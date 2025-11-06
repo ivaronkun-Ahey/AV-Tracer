@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, TextField, FormControlLabel, Switch, Divider } from '@mui/material';
-import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { updateDeviceProperty } from '../../features/canvas/canvasSlice';
+import { useAppSelector, useAppDispatch } from '../store';
+import { updateDeviceProperty } from '../features/canvasSlice';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -24,22 +24,22 @@ const PropertiesPanel: React.FC = () => {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Выберите устройство для просмотра свойств
+          Select a device to view properties
         </Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Свойства устройства
+        Properties
       </Typography>
 
       {/* Device Info */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Устройство
+          Device
         </Typography>
         <Typography variant="h6" sx={{ fontSize: '1.1rem', mb: 0.5 }}>
           {selectedDevice.model}
@@ -54,7 +54,7 @@ const PropertiesPanel: React.FC = () => {
       {/* Position */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Позиция
+          Position
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
@@ -80,7 +80,7 @@ const PropertiesPanel: React.FC = () => {
 
       {/* Device-specific properties */}
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Параметры
+        Parameters
       </Typography>
 
       {renderDeviceProperties(selectedDevice, handlePropertyChange)}
@@ -88,7 +88,7 @@ const PropertiesPanel: React.FC = () => {
       {/* Ports info */}
       <Divider sx={{ my: 2 }} />
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Порты
+        Ports
       </Typography>
       {selectedDevice.ports.map((port, idx) => (
         <Box key={idx} sx={{ mb: 1, p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
@@ -267,7 +267,7 @@ function renderDeviceProperties(device: any, onChange: (prop: string, value: any
     default:
       return (
         <Typography variant="body2" color="text.secondary">
-          Нет доступных параметров
+          No configurable parameters
         </Typography>
       );
   }

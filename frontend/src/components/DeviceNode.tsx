@@ -1,14 +1,14 @@
 import React from 'react';
 import { Group, Rect, Text, Circle, Image } from 'react-konva';
-import { useAppDispatch, useAppSelector } from '../../hooks/redux';
-import { 
-  selectDevice, 
+import { useAppDispatch, useAppSelector } from '../store';
+import {
+  selectDevice,
   updateDevicePosition,
   startConnection,
   completeConnection,
-  cancelConnection 
-} from '../../features/canvas/canvasSlice';
-import { Device } from '../../types/device.types';
+  cancelConnection
+} from '../features/canvasSlice';
+import { Device } from '../types/device.types';
 import useImage from 'use-image';
 
 interface DeviceNodeProps {
@@ -191,6 +191,11 @@ function getDeviceEmoji(type: string): string {
     display: '🖥️',
     projector: '📽️',
     switcher: '🔀',
+    scaler: '⚡',
+    network_switch: '🌐',
+    controller: '🎮',
+    dsp: '💠',
+    array_microphone: '🎙️',
   };
   return emojis[type] || '📦';
 }
@@ -200,7 +205,10 @@ function getPortColor(signalType: string): string {
     analog_audio: '#FF6B00',
     digital_audio: '#0066CC',
     video: '#00B8D4',
-    data: '#00C853',
+    hdmi: '#00B8D4',
+    sdi: '#00C8FF',
+    network: '#00C853',
+    control: '#9C27B0',
   };
   return colors[signalType] || '#0066CC';
 }

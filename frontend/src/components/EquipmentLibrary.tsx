@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Accordion, AccordionSummary, AccordionDetails, Card, CardContent } from '@mui/material';
+import { Box, Typography, TextField, Accordion, AccordionSummary, AccordionDetails, Card, CardContent, Chip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
+import { EQUIPMENT_LIBRARY } from '../data/equipment';
 
-// Mock equipment data (will be loaded from backend later)
-const MOCK_EQUIPMENT = [
+const OLD_MOCK = [
   {
     category: 'audio',
     name: 'Аудио',
@@ -161,27 +161,39 @@ const EquipmentLibrary: React.FC = () => {
     e.dataTransfer.setData('deviceData', JSON.stringify(equipment));
   };
 
-  const filteredEquipment = MOCK_EQUIPMENT.map(category => ({
+  const filteredEquipment = EQUIPMENT_LIBRARY.map(category => ({
     ...category,
-    items: category.items.filter(item =>
-      searchQuery === '' ||
-      item.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(category => category.items.length > 0);
+    subcategories: category.subcategories.map(subcategory => ({
+      ...subcategory,
+      items: subcategory.items.filter(item =>
+        searchQuery === '' ||
+        item.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })).filter(subcategory => subcategory.items.length > 0)
+  })).filter(category => category.subcategories.length > 0);
+
+  const getCategoryColor = (category: string) => {
+    switch(category) {
+      case 'audio': return '#FF6B00';
+      case 'video': return '#00B8D4';
+      case 'network': return '#00C853';
+      default: return '#0066CC';
+    }
+  };
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Библиотека
+        Equipment Library
       </Typography>
 
       {/* Search */}
       <TextField
         fullWidth
         size="small"
-        placeholder="Поиск устройств..."
+        placeholder="Search devices..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         InputProps={{
@@ -213,41 +225,57 @@ const EquipmentLibrary: React.FC = () => {
               },
             }}
           >
-            <Typography sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
               <span>{category.icon}</span>
               {category.name}
+              <Chip
+                label={category.subcategories.reduce((acc, sub) => acc + sub.items.length, 0)}
+                size="small"
+                sx={{ ml: 'auto', bgcolor: getCategoryColor(category.category), fontWeight: 700, fontSize: '0.7rem' }}
+              />
             </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 1 }}>
-            {category.items.map((item) => (
-              <Card
-                key={item._id}
-                draggable
-                onDragStart={handleDragStart(item)}
-                sx={{
-                  mb: 1,
-                  cursor: 'grab',
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    transform: 'translateY(-2px)',
-                  },
-                  '&:active': {
-                    cursor: 'grabbing',
-                  },
-                  transition: 'all 0.2s',
-                  borderLeft: `3px solid ${category.category === 'audio' ? '#FF6B00' : '#00B8D4'}`,
-                }}
-              >
-                <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {item.model}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {item.manufacturer}
-                  </Typography>
-                </CardContent>
-              </Card>
+            {category.subcategories.map((subcategory) => (
+              <Box key={subcategory.name} sx={{ mb: 2 }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, opacity: 0.7, mb: 1, display: 'block' }}>
+                  {subcategory.name}
+                </Typography>
+                {subcategory.items.map((item) => (
+                  <Card
+                    key={item._id}
+                    draggable
+                    onDragStart={handleDragStart(item)}
+                    sx={{
+                      mb: 1,
+                      cursor: 'grab',
+                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${getCategoryColor(category.category)}40`,
+                      },
+                      '&:active': {
+                        cursor: 'grabbing',
+                      },
+                      transition: 'all 0.2s',
+                      borderLeft: `3px solid ${getCategoryColor(category.category)}`,
+                    }}
+                  >
+                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        {item.model}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {item.manufacturer}
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.6, fontSize: '0.7rem' }}>
+                        {item.ports.length} port{item.ports.length !== 1 ? 's' : ''}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
             ))}
           </AccordionDetails>
         </Accordion>
@@ -255,7 +283,7 @@ const EquipmentLibrary: React.FC = () => {
 
       {filteredEquipment.length === 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
-          Устройства не найдены
+          No devices found
         </Typography>
       )}
     </Box>

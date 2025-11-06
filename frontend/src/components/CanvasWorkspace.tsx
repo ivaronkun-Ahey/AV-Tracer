@@ -1,17 +1,23 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Stage, Layer } from 'react-konva';
-import { useAppSelector, useAppDispatch } from '../../hooks/redux';
-import { addDevice } from '../../features/canvas/canvasSlice';
+import { useAppSelector, useAppDispatch } from '../store';
+import { addDevice } from '../features/canvasSlice';
 import DeviceNode from './DeviceNode';
 import ConnectionLine from './ConnectionLine';
-import { Device } from '../../types/device.types';
+import { Device } from '../types/device.types';
 
-interface CanvasWorkspaceProps {
-  width: number;
-  height: number;
-}
+const CanvasWorkspace: React.FC = () => {
+  const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-const CanvasWorkspace: React.FC<CanvasWorkspaceProps> = ({ width, height }) => {
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const { width, height } = dimensions;
   const devices = useAppSelector(state => state.canvas.devices);
   const connections = useAppSelector(state => state.canvas.connections);
   const dispatch = useAppDispatch();
