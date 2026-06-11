@@ -27,6 +27,12 @@ SINK_RU = {
     'projector': 'Проектор',
 }
 
+# Рекомендуемая максимальная длина кабеля (метры) по типу разъёма.
+CABLE_MAX_LENGTH = {
+    'xlr': 100, 'trs': 15, 'speakon': 50, 'hdmi': 15,
+    'sdi': 100, 'cat6': 100, 'rca': 10, 'bnc': 100, 'usb': 5,
+}
+
 
 def signals_compatible(a: str, b: str) -> bool:
     if a == b:
@@ -223,6 +229,62 @@ class SimulationEngine:
                         'message': f"«{self._model(dev)}» требует питания PoE, но коммутатор «{self._model(other)}» его не подаёт",
                         'severity': 'medium',
                     })
+
+        # Бюджет мощности: усилитель → пассивные АС
+        for amp_id, amp in self.devices.items():
+            if self._type(amp) != 'amplifier':
+                continue
+            amp_w = self._props(amp).get('power_watts', 0)
+            min_ohm = self._props(amp).get('min_impedance_ohms', 4)
+            by_port: Dict[str, List] = {}
+            for conn in self.connections:
+                if conn.get('from', {}).get('device') != amp_id:
+                    continue
+                sink = self.devices.get(conn.get('to', {}).get('device'))
+                if not sink:
+                    continue
+                if self._type(sink) in ('speaker', 'subwoofer') and self._props(sink).get('active') is False:
+                    by_port.setdefault(conn['from']['port'], []).append(sink)
+            for spks in by_port.values():
+                impedances = [self._props(s).get('impedance_ohms', 8) for s in spks]
+                parallel = 1 / sum(1 / z for z in impedances)
+                load = round(parallel, 1)
+                total = sum(self._props(s).get('power_handling_watts', 0) for s in spks)
+                if parallel + 1e-9 < min_ohm:
+                    errors.append({
+                        'type': 'impedance_low',
+                        'device': amp_id,
+                        'message': f"Нагрузка {load} Ω на «{self._model(amp)}» ниже минимума {min_ohm} Ω — риск перегрузки и срабатывания защиты",
+                        'severity': 'high',
+                    })
+                if total > 0 and amp_w > 0:
+                    if amp_w > total * 2:
+                        warnings.append({
+                            'type': 'power_over',
+                            'device': amp_id,
+                            'message': f"Усилитель {amp_w} Вт мощнее суммарной мощности АС {total} Вт — риск повреждения на высокой громкости",
+                            'severity': 'medium',
+                        })
+                    elif amp_w * 2 < total:
+                        warnings.append({
+                            'type': 'power_under',
+                            'device': amp_id,
+                            'message': f"Усилитель {amp_w} Вт недостаточен для АС {total} Вт — возможен клиппинг",
+                            'severity': 'medium',
+                        })
+
+        # Длина кабеля
+        for conn in self.connections:
+            cable = conn.get('cable_type')
+            length = conn.get('cable_length', 0)
+            max_len = CABLE_MAX_LENGTH.get(cable, 100)
+            if length and length > max_len:
+                warnings.append({
+                    'type': 'cable_length',
+                    'device': conn.get('from', {}).get('device'),
+                    'message': f"Кабель {str(cable).upper()} {length} м превышает рекомендуемые {max_len} м — возможны потери сигнала",
+                    'severity': 'low',
+                })
 
         # Приёмник без входного подключения
         for dev_id, dev in self.devices.items():

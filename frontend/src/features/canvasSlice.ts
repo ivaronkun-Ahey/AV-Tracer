@@ -162,6 +162,12 @@ const canvasSlice = createSlice({
       }
     },
 
+    updateConnectionLength: (state, action: PayloadAction<{ id: string; length: number }>) => {
+      pushHistory(state);
+      const conn = state.connections.find((c) => c.id === action.payload.id);
+      if (conn) conn.cable_length = Math.max(0, action.payload.length);
+    },
+
     clearCanvas: (state) => {
       pushHistory(state);
       state.devices = [];
@@ -258,6 +264,7 @@ export const {
   completeConnection,
   cancelConnection,
   removeConnection,
+  updateConnectionLength,
   clearCanvas,
   loadProject,
   undo,

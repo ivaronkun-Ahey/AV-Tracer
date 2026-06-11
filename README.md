@@ -82,23 +82,29 @@ npm run dev
 
 ---
 
-## 📚 Библиотека оборудования (48 устройств)
+## 📚 Библиотека оборудования (60 устройств)
 
-- **Аудио:** микрофоны (Shure, AKG, Sennheiser), радиосистемы (Shure ULXD4,
-  Sennheiser EW-DX), микшеры (Allen & Heath, Yamaha, Behringer), усилители
-  (Crown, QSC), акустические системы и сабвуферы (JBL, EV, QSC, Yorkville),
-  DI-боксы и аудиоинтерфейсы (Radial, Behringer, Focusrite), сетевое аудио
-  Dante (Shure MXA910, QSC Core).
-- **Видео:** камеры (Sony, Panasonic, PTZOptics), дисплеи и проекторы (Samsung,
-  LG, Epson, Barco), коммутаторы и масштабаторы (Extron, Blackmagic, Roland,
-  Kramer), медиаплееры (BrightSign, Apple TV), AV-over-IP кодеры/декодеры
-  (Crestron NVX, Extron NAV), запись и стриминг (Blackmagic HyperDeck, Teradek).
-- **Сеть и управление:** коммутаторы (Cisco, Netgear), контроллеры (Crestron,
-  Extron), точки доступа Wi-Fi (Ubiquiti), сенсорные панели (Crestron, Extron).
+- **Аудио:** микрофоны (Shure, AKG, Sennheiser, Rode), радиосистемы (Shure
+  ULXD4, Sennheiser EW-DX), микшеры (Allen & Heath, Yamaha, Behringer, Midas),
+  усилители (Crown, QSC, Lab Gruppen), акустические системы и сабвуферы (JBL,
+  EV, QSC, RCF, Yorkville), DI-боксы и аудиоинтерфейсы (Radial, Focusrite),
+  процессоры/DSP (QSC, Biamp), сетевое аудио Dante.
+- **Видео:** камеры (Sony, Panasonic, PTZOptics, Canon), дисплеи, LED-экраны и
+  проекторы (Samsung, LG, Absen, Epson, Barco, Christie), коммутаторы, матрицы
+  и масштабаторы (Extron, Lightware, Blackmagic, Roland, Kramer), медиаплееры
+  (BrightSign, Apple TV), AV-over-IP кодеры/декодеры (Crestron NVX, Extron NAV),
+  запись и стриминг (Blackmagic HyperDeck, Teradek).
+- **Сеть и управление:** коммутаторы (Cisco, Netgear, Aruba), контроллеры
+  (Crestron, Extron, AMX), точки доступа Wi-Fi (Ubiquiti), сенсорные панели.
 
-Симуляция проверяет схему: совместимость сигналов на соединениях, активные/
-пассивные АС относительно усилителя, питание PoE, фантомное питание,
-масштабирование разрешения видео и наличие сигнала на приёмниках.
+Симуляция проверяет схему: совместимость сигналов, активные/пассивные АС
+относительно усилителя, **бюджет мощности усилитель↔АС** (мощность в ваттах и
+сопротивление нагрузки с учётом параллельного включения), **длину кабелей**,
+питание PoE, фантомное питание, масштабирование разрешения видео и наличие
+сигнала на приёмниках.
+
+Клик по кабелю открывает **инспектор соединения**: тип сигнала, разъём,
+описание и редактируемая длина с проверкой допустимого максимума.
 
 ---
 

@@ -1,4 +1,5 @@
 import { Device, Connection, SimulationResult, SignalFlow, SimIssue } from '../types/device.types';
+import { cableMaxLength } from '../data/cables';
 
 /**
  * Клиентский движок симуляции — точный аналог backend/app/services/engine.py.
@@ -204,6 +205,67 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
           severity: 'medium',
         });
       }
+    }
+  }
+
+  // Бюджет мощности: усилитель → пассивные АС (мощность и сопротивление)
+  for (const amp of devices) {
+    if (amp.type !== 'amplifier') continue;
+    const ampW = amp.properties?.power_watts ?? 0;
+    const minOhm = amp.properties?.min_impedance_ohms ?? 4;
+    const byPort: Record<string, Device[]> = {};
+    for (const c of connections) {
+      if (c.from.device !== amp.id) continue;
+      const sink = byId[c.to.device];
+      if (!sink) continue;
+      if ((sink.type === 'speaker' || sink.type === 'subwoofer') && sink.properties?.active === false) {
+        (byPort[c.from.port] ||= []).push(sink);
+      }
+    }
+    for (const port of Object.keys(byPort)) {
+      const spks = byPort[port];
+      const impedances = spks.map((s) => s.properties?.impedance_ohms ?? 8);
+      const parallel = 1 / impedances.reduce((acc, z) => acc + 1 / z, 0);
+      const load = Math.round(parallel * 10) / 10;
+      const totalHandling = spks.reduce((acc, s) => acc + (s.properties?.power_handling_watts ?? 0), 0);
+      if (parallel + 1e-9 < minOhm) {
+        errors.push({
+          type: 'impedance_low',
+          device: amp.id,
+          message: `Нагрузка ${load} Ω на «${amp.model}» ниже минимума ${minOhm} Ω — риск перегрузки и срабатывания защиты`,
+          severity: 'high',
+        });
+      }
+      if (totalHandling > 0 && ampW > 0) {
+        if (ampW > totalHandling * 2) {
+          warnings.push({
+            type: 'power_over',
+            device: amp.id,
+            message: `Усилитель ${ampW} Вт мощнее суммарной мощности АС ${totalHandling} Вт — риск повреждения на высокой громкости`,
+            severity: 'medium',
+          });
+        } else if (ampW * 2 < totalHandling) {
+          warnings.push({
+            type: 'power_under',
+            device: amp.id,
+            message: `Усилитель ${ampW} Вт недостаточен для АС ${totalHandling} Вт — возможен клиппинг`,
+            severity: 'medium',
+          });
+        }
+      }
+    }
+  }
+
+  // Длина кабеля относительно рекомендуемой для типа разъёма
+  for (const c of connections) {
+    const max = cableMaxLength(c.cable_type);
+    if (c.cable_length > max) {
+      warnings.push({
+        type: 'cable_length',
+        device: c.from.device,
+        message: `Кабель ${String(c.cable_type).toUpperCase()} ${c.cable_length} м превышает рекомендуемые ${max} м — возможны потери сигнала`,
+        severity: 'low',
+      });
     }
   }
 

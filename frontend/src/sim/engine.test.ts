@@ -152,4 +152,42 @@ describe('runSimulation', () => {
     const video = r.signal_flows.find((f) => f.type === 'video');
     expect(video?.resolution).toBe('1920x1080');
   });
+
+  it('бюджет мощности: слишком низкое сопротивление нагрузки усилителя', () => {
+    const devices: Device[] = [
+      dev({ id: 'amp', type: 'amplifier', properties: { power_watts: 500, min_impedance_ohms: 8 } }),
+      dev({ id: 's1', type: 'speaker', properties: { active: false, impedance_ohms: 8, power_handling_watts: 250 } }),
+      dev({ id: 's2', type: 'speaker', properties: { active: false, impedance_ohms: 8, power_handling_watts: 250 } }),
+    ];
+    const conn: Connection[] = [
+      { id: 'c1', from: { device: 'amp', port: 'o' }, to: { device: 's1', port: 'i' }, cable_type: 'speakon', cable_length: 1 },
+      { id: 'c2', from: { device: 'amp', port: 'o' }, to: { device: 's2', port: 'i' }, cable_type: 'speakon', cable_length: 1 },
+    ];
+    const r = runSimulation(devices, conn);
+    expect(r.errors.some((e) => e.type === 'impedance_low')).toBe(true);
+  });
+
+  it('бюджет мощности: усилитель мощнее допустимой мощности АС', () => {
+    const devices: Device[] = [
+      dev({ id: 'amp', type: 'amplifier', properties: { power_watts: 2000, min_impedance_ohms: 2 } }),
+      dev({ id: 's1', type: 'speaker', properties: { active: false, impedance_ohms: 8, power_handling_watts: 200 } }),
+    ];
+    const conn: Connection[] = [
+      { id: 'c1', from: { device: 'amp', port: 'o' }, to: { device: 's1', port: 'i' }, cable_type: 'speakon', cable_length: 1 },
+    ];
+    const r = runSimulation(devices, conn);
+    expect(r.warnings.some((w) => w.type === 'power_over')).toBe(true);
+  });
+
+  it('предупреждает о слишком длинном кабеле', () => {
+    const devices: Device[] = [
+      dev({ id: 'a', type: 'mixer' }),
+      dev({ id: 'b', type: 'mixer' }),
+    ];
+    const conn: Connection[] = [
+      { id: 'c', from: { device: 'a', port: 'o' }, to: { device: 'b', port: 'i' }, cable_type: 'hdmi', cable_length: 30 },
+    ];
+    const r = runSimulation(devices, conn);
+    expect(r.warnings.some((w) => w.type === 'cable_length')).toBe(true);
+  });
 });

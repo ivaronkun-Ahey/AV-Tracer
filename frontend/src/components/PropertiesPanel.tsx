@@ -24,21 +24,27 @@ import {
 import { Device } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
 import { signalColor } from './deviceGeometry';
+import ConnectionInspector from './ConnectionInspector';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
   const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
+  const selectedConnectionId = useAppSelector((s) => s.canvas.selectedConnectionId);
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
 
   const device = devices.find((d) => d.id === selectedDeviceId);
 
   if (!device) {
+    // Выбран кабель — показываем инспектор соединения
+    if (selectedConnectionId) {
+      return <ConnectionInspector />;
+    }
     return (
       <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
         <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
         <Typography variant="body2" color="text.secondary">
-          Выберите устройство на холсте, чтобы увидеть и изменить его параметры
+          Выберите устройство или кабель на холсте, чтобы увидеть и изменить параметры
         </Typography>
       </Box>
     );

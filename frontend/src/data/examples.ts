@@ -94,4 +94,25 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       };
     },
   },
+  {
+    id: 'concert',
+    name: 'Концертный звук (усилитель + пассивные АС)',
+    description: 'Микрофон → микшер → усилитель → две параллельные пассивные колонки',
+    build: () => {
+      const mic = instantiate('shure-sm58', 'c_mic', 1000, 40);
+      const mix = instantiate('allen-heath-sq5', 'c_mix', 1000, 220);
+      const amp = instantiate('crown-xls2502', 'c_amp', 1000, 400);
+      const sp1 = instantiate('yorkville-yx15p', 'c_sp1', 900, 600);
+      const sp2 = instantiate('yorkville-yx15p', 'c_sp2', 1120, 600);
+      return {
+        devices: [mic, mix, amp, sp1, sp2],
+        connections: [
+          connect(['c_mic', 'xlr_out'], ['c_mix', 'xlr_in_1'], 'xlr'),
+          connect(['c_mix', 'xlr_out_l'], ['c_amp', 'xlr_in_l'], 'xlr'),
+          connect(['c_amp', 'speakon_out_l'], ['c_sp1', 'speakon_in'], 'speakon'),
+          connect(['c_amp', 'speakon_out_l'], ['c_sp2', 'speakon_in'], 'speakon'),
+        ],
+      };
+    },
+  },
 ];

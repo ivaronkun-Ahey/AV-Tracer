@@ -112,6 +112,7 @@ export const PROPERTY_LABELS: Record<string, string> = {
   pad: 'Аттенюатор (дБ)',
   power: 'Мощность (Вт)',
   impedance: 'Сопротивление (Ω)',
+  min_impedance_ohms: 'Мин. сопротивление (Ω)',
   // Радиосистемы
   frequency_band: 'Диапазон частот',
   battery_hours: 'Время работы (ч)',
