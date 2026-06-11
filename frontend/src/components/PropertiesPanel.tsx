@@ -1,276 +1,227 @@
 import React from 'react';
-import { Box, Typography, TextField, FormControlLabel, Switch, Divider } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  FormControlLabel,
+  Switch,
+  Divider,
+  Button,
+  Chip,
+  Stack,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
 import { useAppSelector, useAppDispatch } from '../store';
-import { updateDeviceProperty } from '../features/canvasSlice';
+import {
+  updateDeviceProperty,
+  removeDevice,
+  removeConnection,
+  showToast,
+} from '../features/canvasSlice';
+import { Device } from '../types/device.types';
+import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
+import { signalColor } from './deviceGeometry';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
-  const selectedDeviceId = useAppSelector(state => state.canvas.selectedDeviceId);
-  const devices = useAppSelector(state => state.canvas.devices);
-  
-  const selectedDevice = devices.find(d => d.id === selectedDeviceId);
+  const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
+  const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
 
-  const handlePropertyChange = (property: string, value: any) => {
-    if (selectedDevice) {
-      dispatch(updateDeviceProperty({
-        id: selectedDevice.id,
-        property,
-        value,
-      }));
-    }
-  };
+  const device = devices.find((d) => d.id === selectedDeviceId);
 
-  if (!selectedDevice) {
+  if (!device) {
     return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
+      <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
+        <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
         <Typography variant="body2" color="text.secondary">
-          Select a device to view properties
+          Выберите устройство на холсте, чтобы увидеть и изменить его параметры
         </Typography>
       </Box>
     );
   }
 
+  const deviceName = (id: string) => {
+    const d = devices.find((x) => x.id === id);
+    return d ? d.model : id;
+  };
+
+  const deviceConnections = connections.filter(
+    (c) => c.from.device === device.id || c.to.device === device.id
+  );
+
+  const onChange = (property: string, value: any) =>
+    dispatch(updateDeviceProperty({ id: device.id, property, value }));
+
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Properties
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
+        Свойства
       </Typography>
 
-      {/* Device Info */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Device
-        </Typography>
-        <Typography variant="h6" sx={{ fontSize: '1.1rem', mb: 0.5 }}>
-          {selectedDevice.model}
+      {/* Шапка устройства */}
+      <Box sx={{ mb: 2 }}>
+        <Chip
+          label={deviceTypeLabel(device.type)}
+          size="small"
+          sx={{ mb: 1, bgcolor: signalColor(device.ports[0]?.signal_type || 'control'), color: '#fff' }}
+        />
+        <Typography variant="h6" sx={{ fontSize: '1.15rem', lineHeight: 1.2 }}>
+          {device.model}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {selectedDevice.manufacturer}
+          {device.manufacturer}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {device.full_name}
         </Typography>
       </Box>
 
       <Divider sx={{ my: 2 }} />
 
-      {/* Position */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Position
+      {/* Параметры */}
+      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        Параметры
+      </Typography>
+      {renderProperties(device, onChange)}
+
+      {/* Подключения */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        Подключения ({deviceConnections.length})
+      </Typography>
+      {deviceConnections.length === 0 && (
+        <Typography variant="caption" color="text.secondary">
+          Пока нет соединений
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <TextField
-            label="X"
-            size="small"
-            type="number"
-            value={Math.round(selectedDevice.position.x)}
-            disabled
-            fullWidth
-          />
-          <TextField
-            label="Y"
-            size="small"
-            type="number"
-            value={Math.round(selectedDevice.position.y)}
-            disabled
-            fullWidth
-          />
-        </Box>
-      </Box>
+      )}
+      <Stack spacing={1}>
+        {deviceConnections.map((c) => {
+          const outgoing = c.from.device === device.id;
+          const otherId = outgoing ? c.to.device : c.from.device;
+          return (
+            <Box
+              key={c.id}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                p: 1,
+                bgcolor: 'rgba(255,255,255,0.04)',
+                borderRadius: 1,
+              }}
+            >
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="body2" noWrap>
+                  {outgoing ? '→' : '←'} {deviceName(otherId)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {c.cable_type.toUpperCase()}
+                </Typography>
+              </Box>
+              <Tooltip title="Удалить соединение">
+                <IconButton size="small" onClick={() => dispatch(removeConnection(c.id))}>
+                  <LinkOffIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          );
+        })}
+      </Stack>
 
+      {/* Порты */}
       <Divider sx={{ my: 2 }} />
-
-      {/* Device-specific properties */}
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Parameters
+        Порты ({device.ports.length})
       </Typography>
-
-      {renderDeviceProperties(selectedDevice, handlePropertyChange)}
-
-      {/* Ports info */}
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-        Ports
-      </Typography>
-      {selectedDevice.ports.map((port, idx) => (
-        <Box key={idx} sx={{ mb: 1, p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {port.id}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {port.direction} • {port.signal_type}
-          </Typography>
+      {device.ports.map((port, idx) => (
+        <Box key={idx} sx={{ mb: 0.75, p: 1, bgcolor: 'rgba(255,255,255,0.04)', borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: signalColor(port.signal_type), flexShrink: 0 }} />
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {portLabel(port)}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {DIRECTION_LABELS[port.direction]} · {SIGNAL_LABELS[port.signal_type]}
+            </Typography>
+          </Box>
         </Box>
       ))}
+
+      {/* Удаление */}
+      <Divider sx={{ my: 2 }} />
+      <Button
+        fullWidth
+        color="error"
+        variant="outlined"
+        startIcon={<DeleteIcon />}
+        onClick={() => {
+          dispatch(removeDevice(device.id));
+          dispatch(showToast({ message: 'Устройство удалено', severity: 'info' }));
+        }}
+      >
+        Удалить устройство
+      </Button>
     </Box>
   );
 };
 
-// Render device-specific properties
-function renderDeviceProperties(device: any, onChange: (prop: string, value: any) => void) {
-  const props = device.properties;
-
-  // Common properties based on device type
-  switch (device.type) {
-    case 'microphone':
-      return (
-        <>
-          <TextField
-            label="Gain (dB)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.gain || 0}
-            onChange={(e) => onChange('gain', Number(e.target.value))}
-            sx={{ mb: 2 }}
-          />
-          {props.hasOwnProperty('phantom_power') && (
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={props.phantom_power || false}
-                  onChange={(e) => onChange('phantom_power', e.target.checked)}
-                />
-              }
-              label="Phantom Power"
-            />
-          )}
-        </>
-      );
-
-    case 'mixer':
-      return (
-        <>
-          <TextField
-            label="Channels"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.channels || 16}
-            disabled
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Master Gain (dB)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.gain || 0}
-            onChange={(e) => onChange('gain', Number(e.target.value))}
-            sx={{ mb: 2 }}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={props.phantom_power || false}
-                onChange={(e) => onChange('phantom_power', e.target.checked)}
-              />
-            }
-            label="Phantom Power"
-          />
-        </>
-      );
-
-    case 'amplifier':
-      return (
-        <>
-          <TextField
-            label="Power (W)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.power || 0}
-            disabled
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Gain (dB)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.gain || 0}
-            onChange={(e) => onChange('gain', Number(e.target.value))}
-            sx={{ mb: 2 }}
-          />
-        </>
-      );
-
-    case 'speaker':
-      return (
-        <>
-          <TextField
-            label="Power (W)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.power || 0}
-            disabled
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Impedance (Ω)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.impedance || 8}
-            disabled
-            sx={{ mb: 2 }}
-          />
-        </>
-      );
-
-    case 'camera':
-      return (
-        <>
-          <TextField
-            label="Resolution"
-            size="small"
-            fullWidth
-            value={props.resolution || '1920x1080'}
-            onChange={(e) => onChange('resolution', e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Frame Rate (fps)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.fps || 60}
-            onChange={(e) => onChange('fps', Number(e.target.value))}
-            sx={{ mb: 2 }}
-          />
-        </>
-      );
-
-    case 'display':
-    case 'projector':
-      return (
-        <>
-          <TextField
-            label="Size (inches)"
-            type="number"
-            size="small"
-            fullWidth
-            value={props.size || 85}
-            disabled
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Resolution"
-            size="small"
-            fullWidth
-            value={props.resolution || '3840x2160'}
-            disabled
-            sx={{ mb: 2 }}
-          />
-        </>
-      );
-
-    default:
-      return (
-        <Typography variant="body2" color="text.secondary">
-          No configurable parameters
-        </Typography>
-      );
+/** Универсальный рендер параметров: тип поля выбирается по типу значения. */
+function renderProperties(device: Device, onChange: (prop: string, value: any) => void) {
+  const props = device.properties || {};
+  const keys = Object.keys(props);
+  if (keys.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Нет настраиваемых параметров
+      </Typography>
+    );
   }
+  return (
+    <>
+      {keys.map((key) => {
+        const value = props[key];
+        if (typeof value === 'boolean') {
+          return (
+            <FormControlLabel
+              key={key}
+              sx={{ display: 'flex', mb: 0.5 }}
+              control={<Switch checked={value} onChange={(e) => onChange(key, e.target.checked)} />}
+              label={<Typography variant="body2">{propertyLabel(key)}</Typography>}
+            />
+          );
+        }
+        if (typeof value === 'number') {
+          return (
+            <TextField
+              key={key}
+              label={propertyLabel(key)}
+              type="number"
+              size="small"
+              fullWidth
+              value={value}
+              onChange={(e) => onChange(key, Number(e.target.value))}
+              sx={{ mb: 1.5 }}
+            />
+          );
+        }
+        return (
+          <TextField
+            key={key}
+            label={propertyLabel(key)}
+            size="small"
+            fullWidth
+            value={String(value)}
+            onChange={(e) => onChange(key, e.target.value)}
+            sx={{ mb: 1.5 }}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 export default PropertiesPanel;

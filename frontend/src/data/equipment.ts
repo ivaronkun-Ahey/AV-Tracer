@@ -1,5 +1,3 @@
-import { Device } from '../types/device.types';
-
 // Comprehensive professional AV equipment library (30+ devices)
 export const EQUIPMENT_LIBRARY = [
   {

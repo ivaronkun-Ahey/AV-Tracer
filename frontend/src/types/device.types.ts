@@ -23,6 +23,7 @@ export interface Device {
   properties: Record<string, any>;
   specs?: Record<string, any>;
   icon_url?: string;
+  image_url?: string;
 }
 
 export interface Connection {
@@ -46,4 +47,30 @@ export interface Project {
   connections: Connection[];
   created_at: string;
   updated_at: string;
+}
+
+/** Результаты работы движка симуляции (совпадает с ответом backend и локального движка). */
+export interface SignalFlow {
+  type: 'audio' | 'video';
+  source: string;
+  path: string[];
+  final_level_db?: number;
+  resolution?: string;
+  status: 'ok' | 'warning' | 'error';
+}
+
+export interface SimIssue {
+  type: string;
+  device: string;
+  message: string;
+  severity?: 'low' | 'medium' | 'high';
+}
+
+export interface SimulationResult {
+  valid: boolean;
+  signal_flows: SignalFlow[];
+  warnings: SimIssue[];
+  errors: SimIssue[];
+  /** Откуда получен результат: 'server' — Python backend, 'local' — расчёт в браузере. */
+  computed_by?: 'server' | 'local';
 }

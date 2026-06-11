@@ -72,7 +72,7 @@ class SimulationEngine:
         # Find audio sources (microphones)
         sources = [
             dev_id for dev_id, dev in self.devices.items()
-            if self._get_device_type(dev) == 'microphone'
+            if self._get_device_type(dev) in ('microphone', 'array_microphone')
         ]
         
         for source_id in sources:
@@ -207,7 +207,7 @@ class SimulationEngine:
                         warnings.append({
                             'type': 'phantom_power',
                             'device': device_id,
-                            'message': 'Condenser microphone requires phantom power',
+                            'message': 'Конденсаторному микрофону требуется фантомное питание (+48V)',
                             'severity': 'medium',
                         })
         
@@ -223,10 +223,12 @@ class SimulationEngine:
             
             if device_type in ['speaker', 'display', 'projector']:
                 if not self._has_input_connection(device_id):
+                    labels = {'speaker': 'Колонка', 'display': 'Дисплей', 'projector': 'Проектор'}
                     errors.append({
                         'type': 'no_input',
                         'device': device_id,
-                        'message': f'{device_type} has no input connection',
+                        'message': f'{labels.get(device_type, device_type)} не подключён ко входному сигналу',
+                        'severity': 'high',
                     })
         
         return errors
