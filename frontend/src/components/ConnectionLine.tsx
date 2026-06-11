@@ -1,6 +1,9 @@
 import React from 'react';
 import { Line, Circle } from 'react-konva';
 import { Connection, Device } from '../types/device.types';
+import { useAppDispatch, useAppSelector } from '../store';
+import { selectConnection } from '../features/canvasSlice';
+import { outputPortPos, inputPortPos, signalColor } from './deviceGeometry';
 
 interface ConnectionLineProps {
   connection: Connection;
@@ -8,90 +11,70 @@ interface ConnectionLineProps {
 }
 
 const ConnectionLine: React.FC<ConnectionLineProps> = ({ connection, devices }) => {
-  // Find from and to devices
-  const fromDevice = devices.find(d => d.id === connection.from.device);
-  const toDevice = devices.find(d => d.id === connection.to.device);
+  const dispatch = useAppDispatch();
+  const selectedConnectionId = useAppSelector((s) => s.canvas.selectedConnectionId);
 
+  const fromDevice = devices.find((d) => d.id === connection.from.device);
+  const toDevice = devices.find((d) => d.id === connection.to.device);
   if (!fromDevice || !toDevice) return null;
 
-  // Find the port positions
-  const fromPort = fromDevice.ports.find(p => p.id === connection.from.port);
-  const toPort = toDevice.ports.find(p => p.id === connection.to.port);
+  const fromPos = outputPortPos(fromDevice, connection.from.port);
+  const toPos = inputPortPos(toDevice, connection.to.port);
+  if (!fromPos || !toPos) return null;
 
-  if (!fromPort || !toPort) return null;
+  const fromPort = fromDevice.ports.find((p) => p.id === connection.from.port);
+  const cableColor = signalColor(fromPort?.signal_type || 'control');
+  const isSelected = selectedConnectionId === connection.id;
 
-  // Calculate port positions
-  const fromOutputPorts = fromDevice.ports.filter(p => p.direction === 'output' || p.direction === 'bidirectional');
-  const toInputPorts = toDevice.ports.filter(p => p.direction === 'input' || p.direction === 'bidirectional');
+  const controlOffset = Math.max(40, Math.abs(toPos.y - fromPos.y) * 0.5);
 
-  const fromPortIndex = fromOutputPorts.findIndex(p => p.id === fromPort.id);
-  const toPortIndex = toInputPorts.findIndex(p => p.id === toPort.id);
+  const points = [
+    fromPos.x, fromPos.y,
+    fromPos.x, fromPos.y + controlOffset,
+    toPos.x, toPos.y - controlOffset,
+    toPos.x, toPos.y,
+  ];
 
-  const fromSpacing = 120 / (fromOutputPorts.length + 1);
-  const toSpacing = 120 / (toInputPorts.length + 1);
-
-  const fromX = fromDevice.position.x + fromSpacing * (fromPortIndex + 1);
-  const fromY = fromDevice.position.y + 106;
-  const toX = toDevice.position.x + toSpacing * (toPortIndex + 1);
-  const toY = toDevice.position.y - 6;
-
-  // Get cable color based on signal type
-  const cableColor = getCableColor(fromPort.signal_type);
-
-  // Calculate bezier control points for smooth curves
-  const controlOffset = Math.abs(toY - fromY) * 0.5;
+  const handleSelect = (e: any) => {
+    e.cancelBubble = true;
+    dispatch(selectConnection(connection.id));
+  };
 
   return (
     <>
-      {/* Bezier curve connection line */}
+      {/* Широкая невидимая линия — увеличенная область клика */}
       <Line
-        points={[
-          fromX, fromY,
-          fromX, fromY + controlOffset,
-          toX, toY - controlOffset,
-          toX, toY
-        ]}
-        stroke={cableColor}
-        strokeWidth={3}
+        points={points}
+        stroke="transparent"
+        strokeWidth={16}
         tension={0.5}
         bezier
-        shadowColor="black"
-        shadowBlur={5}
-        shadowOpacity={0.3}
+        onClick={handleSelect}
+        onTap={handleSelect}
+        onMouseEnter={(e) => {
+          const c = e.target.getStage()?.container();
+          if (c) c.style.cursor = 'pointer';
+        }}
+        onMouseLeave={(e) => {
+          const c = e.target.getStage()?.container();
+          if (c) c.style.cursor = 'default';
+        }}
       />
-
-      {/* Connection point indicators */}
-      <Circle
-        x={fromX}
-        y={fromY}
-        radius={4}
-        fill={cableColor}
-        stroke="#FFFFFF"
-        strokeWidth={1}
+      <Line
+        points={points}
+        stroke={cableColor}
+        strokeWidth={isSelected ? 5 : 3}
+        tension={0.5}
+        bezier
+        shadowColor={isSelected ? cableColor : 'black'}
+        shadowBlur={isSelected ? 12 : 4}
+        shadowOpacity={isSelected ? 0.9 : 0.3}
+        listening={false}
       />
-      <Circle
-        x={toX}
-        y={toY}
-        radius={4}
-        fill={cableColor}
-        stroke="#FFFFFF"
-        strokeWidth={1}
-      />
+      <Circle x={fromPos.x} y={fromPos.y} radius={4} fill={cableColor} stroke="#FFFFFF" strokeWidth={1} listening={false} />
+      <Circle x={toPos.x} y={toPos.y} radius={4} fill={cableColor} stroke="#FFFFFF" strokeWidth={1} listening={false} />
     </>
   );
 };
-
-function getCableColor(signalType: string): string {
-  const colors: Record<string, string> = {
-    analog_audio: '#FF6B00',
-    digital_audio: '#0066CC',
-    video: '#00B8D4',
-    hdmi: '#00B8D4',
-    sdi: '#00C8FF',
-    network: '#00C853',
-    control: '#9C27B0',
-  };
-  return colors[signalType] || '#0066CC';
-}
 
 export default ConnectionLine;

@@ -1,144 +1,149 @@
-# 🎬 AV-Tracer - Professional Audio-Video System Simulator
+# ⚡ AV-Tracer — симулятор аудио-видео систем
 
-**Like Cisco Packet Tracer, but for Audio-Video Systems**
+**Как Cisco Packet Tracer, только для аудио-видео оборудования.**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Status](https://img.shields.io/badge/status-working-green.svg)
+Собирайте схемы AV-систем мышкой: перетащите устройства на холст, соедините их
+кабелями, настройте параметры и запустите проверку сигнала — без дорогого «железа».
 
-## 🎯 Overview
+> Интерфейс на русском языке. Названия моделей оборудования (Shure SM58 и т. п.)
+> и обозначения разъёмов (XLR, HDMI, SDI) оставлены международными.
 
-AV-Tracer is a professional-grade, web-based simulator for designing, connecting, and testing audio-video systems. Build complete AV installations virtually - no expensive hardware needed!
+---
 
-### ✨ Key Features
+## 🚀 Запуск
 
-- ✅ **30+ Professional Devices** - Microphones, mixers, amps, speakers, cameras, displays, switchers, network gear
-- ✅ **Visual Canvas** - Drag-and-drop interface with grid background
-- ✅ **Smart Connections** - Color-coded cables with automatic signal type detection
-- ✅ **Device Configuration** - Detailed properties panel for each device
-- ✅ **Signal Flow Simulation** - Real-time audio/video path analysis
-- ✅ **Error Detection** - Automatic validation and warnings
-- ✅ **Save/Load Projects** - Export/import system designs
-- ✅ **Professional UI** - Dark theme with Material-UI
+### Вариант 1. Docker — одна команда (рекомендуется)
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- Python 3.8+
-
-### Installation & Running
-
-**1. Install Backend:**
 ```bash
-cd backend
-pip install -r requirements.txt
-python3 -m uvicorn app.main:app --reload --port 8000
+docker compose up
 ```
 
-**2. Install Frontend:**
+Откройте в браузере **http://localhost:3000**. Готово.
+
+### Вариант 2. Скрипт запуска (Linux / macOS)
+
+```bash
+./run.sh
+```
+
+Скрипт сам создаст окружение Python, поставит зависимости и поднимет backend
+(порт 8000) и frontend (порт 3000).
+
+### Вариант 3. Вручную (два терминала)
+
+**Backend (порт 8000):**
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+**Frontend (порт 3000):**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-**3. Access:**
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+Адреса: интерфейс — http://localhost:3000, API — http://localhost:8000,
+документация API — http://localhost:8000/docs.
 
-## 📚 Equipment Library (30+ Devices)
-
-### 🎤 Audio Equipment
-**Microphones:** Shure SM58, Beta 87A, AKG C414, Sennheiser e835
-**Mixers:** Allen & Heath SQ-5, Yamaha MG12XU, Behringer X32
-**Amplifiers:** Crown XLS 2502, QSC GX5
-**Speakers:** JBL PRX815W, EV ZLX-12P, QSC K12.2, Yorkville YX15P
-**Network Audio:** Shure MXA910 (Dante), QSC Core 110f
-
-### 📹 Video Equipment
-**Cameras:** Sony SRG-300H, Panasonic AW-UE150, PTZOptics 20X-SDI
-**Displays:** Samsung QM85R, LG 75UP8000
-**Projectors:** Epson EB-L1755U, Barco F90-4K13
-**Switchers:** Extron IN1608, Blackmagic ATEM Mini Pro, Roland V-60HD, Kramer VP-558
-
-### 🌐 Network & Control
-**Switches:** Cisco SG350-28, Netgear GS728TP
-**Controllers:** Crestron CP3, Extron IPCP Pro 550
-
-## 🎨 How to Use
-
-1. **Browse Equipment** - Search or filter devices in left panel
-2. **Drag to Canvas** - Drop devices onto the workspace
-3. **Make Connections** - Click output port → input port to cable
-4. **Configure** - Select device, adjust properties on right
-5. **Simulate** - Click "Simulate" to analyze signal paths
-6. **Save** - Export your design as JSON
-
-## 🧪 Simulation Engine
-
-Analyzes your system and provides:
-- ✅ Audio signal flow tracing (mic to speaker)
-- ✅ Video signal flow tracing (camera to display)
-- ✅ Signal level calculation (dBu)
-- ✅ Error detection (missing connections, incompatible signals)
-- ✅ Warnings (phantom power, impedance issues)
-
-## 📖 Example: Basic PA System
-
-1. Add: Shure SM58 mic
-2. Add: Allen & Heath SQ-5 mixer
-3. Add: Crown XLS 2502 amp
-4. Add: JBL PRX815W speaker
-5. Connect: Mic →(XLR)→ Mixer →(XLR)→ Amp →(Speakon)→ Speaker
-6. Configure gain levels
-7. Run simulation ✅
-
-## 🛠 Tech Stack
-
-**Frontend:** React 18 + TypeScript + Vite + Redux Toolkit + Konva.js + Material-UI
-**Backend:** FastAPI + Python + Pydantic + Uvicorn
-
-## 📁 Project Structure
-```
-AV-Tracer/
-├── frontend/          # React + TypeScript UI
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── features/    # Redux slices
-│   │   ├── data/        # Equipment library (30+ devices)
-│   │   └── types/       # TypeScript types
-├── backend/           # FastAPI backend
-│   ├── app/
-│   │   ├── services/    # Simulation engine
-│   │   └── main.py      # API endpoints
-└── README.md
-```
-
-## 🎓 Use Cases
-
-- 🎓 **Education** - Learn AV without expensive hardware
-- 📜 **Certification** - Practice for AVIXA CTS exam
-- 🏫 **Training** - Teach audio/video concepts
-- 📐 **Planning** - Design before installation
-- 🔧 **Troubleshooting** - Practice problem-solving
-
-## 🔮 Roadmap
-
-**v1.1:** 50+ devices, templates, advanced analysis
-**v2.0:** Learning scenarios, gamification, mobile app
-**v3.0:** 3D visualization, VR/AR mode, marketplace
-
-## 📝 License
-
-MIT License - Use freely!
-
-## 🙏 Credits
-
-Inspired by Cisco Packet Tracer | Built for the AV industry
+> **Можно и без backend.** Если Python-сервер не запущен, кнопка «Симуляция»
+> автоматически выполнит расчёт прямо в браузере — функция работает всегда.
 
 ---
 
-**⭐ Star this project if you find it useful!**
+## 🎬 Как пользоваться
 
-*Last Updated: November 2025 | Version 1.0.0*
+1. **Добавьте устройства** — перетащите карточку из библиотеки слева на холст.
+   Не знаете, с чего начать? Нажмите **«Загрузить пример»** на пустом холсте.
+2. **Соедините** — кликните по **нижнему** (выходному) кружку одного устройства,
+   затем по **верхнему** (входному) кружку другого. Совместимые входы
+   подсвечиваются зелёным; несовместимые сигналы соединить нельзя.
+3. **Настройте** — выберите устройство, измените его параметры в панели справа
+   (усиление, фантомное питание, разрешение и т. д.).
+4. **Проверьте** — нажмите **«Симуляция»**: внизу откроется панель с цепочками
+   сигнала, ошибками и предупреждениями. Кликните по проблеме — устройство
+   выделится на холсте.
+5. **Сохраните** — кнопка «Сохранить» выгружает проект в JSON, «Открыть» —
+   загружает обратно. Схема также автоматически сохраняется в браузере.
+
+### Горячие клавиши и управление
+
+| Действие | Как |
+|---|---|
+| Удалить выбранное устройство/кабель | `Delete` или `Backspace` |
+| Отменить соединение / снять выделение | `Esc` |
+| Отменить / повторить действие | `Ctrl+Z` / `Ctrl+Shift+Z` |
+| Масштаб | колесо мыши |
+| Панорама холста | перетаскивание пустого места |
+| Сбросить вид (100 %) | кнопка-«прицел» в правом нижнем углу |
+
+---
+
+## 📚 Библиотека оборудования (60 устройств)
+
+- **Аудио:** микрофоны (Shure, AKG, Sennheiser, Rode), радиосистемы (Shure
+  ULXD4, Sennheiser EW-DX), микшеры (Allen & Heath, Yamaha, Behringer, Midas),
+  усилители (Crown, QSC, Lab Gruppen), акустические системы и сабвуферы (JBL,
+  EV, QSC, RCF, Yorkville), DI-боксы и аудиоинтерфейсы (Radial, Focusrite),
+  процессоры/DSP (QSC, Biamp), сетевое аудио Dante.
+- **Видео:** камеры (Sony, Panasonic, PTZOptics, Canon), дисплеи, LED-экраны и
+  проекторы (Samsung, LG, Absen, Epson, Barco, Christie), коммутаторы, матрицы
+  и масштабаторы (Extron, Lightware, Blackmagic, Roland, Kramer), медиаплееры
+  (BrightSign, Apple TV), AV-over-IP кодеры/декодеры (Crestron NVX, Extron NAV),
+  запись и стриминг (Blackmagic HyperDeck, Teradek).
+- **Сеть и управление:** коммутаторы (Cisco, Netgear, Aruba), контроллеры
+  (Crestron, Extron, AMX), точки доступа Wi-Fi (Ubiquiti), сенсорные панели.
+
+Симуляция проверяет схему: совместимость сигналов, активные/пассивные АС
+относительно усилителя, **бюджет мощности усилитель↔АС** (мощность в ваттах и
+сопротивление нагрузки с учётом параллельного включения), **длину кабелей**,
+питание PoE, фантомное питание, масштабирование разрешения видео и наличие
+сигнала на приёмниках.
+
+Клик по кабелю открывает **инспектор соединения**: тип сигнала, разъём,
+описание и редактируемая длина с проверкой допустимого максимума.
+
+---
+
+## 🧩 Структура проекта
+
+```
+AV-Tracer/
+├── frontend/              # Интерфейс: React + TypeScript + Vite + Konva + MUI
+│   └── src/
+│       ├── components/    # Холст, узлы, кабели, панели
+│       ├── features/      # Redux-состояние (canvasSlice)
+│       ├── sim/           # Браузерный движок симуляции (+ тесты)
+│       ├── data/          # Библиотека оборудования, примеры, подписи
+│       └── types/         # Типы TypeScript
+├── backend/               # API симуляции: FastAPI + Python
+│   └── app/
+│       ├── services/      # Движок симуляции (engine.py)
+│       └── main.py        # REST-эндпоинт /api/simulate
+├── docker-compose.yml     # Запуск всего одной командой
+├── run.sh                 # Запуск без Docker
+└── docs/                  # Подробная документация и архив
+```
+
+## 🛠 Технологии
+
+**Frontend:** React 18, TypeScript, Vite, Redux Toolkit, Konva.js, Material-UI.
+**Backend:** FastAPI, Pydantic, Uvicorn.
+
+## 🧪 Тесты
+
+```bash
+cd frontend && npm test     # тесты движка симуляции (Vitest)
+```
+
+## 📖 Дополнительно
+
+- Подробные проектные документы — в `docs/`.
+- Прежние инструкции (устаревшие) сохранены в `docs/archive/`.
+
+---
+
+*Вдохновлено Cisco Packet Tracer · создано для AV-индустрии.*

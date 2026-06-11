@@ -1,258 +1,336 @@
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Set, Optional
+
+
+AUDIO_SOURCES = ('microphone', 'array_microphone', 'wireless_mic')
+VIDEO_SOURCES = ('camera', 'media_player')
+AUDIO_SINKS = ('speaker', 'subwoofer')
+VIDEO_SINKS = ('display', 'projector')
+
+# Сигналы, физически передаваемые по сети/IP (Dante, AV-over-IP).
+IP_SIGNALS = {'network', 'digital_audio'}
+
+SIG_RU = {
+    'analog_audio': 'аналог. аудио',
+    'digital_audio': 'цифр. аудио',
+    'video': 'видео',
+    'hdmi': 'HDMI',
+    'sdi': 'SDI',
+    'network': 'сеть',
+    'control': 'управление',
+    'usb': 'USB',
+}
+
+SINK_RU = {
+    'speaker': 'Колонка',
+    'subwoofer': 'Сабвуфер',
+    'display': 'Дисплей',
+    'projector': 'Проектор',
+}
+
+# Рекомендуемая максимальная длина кабеля (метры) по типу разъёма.
+CABLE_MAX_LENGTH = {
+    'xlr': 100, 'trs': 15, 'speakon': 50, 'hdmi': 15,
+    'sdi': 100, 'cat6': 100, 'rca': 10, 'bnc': 100, 'usb': 5,
+}
+
+
+def signals_compatible(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    return a in IP_SIGNALS and b in IP_SIGNALS
 
 
 class SimulationEngine:
+    """Движок симуляции сигнальных трактов AV-системы.
+
+    Точный аналог frontend/src/sim/engine.ts — результаты должны совпадать
+    независимо от того, где выполнен расчёт (сервер или браузер).
     """
-    Core simulation engine for AVTrainer
-    Simulates signal flow through AV equipment
-    """
-    
+
     def __init__(self):
         self.devices: Dict[str, Dict] = {}
         self.connections: List[Dict] = []
-        
+
     def load_topology(self, devices: List, connections: List):
-        """Load devices and connections into the engine"""
-        # Convert to dict for easy lookup
         self.devices = {d.id if hasattr(d, 'id') else d['id']: d for d in devices}
         self.connections = connections
-        
+
     def run_simulation(self) -> Dict:
-        """Run full system simulation"""
-        # Build signal graph
         graph = self._build_signal_graph()
-        
-        # Simulate audio chains
         audio_flows = self._simulate_audio_chains(graph)
-        
-        # Simulate video chains
         video_flows = self._simulate_video_chains(graph)
-        
-        # Check for issues
-        warnings = self._check_warnings()
-        errors = self._check_errors()
-        
+        warnings, errors = self._check_issues()
         return {
             "valid": len(errors) == 0,
             "signal_flows": audio_flows + video_flows,
             "warnings": warnings,
             "errors": errors,
         }
-    
+
+    # ------- Граф -------
     def _build_signal_graph(self) -> Dict[str, List[Dict]]:
-        """Build directed graph of signal flow"""
-        graph = {}
-        
+        graph: Dict[str, List[Dict]] = {}
         for conn in self.connections:
-            # Handle both object and dict connections
-            from_device = getattr(conn, 'from_device', None) or conn.get('from', {}).get('device')
-            to_device = getattr(conn, 'to_device', None) or conn.get('to', {}).get('device')
-            from_port = getattr(conn, 'from_port', None) or conn.get('from', {}).get('port')
-            to_port = getattr(conn, 'to_port', None) or conn.get('to', {}).get('port')
-            
+            from_device = conn.get('from', {}).get('device')
+            to_device = conn.get('to', {}).get('device')
+            from_port = conn.get('from', {}).get('port')
+            to_port = conn.get('to', {}).get('port')
             if not from_device:
                 continue
-                
-            if from_device not in graph:
-                graph[from_device] = []
-            
-            graph[from_device].append({
+            graph.setdefault(from_device, []).append({
                 'to': to_device,
                 'from_port': from_port,
                 'to_port': to_port,
-                'cable_type': getattr(conn, 'cable_type', conn.get('cable_type')),
             })
-        
         return graph
-    
+
+    def _next_hop(self, graph: Dict, node: str) -> Optional[str]:
+        hops = graph.get(node)
+        if not hops:
+            return None
+        return hops[0]['to']
+
+    # ------- Аудио -------
     def _simulate_audio_chains(self, graph: Dict) -> List[Dict]:
-        """Simulate audio signal paths"""
         flows = []
-        
-        # Find audio sources (microphones)
-        sources = [
-            dev_id for dev_id, dev in self.devices.items()
-            if self._get_device_type(dev) == 'microphone'
-        ]
-        
-        for source_id in sources:
-            signal_level = -60.0  # Mic level in dBu
-            path = [source_id]
-            
-            # Trace signal path
-            current = source_id
+        for dev_id, dev in self.devices.items():
+            if self._type(dev) not in AUDIO_SOURCES:
+                continue
+            level = -50.0 if self._type(dev) == 'wireless_mic' else -60.0
+            path = [dev_id]
+            current = dev_id
             visited: Set[str] = set()
-            
-            while current and current not in visited:
+            while current not in visited:
                 visited.add(current)
-                
-                if current not in graph:
+                nxt = self._next_hop(graph, current)
+                if not nxt or nxt not in self.devices:
                     break
-                
-                # Get next device
-                next_hops = graph[current]
-                if not next_hops:
-                    break
-                
-                next_hop = next_hops[0]  # Simplified: take first connection
-                next_device_id = next_hop['to']
-                
-                if not next_device_id:
-                    break
-                
-                # Process signal through device
-                device = self.devices[next_device_id]
-                signal_level = self._process_audio_signal(device, signal_level)
-                
-                path.append(next_device_id)
-                current = next_device_id
-            
-            # Determine status
-            status = 'ok' if -10 <= signal_level <= 10 else 'warning'
-            
+                level = self._process_audio(self.devices[nxt], level)
+                path.append(nxt)
+                current = nxt
             flows.append({
                 'type': 'audio',
-                'source': source_id,
+                'source': dev_id,
                 'path': path,
-                'final_level_db': signal_level,
-                'status': status,
+                'final_level_db': round(level, 1),
+                'status': 'ok' if -10 <= level <= 10 else 'warning',
             })
-        
         return flows
-    
-    def _process_audio_signal(self, device, input_level: float) -> float:
-        """Process audio signal through a device"""
-        output_level = input_level
-        
-        device_type = self._get_device_type(device)
-        properties = self._get_device_properties(device)
-        
-        if device_type == 'mixer':
-            gain = properties.get('gain', 0) or properties.get('master_gain', 0)
-            output_level += gain
-            
-        elif device_type == 'amplifier':
-            gain = properties.get('gain', 20)
-            output_level += gain
-            
-        elif device_type == 'speaker':
-            # Speaker doesn't change signal level (it converts to acoustic)
-            pass
-        
-        return output_level
-    
+
+    def _process_audio(self, device, level: float) -> float:
+        t = self._type(device)
+        p = self._props(device)
+        if t == 'mixer':
+            return level + (p.get('gain') if p.get('gain') is not None else p.get('master_gain', 0))
+        if t == 'amplifier':
+            return level + p.get('gain', 20)
+        if t == 'dsp':
+            return level + p.get('gain', 0)
+        return level
+
+    # ------- Видео -------
     def _simulate_video_chains(self, graph: Dict) -> List[Dict]:
-        """Simulate video signal paths"""
         flows = []
-        
-        # Find video sources
-        sources = [
-            dev_id for dev_id, dev in self.devices.items()
-            if self._get_device_type(dev) in ['camera']
-        ]
-        
-        for source_id in sources:
-            source_device = self.devices[source_id]
-            properties = self._get_device_properties(source_device)
-            resolution = properties.get('resolution', '1920x1080')
-            
-            path = self._trace_path(source_id, graph, 'video')
-            
+        for dev_id, dev in self.devices.items():
+            if self._type(dev) not in VIDEO_SOURCES:
+                continue
+            resolution = self._props(dev).get('resolution', '1920x1080')
+            path = [dev_id]
+            current = dev_id
+            visited: Set[str] = set()
+            while current not in visited:
+                visited.add(current)
+                nxt = self._next_hop(graph, current)
+                if not nxt or nxt not in self.devices:
+                    break
+                res_out = self._props(self.devices[nxt]).get('resolution_out')
+                if res_out:
+                    resolution = res_out
+                path.append(nxt)
+                current = nxt
             flows.append({
                 'type': 'video',
-                'source': source_id,
+                'source': dev_id,
                 'path': path,
                 'resolution': resolution,
                 'status': 'ok',
             })
-        
         return flows
-    
-    def _trace_path(self, start: str, graph: Dict, signal_type: str) -> List[str]:
-        """Trace signal path of specific type"""
-        path = [start]
-        current = start
-        visited: Set[str] = set()
-        
-        while current and current not in visited:
-            visited.add(current)
-            
-            if current not in graph:
-                break
-            
-            connections = graph[current]
-            if not connections:
-                break
-            
-            next_hop = connections[0]
-            current = next_hop['to']
-            if current:
-                path.append(current)
-        
-        return path
-    
-    def _check_warnings(self) -> List[Dict]:
-        """Check for configuration warnings"""
-        warnings = []
-        
-        # Check phantom power for condenser mics
-        for device_id, device in self.devices.items():
-            if self._get_device_type(device) == 'microphone':
-                properties = self._get_device_properties(device)
-                specs = self._get_device_specs(device)
-                
-                if specs.get('requires_phantom', False):
-                    # Check if phantom power is enabled
-                    if not properties.get('phantom_power', False):
+
+    # ------- Проверки -------
+    def _check_issues(self):
+        warnings: List[Dict] = []
+        errors: List[Dict] = []
+
+        # Фантомное питание
+        for dev_id, dev in self.devices.items():
+            if self._specs(dev).get('requires_phantom') and self._props(dev).get('phantom_power') is False:
+                warnings.append({
+                    'type': 'phantom_power',
+                    'device': dev_id,
+                    'message': (
+                        'Конденсаторному микрофону требуется фантомное питание (+48V)'
+                        if self._type(dev) == 'microphone'
+                        else 'Устройству требуется фантомное питание (+48V)'
+                    ),
+                    'severity': 'medium',
+                })
+
+        # Несовместимость сигналов на соединении
+        for conn in self.connections:
+            f = conn.get('from', {})
+            t = conn.get('to', {})
+            from_sig = self._port_signal(f.get('device'), f.get('port'))
+            to_sig = self._port_signal(t.get('device'), t.get('port'))
+            if from_sig and to_sig and not signals_compatible(from_sig, to_sig):
+                errors.append({
+                    'type': 'signal_mismatch',
+                    'device': f.get('device'),
+                    'message': f"Несовместимые сигналы: {SIG_RU.get(from_sig, from_sig)} → {SIG_RU.get(to_sig, to_sig)}",
+                    'severity': 'high',
+                })
+
+        # Активные/пассивные АС и сабвуферы относительно усилителя
+        for dev_id, dev in self.devices.items():
+            if self._type(dev) not in AUDIO_SINKS:
+                continue
+            active = self._props(dev).get('active')
+            for conn in self._incoming(dev_id):
+                from_dev = self.devices.get(conn.get('from', {}).get('device'))
+                if not from_dev:
+                    continue
+                if active is True and self._type(from_dev) == 'amplifier':
+                    errors.append({
+                        'type': 'active_on_amp',
+                        'device': dev_id,
+                        'message': f"{SINK_RU[self._type(dev)]} «{self._model(dev)}» активный — его нельзя подключать к выходу усилителя, подайте линейный сигнал",
+                        'severity': 'high',
+                    })
+                elif active is False and self._type(from_dev) != 'amplifier':
+                    errors.append({
+                        'type': 'passive_no_amp',
+                        'device': dev_id,
+                        'message': f"{SINK_RU[self._type(dev)]} «{self._model(dev)}» пассивный — ему требуется усилитель мощности",
+                        'severity': 'high',
+                    })
+
+        # Питание PoE
+        for dev_id, dev in self.devices.items():
+            needs_poe = self._specs(dev).get('requires_poe') or self._props(dev).get('requires_poe')
+            if not needs_poe:
+                continue
+            for conn in self._incident(dev_id):
+                other_id = conn['from']['device'] if conn['to']['device'] == dev_id else conn['to']['device']
+                other = self.devices.get(other_id)
+                if other and self._type(other) == 'network_switch' and self._props(other).get('poe') is False:
+                    warnings.append({
+                        'type': 'no_poe',
+                        'device': dev_id,
+                        'message': f"«{self._model(dev)}» требует питания PoE, но коммутатор «{self._model(other)}» его не подаёт",
+                        'severity': 'medium',
+                    })
+
+        # Бюджет мощности: усилитель → пассивные АС
+        for amp_id, amp in self.devices.items():
+            if self._type(amp) != 'amplifier':
+                continue
+            amp_w = self._props(amp).get('power_watts', 0)
+            min_ohm = self._props(amp).get('min_impedance_ohms', 4)
+            by_port: Dict[str, List] = {}
+            for conn in self.connections:
+                if conn.get('from', {}).get('device') != amp_id:
+                    continue
+                sink = self.devices.get(conn.get('to', {}).get('device'))
+                if not sink:
+                    continue
+                if self._type(sink) in ('speaker', 'subwoofer') and self._props(sink).get('active') is False:
+                    by_port.setdefault(conn['from']['port'], []).append(sink)
+            for spks in by_port.values():
+                impedances = [self._props(s).get('impedance_ohms', 8) for s in spks]
+                parallel = 1 / sum(1 / z for z in impedances)
+                load = round(parallel, 1)
+                total = sum(self._props(s).get('power_handling_watts', 0) for s in spks)
+                if parallel + 1e-9 < min_ohm:
+                    errors.append({
+                        'type': 'impedance_low',
+                        'device': amp_id,
+                        'message': f"Нагрузка {load} Ω на «{self._model(amp)}» ниже минимума {min_ohm} Ω — риск перегрузки и срабатывания защиты",
+                        'severity': 'high',
+                    })
+                if total > 0 and amp_w > 0:
+                    if amp_w > total * 2:
                         warnings.append({
-                            'type': 'phantom_power',
-                            'device': device_id,
-                            'message': 'Condenser microphone requires phantom power',
+                            'type': 'power_over',
+                            'device': amp_id,
+                            'message': f"Усилитель {amp_w} Вт мощнее суммарной мощности АС {total} Вт — риск повреждения на высокой громкости",
                             'severity': 'medium',
                         })
-        
-        return warnings
-    
-    def _check_errors(self) -> List[Dict]:
-        """Check for critical errors"""
-        errors = []
-        
-        # Check for devices without input
-        for device_id, device in self.devices.items():
-            device_type = self._get_device_type(device)
-            
-            if device_type in ['speaker', 'display', 'projector']:
-                if not self._has_input_connection(device_id):
-                    errors.append({
-                        'type': 'no_input',
-                        'device': device_id,
-                        'message': f'{device_type} has no input connection',
-                    })
-        
-        return errors
-    
-    def _has_input_connection(self, device_id: str) -> bool:
-        """Check if device has input connection"""
+                    elif amp_w * 2 < total:
+                        warnings.append({
+                            'type': 'power_under',
+                            'device': amp_id,
+                            'message': f"Усилитель {amp_w} Вт недостаточен для АС {total} Вт — возможен клиппинг",
+                            'severity': 'medium',
+                        })
+
+        # Длина кабеля
         for conn in self.connections:
-            to_device = getattr(conn, 'to_device', None) or conn.get('to', {}).get('device')
-            if to_device == device_id:
-                return True
-        return False
-    
-    def _get_device_type(self, device) -> str:
-        """Get device type from device object or dict"""
-        if hasattr(device, 'type'):
-            return device.type
-        return device.get('type', '')
-    
-    def _get_device_properties(self, device) -> Dict:
-        """Get device properties"""
-        if hasattr(device, 'properties'):
-            return device.properties
-        return device.get('properties', {})
-    
-    def _get_device_specs(self, device) -> Dict:
-        """Get device specs"""
+            cable = conn.get('cable_type')
+            length = conn.get('cable_length', 0)
+            max_len = CABLE_MAX_LENGTH.get(cable, 100)
+            if length and length > max_len:
+                warnings.append({
+                    'type': 'cable_length',
+                    'device': conn.get('from', {}).get('device'),
+                    'message': f"Кабель {str(cable).upper()} {length} м превышает рекомендуемые {max_len} м — возможны потери сигнала",
+                    'severity': 'low',
+                })
+
+        # Приёмник без входного подключения
+        for dev_id, dev in self.devices.items():
+            t = self._type(dev)
+            if t in (AUDIO_SINKS + VIDEO_SINKS) and not self._incoming(dev_id):
+                errors.append({
+                    'type': 'no_input',
+                    'device': dev_id,
+                    'message': f"{SINK_RU.get(t, t)} «{self._model(dev)}» не подключён ко входному сигналу",
+                    'severity': 'high',
+                })
+
+        return warnings, errors
+
+    # ------- Вспомогательное -------
+    def _incoming(self, dev_id: str) -> List[Dict]:
+        return [c for c in self.connections if c.get('to', {}).get('device') == dev_id]
+
+    def _incident(self, dev_id: str) -> List[Dict]:
+        return [
+            c for c in self.connections
+            if c.get('to', {}).get('device') == dev_id or c.get('from', {}).get('device') == dev_id
+        ]
+
+    def _port_signal(self, dev_id, port_id) -> Optional[str]:
+        dev = self.devices.get(dev_id)
+        if not dev:
+            return None
+        for p in self._ports(dev):
+            if (p.get('id') if isinstance(p, dict) else getattr(p, 'id', None)) == port_id:
+                return p.get('signal_type') if isinstance(p, dict) else getattr(p, 'signal_type', None)
+        return None
+
+    def _type(self, device) -> str:
+        return device.type if hasattr(device, 'type') else device.get('type', '')
+
+    def _model(self, device) -> str:
+        return device.model if hasattr(device, 'model') else device.get('model', '')
+
+    def _props(self, device) -> Dict:
+        return device.properties if hasattr(device, 'properties') else device.get('properties', {}) or {}
+
+    def _specs(self, device) -> Dict:
         if hasattr(device, 'specs'):
-            return getattr(device, 'specs', {})
-        return device.get('specs', {})
+            return getattr(device, 'specs', {}) or {}
+        return device.get('specs', {}) or {}
+
+    def _ports(self, device) -> List:
+        return device.ports if hasattr(device, 'ports') else device.get('ports', []) or []
