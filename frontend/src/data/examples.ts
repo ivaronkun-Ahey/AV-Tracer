@@ -75,4 +75,23 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       };
     },
   },
+  {
+    id: 'av-over-ip',
+    name: 'Видео по сети (AV-over-IP)',
+    description: 'Камера → кодер → декодер → дисплей',
+    build: () => {
+      const cam = instantiate('panasonic-aw-ue150', 'ip_cam', 720, 60);
+      const enc = instantiate('crestron-nvx-enc', 'ip_enc', 720, 240);
+      const dec = instantiate('crestron-nvx-dec', 'ip_dec', 720, 420);
+      const display = instantiate('samsung-qm85r', 'ip_disp', 720, 600);
+      return {
+        devices: [cam, enc, dec, display],
+        connections: [
+          connect(['ip_cam', 'hdmi_out'], ['ip_enc', 'hdmi_in'], 'hdmi'),
+          connect(['ip_enc', 'network_out'], ['ip_dec', 'network_in'], 'cat6'),
+          connect(['ip_dec', 'hdmi_out'], ['ip_disp', 'hdmi_in_1'], 'hdmi'),
+        ],
+      };
+    },
+  },
 ];

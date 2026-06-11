@@ -1,5 +1,5 @@
-export type SignalType = 'analog_audio' | 'digital_audio' | 'video' | 'hdmi' | 'sdi' | 'network' | 'control';
-export type CableType = 'xlr' | 'trs' | 'speakon' | 'hdmi' | 'sdi' | 'cat6' | 'rca' | 'bnc';
+export type SignalType = 'analog_audio' | 'digital_audio' | 'video' | 'hdmi' | 'sdi' | 'network' | 'control' | 'usb';
+export type CableType = 'xlr' | 'trs' | 'speakon' | 'hdmi' | 'sdi' | 'cat6' | 'rca' | 'bnc' | 'usb';
 export type PortDirection = 'input' | 'output' | 'bidirectional';
 export type DeviceCategory = 'audio' | 'video' | 'network' | 'control';
 

@@ -4,17 +4,27 @@ import { CableType, SignalType } from '../types/device.types';
 export const DEVICE_TYPE_LABELS: Record<string, string> = {
   microphone: 'Микрофон',
   array_microphone: 'Микрофонный массив',
+  wireless_mic: 'Радиосистема (микрофон)',
   mixer: 'Микшер',
   amplifier: 'Усилитель',
   speaker: 'Акустическая система',
+  subwoofer: 'Сабвуфер',
+  di_box: 'DI-бокс',
+  audio_interface: 'Аудиоинтерфейс',
   camera: 'Камера',
   display: 'Дисплей',
   projector: 'Проектор',
   switcher: 'Видеокоммутатор',
   scaler: 'Масштабатор',
+  media_player: 'Медиаплеер',
+  encoder: 'AV-over-IP кодер',
+  decoder: 'AV-over-IP декодер',
+  video_recorder: 'Видеорекордер',
   network_switch: 'Сетевой коммутатор',
   controller: 'Контроллер',
   dsp: 'Аудиопроцессор (DSP)',
+  wireless_ap: 'Точка доступа Wi-Fi',
+  touch_panel: 'Сенсорная панель',
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -29,12 +39,20 @@ export const SUBCATEGORY_LABELS: Record<string, string> = {
   'Mixers & Consoles': 'Микшеры и пульты',
   Amplifiers: 'Усилители',
   Speakers: 'Акустические системы',
+  Subwoofers: 'Сабвуферы',
+  'Wireless Systems': 'Радиосистемы',
+  'DI Boxes & Interfaces': 'DI-боксы и интерфейсы',
   Cameras: 'Камеры',
   'Displays & Projectors': 'Дисплеи и проекторы',
   'Switchers & Processors': 'Коммутаторы и процессоры',
+  'Media Players': 'Медиаплееры',
+  'AV-over-IP': 'AV-over-IP (кодеры/декодеры)',
+  'Recording & Streaming': 'Запись и стриминг',
   'Network Switches': 'Сетевые коммутаторы',
   'Audio Network': 'Сетевое аудио (Dante)',
   'Control Systems': 'Системы управления',
+  'Wireless & Access Points': 'Точки доступа Wi-Fi',
+  'Touch Panels': 'Панели управления',
 };
 
 export const SIGNAL_LABELS: Record<SignalType, string> = {
@@ -45,6 +63,7 @@ export const SIGNAL_LABELS: Record<SignalType, string> = {
   sdi: 'SDI',
   network: 'Сеть',
   control: 'Управление',
+  usb: 'USB',
 };
 
 export const DIRECTION_LABELS: Record<string, string> = {
@@ -93,6 +112,32 @@ export const PROPERTY_LABELS: Record<string, string> = {
   pad: 'Аттенюатор (дБ)',
   power: 'Мощность (Вт)',
   impedance: 'Сопротивление (Ω)',
+  // Радиосистемы
+  frequency_band: 'Диапазон частот',
+  battery_hours: 'Время работы (ч)',
+  diversity: 'Diversity-приём',
+  // Аудиоинтерфейсы
+  sample_rate: 'Частота дискретизации (кГц)',
+  bit_depth: 'Разрядность (бит)',
+  // Сабвуферы / пассивные АС
+  passive: 'Пассивный',
+  crossover_hz: 'Частота кроссовера (Гц)',
+  power_handling_watts: 'Допустимая мощность (Вт)',
+  max_spl_db: 'Макс. SPL (дБ)',
+  // Медиаплееры / запись
+  storage_gb: 'Накопитель (ГБ)',
+  hdr: 'HDR',
+  format: 'Формат записи',
+  loop_out: 'Сквозной выход',
+  // AV-over-IP / стриминг
+  codec: 'Кодек',
+  bitrate_mbps: 'Битрейт (Мбит/с)',
+  latency_ms: 'Задержка (мс)',
+  // Сеть и управление
+  screen_size_in: 'Диагональ экрана (")',
+  wifi_standard: 'Стандарт Wi-Fi',
+  max_clients: 'Макс. клиентов',
+  requires_poe: 'Питание PoE',
 };
 
 export function deviceTypeLabel(type: string): string {

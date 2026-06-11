@@ -19,6 +19,7 @@ import {
   outputPorts,
   portLocalX,
   signalColor,
+  signalsCompatible,
   deviceEmoji,
 } from './deviceGeometry';
 
@@ -80,7 +81,7 @@ const DeviceNode: React.FC<DeviceNodeProps> = ({ device }) => {
       dispatch(cancelConnection());
       return;
     }
-    if (sourceSignal && port.signal_type !== sourceSignal) {
+    if (sourceSignal && !signalsCompatible(sourceSignal, port.signal_type)) {
       dispatch(showToast({ message: 'Несовместимые сигналы: эти порты нельзя соединить', severity: 'error' }));
       return;
     }
@@ -94,8 +95,10 @@ const DeviceNode: React.FC<DeviceNodeProps> = ({ device }) => {
   const renderPort = (port: Port, role: 'input' | 'output', count: number, idx: number) => {
     const x = portLocalX(count, idx);
     const y = role === 'input' ? 0 : NODE_H;
-    const compatible = role === 'input' && connectionInProgress && sourceSignal === port.signal_type;
-    const incompatible = role === 'input' && connectionInProgress && sourceSignal !== port.signal_type;
+    const compatible =
+      role === 'input' && !!connectionInProgress && !!sourceSignal && signalsCompatible(sourceSignal, port.signal_type);
+    const incompatible =
+      role === 'input' && !!connectionInProgress && !compatible;
     return (
       <React.Fragment key={`${role}-${port.id}`}>
         {compatible && <Circle x={x} y={y} radius={PORT_R + 4} fill="#3DDC8455" />}

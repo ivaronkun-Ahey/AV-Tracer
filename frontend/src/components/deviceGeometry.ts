@@ -47,26 +47,46 @@ const SIGNAL_COLORS: Record<string, string> = {
   sdi: '#00C8FF',
   network: '#00C853',
   control: '#9C27B0',
+  usb: '#E91E63',
 };
 
 export function signalColor(signalType: string): string {
   return SIGNAL_COLORS[signalType] || '#0066CC';
 }
 
+// Сигналы, которые физически передаются по сети/IP (один кабель cat6).
+const IP_SIGNALS = new Set(['network', 'digital_audio']);
+
+/** Можно ли соединить два порта по типу сигнала. */
+export function signalsCompatible(a: string, b: string): boolean {
+  if (a === b) return true;
+  return IP_SIGNALS.has(a) && IP_SIGNALS.has(b);
+}
+
 const DEVICE_EMOJI: Record<string, string> = {
   microphone: '🎤',
   array_microphone: '🎙️',
+  wireless_mic: '📡',
   mixer: '🎛️',
   amplifier: '📢',
   speaker: '🔊',
+  subwoofer: '🔉',
+  di_box: '🔌',
+  audio_interface: '🎚️',
   camera: '📹',
   display: '🖥️',
   projector: '📽️',
   switcher: '🔀',
   scaler: '⚡',
+  media_player: '▶️',
+  encoder: '📤',
+  decoder: '📥',
+  video_recorder: '📼',
   network_switch: '🌐',
   controller: '🎮',
   dsp: '💠',
+  wireless_ap: '📶',
+  touch_panel: '📱',
 };
 
 export function deviceEmoji(type: string): string {

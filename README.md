@@ -82,14 +82,23 @@ npm run dev
 
 ---
 
-## 📚 Библиотека оборудования (30+ устройств)
+## 📚 Библиотека оборудования (48 устройств)
 
-- **Аудио:** микрофоны (Shure, AKG, Sennheiser), микшеры (Allen & Heath, Yamaha,
-  Behringer), усилители (Crown, QSC), акустические системы (JBL, EV, QSC, Yorkville),
-  сетевое аудио Dante (Shure MXA910, QSC Core).
-- **Видео:** камеры (Sony, Panasonic, PTZOptics), дисплеи и проекторы (Samsung, LG,
-  Epson, Barco), коммутаторы и масштабаторы (Extron, Blackmagic, Roland, Kramer).
-- **Сеть и управление:** коммутаторы (Cisco, Netgear), контроллеры (Crestron, Extron).
+- **Аудио:** микрофоны (Shure, AKG, Sennheiser), радиосистемы (Shure ULXD4,
+  Sennheiser EW-DX), микшеры (Allen & Heath, Yamaha, Behringer), усилители
+  (Crown, QSC), акустические системы и сабвуферы (JBL, EV, QSC, Yorkville),
+  DI-боксы и аудиоинтерфейсы (Radial, Behringer, Focusrite), сетевое аудио
+  Dante (Shure MXA910, QSC Core).
+- **Видео:** камеры (Sony, Panasonic, PTZOptics), дисплеи и проекторы (Samsung,
+  LG, Epson, Barco), коммутаторы и масштабаторы (Extron, Blackmagic, Roland,
+  Kramer), медиаплееры (BrightSign, Apple TV), AV-over-IP кодеры/декодеры
+  (Crestron NVX, Extron NAV), запись и стриминг (Blackmagic HyperDeck, Teradek).
+- **Сеть и управление:** коммутаторы (Cisco, Netgear), контроллеры (Crestron,
+  Extron), точки доступа Wi-Fi (Ubiquiti), сенсорные панели (Crestron, Extron).
+
+Симуляция проверяет схему: совместимость сигналов на соединениях, активные/
+пассивные АС относительно усилителя, питание PoE, фантомное питание,
+масштабирование разрешения видео и наличие сигнала на приёмниках.
 
 ---
 
