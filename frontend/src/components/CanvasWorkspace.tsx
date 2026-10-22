@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Line } from 'react-konva';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { Stage, Layer, Path } from 'react-konva';
 import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useAppSelector, useAppDispatch } from '../store';
@@ -12,6 +12,7 @@ import {
   setZoom,
   setPan,
   resetView,
+  requestFit,
   showToast,
   undo,
   redo,
@@ -21,7 +22,20 @@ import ConnectionLine from './ConnectionLine';
 import EmptyState from './EmptyState';
 import ZoomControls from './ZoomControls';
 import { createDevice, findEquipment } from '../data/equipment';
-import { outputPortPos, signalColor, nodeWidth, NODE_H } from './deviceGeometry';
+import { deviceTags } from '../data/deviceTags';
+import {
+  portAnchor,
+  signalColor,
+  nodeSize,
+  routeCable,
+  roundedPath,
+  diagramBounds,
+  snapToGrid,
+  GRID,
+} from './deviceGeometry';
+import { CanvasRenderContext, DARK_PALETTE } from './canvasTheme';
+
+const FIT_PADDING = 60;
 
 const CanvasWorkspace: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -35,6 +49,15 @@ const CanvasWorkspace: React.FC = () => {
   const connectionInProgress = useAppSelector((s) => s.canvas.connectionInProgress);
   const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
   const selectedConnectionId = useAppSelector((s) => s.canvas.selectedConnectionId);
+  const snap = useAppSelector((s) => s.canvas.snapToGrid);
+  const showCableLabels = useAppSelector((s) => s.canvas.showCableLabels);
+  const fitRequest = useAppSelector((s) => s.canvas.fitRequest);
+
+  const tags = useMemo(() => deviceTags(devices), [devices]);
+  const renderContext = useMemo(
+    () => ({ palette: DARK_PALETTE, interactive: true, showCableLabels }),
+    [showCableLabels]
+  );
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
@@ -53,6 +76,34 @@ const CanvasWorkspace: React.FC = () => {
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
+
+  // «Вписать в экран»: масштаб и панорама так, чтобы была видна вся схема
+  const devicesRef = useRef(devices);
+  devicesRef.current = devices;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  useEffect(() => {
+    if (fitRequest === 0) return;
+    const bounds = diagramBounds(devicesRef.current, connectionsRef.current);
+    if (!bounds) return;
+    const scale = Math.max(
+      0.2,
+      Math.min(
+        1.25,
+        (dimensions.width - FIT_PADDING * 2) / bounds.width,
+        (dimensions.height - FIT_PADDING * 2) / bounds.height
+      )
+    );
+    dispatch(setZoom(scale));
+    dispatch(
+      setPan({
+        x: dimensions.width / 2 - (bounds.x + bounds.width / 2) * scale,
+        y: dimensions.height / 2 - (bounds.y + bounds.height / 2) * scale,
+      })
+    );
+    // Реагируем только на новый запрос, а не на каждое изменение размеров
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitRequest, dispatch]);
 
   // Клавиатура: удаление и отмена
   useEffect(() => {
@@ -103,8 +154,10 @@ const CanvasWorkspace: React.FC = () => {
 
     const id = `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const newDevice = createDevice(tpl, id, { x, y });
-    // Центр устройства — под курсором
-    newDevice.position = { x: x - nodeWidth(newDevice) / 2, y: y - NODE_H / 2 };
+    // Центр устройства — под курсором (с привязкой к сетке)
+    const size = nodeSize(newDevice);
+    const pos = { x: x - size.width / 2, y: y - size.height / 2 };
+    newDevice.position = snap ? { x: snapToGrid(pos.x), y: snapToGrid(pos.y) } : pos;
     dispatch(addDevice(newDevice));
   };
 
@@ -151,13 +204,14 @@ const CanvasWorkspace: React.FC = () => {
     if (rel) setPointer({ x: rel.x, y: rel.y });
   }, [connectionInProgress]);
 
-  // Координаты источника для «резиновой» линии соединения
-  let rubberStart: { x: number; y: number } | null = null;
+  // «Резиновая» трасса от выбранного выхода к курсору
+  let rubberPath: string | null = null;
   let rubberColor = '#3DDC84';
   if (connectionInProgress) {
     const src = devices.find((d) => d.id === connectionInProgress.fromDeviceId);
-    if (src) {
-      rubberStart = outputPortPos(src, connectionInProgress.fromPortId);
+    const start = src ? portAnchor(src, connectionInProgress.fromPortId, connections) : null;
+    if (src && start) {
+      rubberPath = roundedPath(routeCable(start, { ...pointer, side: 'left' }));
       const port = src.ports.find((p) => p.id === connectionInProgress.fromPortId);
       rubberColor = signalColor(port?.signal_type || 'control');
     }
@@ -174,7 +228,7 @@ const CanvasWorkspace: React.FC = () => {
         height: '100%',
         background: '#11161f',
         backgroundImage: `linear-gradient(#1b2230 1px, transparent 1px), linear-gradient(90deg, #1b2230 1px, transparent 1px)`,
-        backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
+        backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
         overflow: 'hidden',
       }}
@@ -194,25 +248,21 @@ const CanvasWorkspace: React.FC = () => {
         onDragEnd={handleStageDragEnd}
         onMouseMove={handleMouseMove}
       >
-        <Layer>
-          {connections.map((c) => (
-            <ConnectionLine key={c.id} connection={c} devices={devices} />
-          ))}
+        <CanvasRenderContext.Provider value={renderContext}>
+          <Layer>
+            {connections.map((c) => (
+              <ConnectionLine key={c.id} connection={c} devices={devices} />
+            ))}
 
-          {rubberStart && (
-            <Line
-              points={[rubberStart.x, rubberStart.y, pointer.x, pointer.y]}
-              stroke={rubberColor}
-              strokeWidth={2.5}
-              dash={[8, 6]}
-              listening={false}
-            />
-          )}
+            {rubberPath && (
+              <Path data={rubberPath} stroke={rubberColor} strokeWidth={2.5} dash={[8, 6]} listening={false} />
+            )}
 
-          {devices.map((d) => (
-            <DeviceNode key={d.id} device={d} />
-          ))}
-        </Layer>
+            {devices.map((d) => (
+              <DeviceNode key={d.id} device={d} tag={tags[d.id]} />
+            ))}
+          </Layer>
+        </CanvasRenderContext.Provider>
       </Stage>
 
       {devices.length === 0 && <EmptyState />}
@@ -233,7 +283,7 @@ const CanvasWorkspace: React.FC = () => {
             pointerEvents: 'none',
           }}
         >
-          Выберите входной порт другого устройства · Esc — отмена
+          Выберите вход другого устройства (порты слева) · Esc — отмена
         </div>
       )}
 
@@ -242,6 +292,7 @@ const CanvasWorkspace: React.FC = () => {
         onZoomIn={() => dispatch(setZoom(zoom * 1.2))}
         onZoomOut={() => dispatch(setZoom(zoom / 1.2))}
         onReset={() => dispatch(resetView())}
+        onFit={() => dispatch(requestFit())}
       />
     </div>
   );

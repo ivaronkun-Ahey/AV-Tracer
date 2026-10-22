@@ -52,11 +52,10 @@ const ConnectionInspector: React.FC = () => {
         Соединение
       </Typography>
 
-      <Chip
-        label={SIGNAL_LABELS[sig as keyof typeof SIGNAL_LABELS] || sig}
-        size="small"
-        sx={{ bgcolor: color, color: '#fff', mb: 2 }}
-      />
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Chip label={SIGNAL_LABELS[sig as keyof typeof SIGNAL_LABELS] || sig} size="small" sx={{ bgcolor: color, color: '#fff' }} />
+        {conn.label && <Chip label={`Маркировка ${conn.label}`} size="small" variant="outlined" />}
+      </Stack>
 
       <Stack spacing={1} sx={{ mb: 2 }}>
         {endpoint(fromDev, fromPort, 'Источник')}

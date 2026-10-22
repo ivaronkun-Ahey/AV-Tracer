@@ -23,7 +23,8 @@ import {
 } from '../features/canvasSlice';
 import { Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
-import { signalColor } from './deviceGeometry';
+import { signalColor, categoryColor } from './deviceGeometry';
+import { deviceTags } from '../data/deviceTags';
 import ConnectionInspector from './ConnectionInspector';
 import NumberField from './NumberField';
 
@@ -35,6 +36,7 @@ const PropertiesPanel: React.FC = () => {
   const connections = useAppSelector((s) => s.canvas.connections);
 
   const device = devices.find((d) => d.id === selectedDeviceId);
+  const tag = device ? deviceTags(devices)[device.id] : '';
 
   if (!device) {
     // Выбран кабель — показываем инспектор соединения
@@ -71,11 +73,10 @@ const PropertiesPanel: React.FC = () => {
 
       {/* Шапка устройства */}
       <Box sx={{ mb: 2 }}>
-        <Chip
-          label={deviceTypeLabel(device.type)}
-          size="small"
-          sx={{ mb: 1, bgcolor: signalColor(device.ports[0]?.signal_type || 'control'), color: '#fff' }}
-        />
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+          <Chip label={deviceTypeLabel(device.type)} size="small" sx={{ bgcolor: categoryColor(device.category), color: '#fff' }} />
+          <Chip label={tag} size="small" variant="outlined" />
+        </Stack>
         <Typography variant="h6" sx={{ fontSize: '1.15rem', lineHeight: 1.2 }}>
           {device.model}
         </Typography>

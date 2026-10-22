@@ -16,20 +16,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import { EQUIPMENT_LIBRARY } from '../data/equipment';
 import { EquipmentTemplate } from '../types/device.types';
 import { CATEGORY_LABELS, SUBCATEGORY_LABELS, deviceTypeLabel } from '../data/labels';
-import { deviceEmoji } from './deviceGeometry';
-
-function categoryColor(category: string): string {
-  switch (category) {
-    case 'audio':
-      return '#FF6B00';
-    case 'video':
-      return '#00B8D4';
-    case 'network':
-      return '#00C853';
-    default:
-      return '#0066CC';
-  }
-}
+import DeviceIcon from './DeviceIcon';
+import { categoryColor } from './deviceGeometry';
 
 const EquipmentLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,13 +133,15 @@ const EquipmentLibrary: React.FC = () => {
                       }}
                     >
                       <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 }, display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Box sx={{ fontSize: 22, lineHeight: 1 }}>{deviceEmoji(item.type)}</Box>
+                        <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                          <DeviceIcon type={item.type} color={categoryColor(item.category)} />
+                        </Box>
                         <Box sx={{ minWidth: 0 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
                             {item.model}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                            {item.manufacturer} · {item.ports.length} порт.
+                            {deviceTypeLabel(item.type)} · {item.manufacturer} · {item.ports.length} порт.
                           </Typography>
                         </Box>
                       </CardContent>

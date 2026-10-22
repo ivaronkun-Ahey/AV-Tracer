@@ -86,6 +86,8 @@ describe('canvasSlice', () => {
     state = connect(state, 'amp', 'p', 's1', 'in');
     state = connect(state, 'amp', 'p', 's2', 'in');
     expect(state.connections).toHaveLength(2);
+    // Каждый новый кабель получает маркировку для схемы и кабельного журнала
+    expect(state.connections.map((c) => c.label)).toEqual(['A-001', 'A-002']);
   });
 
   it('Ethernet-порт, занятый как вход, нельзя использовать как выход', () => {

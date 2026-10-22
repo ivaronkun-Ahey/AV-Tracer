@@ -12,6 +12,10 @@ import {
   Tooltip,
   IconButton,
   Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
@@ -19,6 +23,16 @@ import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ImageIcon from '@mui/icons-material/Image';
+import PrintIcon from '@mui/icons-material/Print';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import CableIcon from '@mui/icons-material/Cable';
+import CheckIcon from '@mui/icons-material/Check';
+import ExportStage from './ExportStage';
 import EquipmentLibrary from './EquipmentLibrary';
 import CanvasWorkspace from './CanvasWorkspace';
 import PropertiesPanel from './PropertiesPanel';
@@ -30,9 +44,23 @@ import {
   undo,
   redo,
   setSimulation,
+  setDevicePositions,
+  requestFit,
+  toggleSnapToGrid,
+  toggleCableLabels,
   showToast,
   clearToast,
 } from '../features/canvasSlice';
+import { computeAutoLayout } from '../features/autoLayout';
+import {
+  bomCsv,
+  cableScheduleCsv,
+  dateStamp,
+  documentationHtml,
+  downloadDataUrl,
+  downloadFile,
+} from '../features/exportDocs';
+import { EXAMPLE_PROJECTS } from '../data/examples';
 import { runSimulation } from '../sim/engine';
 import { parseProjectDoc } from '../data/projectSchema';
 import { SimulationResult } from '../types/device.types';
@@ -53,6 +81,76 @@ const MainLayout: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // О недоступности сервера сообщаем один раз, а не при каждом запуске
   const serverNoticeShown = useRef(false);
+  const snapToGrid = useAppSelector((s) => s.canvas.snapToGrid);
+  const showCableLabels = useAppSelector((s) => s.canvas.showCableLabels);
+  const [menu, setMenu] = useState<{ name: 'examples' | 'view' | 'export'; anchor: HTMLElement } | null>(null);
+  const [layoutRunning, setLayoutRunning] = useState(false);
+  const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
+  const openMenu = (name: 'examples' | 'view' | 'export') => (e: React.MouseEvent<HTMLElement>) =>
+    setMenu({ name, anchor: e.currentTarget });
+  const closeMenu = () => setMenu(null);
+
+  const handleExample = (id: string) => {
+    closeMenu();
+    const example = EXAMPLE_PROJECTS.find((x) => x.id === id);
+    if (!example) return;
+    if (devices.length > 0 && !confirm('Заменить текущую схему примером? Отменить можно через Ctrl+Z.')) return;
+    dispatch(loadProject(example.build()));
+    dispatch(requestFit());
+    dispatch(showToast({ message: `Загружен пример: ${example.name}`, severity: 'success' }));
+  };
+
+  const handleAutoLayout = async () => {
+    if (devices.length === 0) return;
+    setLayoutRunning(true);
+    try {
+      dispatch(setDevicePositions(await computeAutoLayout(devices, connections)));
+      dispatch(requestFit());
+      dispatch(showToast({ message: 'Схема упорядочена по ходу сигнала · Ctrl+Z — вернуть как было', severity: 'success' }));
+    } catch {
+      dispatch(showToast({ message: 'Не удалось упорядочить схему', severity: 'error' }));
+    } finally {
+      setLayoutRunning(false);
+    }
+  };
+
+  const startExport = (kind: 'png' | 'print' | 'bom' | 'cables') => {
+    closeMenu();
+    if (devices.length === 0) {
+      dispatch(showToast({ message: 'Схема пуста — экспортировать нечего', severity: 'info' }));
+      return;
+    }
+    if (kind === 'bom') {
+      downloadFile(`av-tracer-bom-${dateStamp()}.csv`, bomCsv(devices));
+      return;
+    }
+    if (kind === 'cables') {
+      downloadFile(`av-tracer-cables-${dateStamp()}.csv`, cableScheduleCsv(devices, connections));
+      return;
+    }
+    // Окно для печати открываем сразу по клику, иначе браузер заблокирует всплывающее окно
+    const win = kind === 'print' ? window.open('', '_blank') : null;
+    if (kind === 'print' && !win) {
+      dispatch(showToast({ message: 'Браузер заблокировал новое окно — разрешите всплывающие окна', severity: 'warning' }));
+      return;
+    }
+    win?.document.write('<p style="font-family: sans-serif">Готовим документ…</p>');
+    setExportJob({ kind, win });
+  };
+
+  const finishExport = (dataUrl: string) => {
+    const job = exportJob;
+    setExportJob(null);
+    if (!job) return;
+    if (job.kind === 'png') {
+      downloadDataUrl(`av-tracer-schema-${dateStamp()}.png`, dataUrl);
+      dispatch(showToast({ message: 'Схема сохранена в PNG', severity: 'success' }));
+    } else if (job.win) {
+      job.win.document.open();
+      job.win.document.write(documentationHtml(dataUrl, devices, connections));
+      job.win.document.close();
+    }
+  };
 
   const handleClear = () => {
     if (devices.length === 0) return;
@@ -177,6 +275,30 @@ const MainLayout: React.FC = () => {
             </span>
           </Tooltip>
 
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#30363d' }} />
+
+          <Button size="small" startIcon={<AutoAwesomeIcon />} onClick={openMenu('examples')}>
+            Примеры
+          </Button>
+          <Tooltip title="Расставить устройства по ходу сигнала: источники слева, приёмники справа">
+            <span>
+              <Button
+                size="small"
+                startIcon={<AccountTreeIcon />}
+                onClick={handleAutoLayout}
+                disabled={devices.length === 0 || layoutRunning}
+              >
+                Упорядочить
+              </Button>
+            </span>
+          </Tooltip>
+          <Button size="small" startIcon={<VisibilityIcon />} onClick={openMenu('view')}>
+            Вид
+          </Button>
+          <Button size="small" startIcon={<FileDownloadIcon />} onClick={openMenu('export')}>
+            Экспорт
+          </Button>
+
           <Box sx={{ flexGrow: 1 }} />
 
           <Button
@@ -252,11 +374,67 @@ const MainLayout: React.FC = () => {
         <span>Устройств: {devices.length}</span>
         <span>Соединений: {connections.length}</span>
         <span style={{ marginLeft: 'auto', opacity: 0.7 }}>
-          Удалить — Delete · Отмена — Esc · Зум — колесо мыши
+          Входы — слева, выходы — справа · Удалить — Delete · Отмена — Esc · Зум — колесо мыши
         </span>
       </Box>
 
       <SimulationPanel />
+
+      <Menu anchorEl={menu?.anchor} open={menu?.name === 'examples'} onClose={closeMenu}>
+        {EXAMPLE_PROJECTS.map((ex) => (
+          <MenuItem key={ex.id} onClick={() => handleExample(ex.id)}>
+            <ListItemText primary={ex.name} secondary={ex.description} />
+          </MenuItem>
+        ))}
+      </Menu>
+
+      <Menu anchorEl={menu?.anchor} open={menu?.name === 'view'} onClose={closeMenu}>
+        <MenuItem onClick={() => dispatch(toggleSnapToGrid())}>
+          <ListItemIcon>{snapToGrid && <CheckIcon fontSize="small" />}</ListItemIcon>
+          <ListItemText primary="Привязка к сетке" />
+        </MenuItem>
+        <MenuItem onClick={() => dispatch(toggleCableLabels())}>
+          <ListItemIcon>{showCableLabels && <CheckIcon fontSize="small" />}</ListItemIcon>
+          <ListItemText primary="Подписи кабелей" secondary="маркировка и длина" />
+        </MenuItem>
+      </Menu>
+
+      <Menu anchorEl={menu?.anchor} open={menu?.name === 'export'} onClose={closeMenu}>
+        <MenuItem onClick={() => startExport('png')}>
+          <ListItemIcon>
+            <ImageIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Схема (PNG)" secondary="светлая тема, по габаритам схемы" />
+        </MenuItem>
+        <MenuItem onClick={() => startExport('print')}>
+          <ListItemIcon>
+            <PrintIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Документация (печать / PDF)" secondary="схема со штампом, спецификация, кабели" />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => startExport('bom')}>
+          <ListItemIcon>
+            <TableChartIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Спецификация оборудования (CSV)" />
+        </MenuItem>
+        <MenuItem onClick={() => startExport('cables')}>
+          <ListItemIcon>
+            <CableIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Кабельный журнал (CSV)" />
+        </MenuItem>
+      </Menu>
+
+      {exportJob && (
+        <ExportStage
+          devices={devices}
+          connections={connections}
+          showCableLabels={showCableLabels}
+          onRendered={finishExport}
+        />
+      )}
 
       <Snackbar
         open={!!toast}

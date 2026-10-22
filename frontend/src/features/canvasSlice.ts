@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
 import { Device, Connection, SimulationResult, CableType, PropValue } from '../types/device.types';
 import { isPortBusy, findPort } from './connectionRules';
+import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
 
 interface CanvasDoc {
   devices: Device[];
@@ -18,6 +19,11 @@ interface CanvasState {
   } | null;
   zoom: number;
   pan: { x: number; y: number };
+  // Настройки вида
+  snapToGrid: boolean;
+  showCableLabels: boolean;
+  /** Счётчик запросов «вписать схему в экран» (холст реагирует на изменение). */
+  fitRequest: number;
   // История для undo/redo
   past: CanvasDoc[];
   future: CanvasDoc[];
@@ -40,6 +46,9 @@ export const initialCanvasState: CanvasState = {
   connectionInProgress: null,
   zoom: 1,
   pan: { x: 0, y: 0 },
+  snapToGrid: true,
+  showCableLabels: true,
+  fitRequest: 0,
   past: [],
   future: [],
   lastHistoryKey: null,
@@ -110,6 +119,15 @@ const canvasSlice = createSlice({
       pushHistory(state, { keepSimulation: true });
       state.selectedDeviceId = action.payload;
       state.selectedConnectionId = null;
+    },
+
+    /** Новые позиции сразу для многих устройств (автораскладка) — один шаг отмены. */
+    setDevicePositions: (state, action: PayloadAction<Record<string, { x: number; y: number }>>) => {
+      pushHistory(state, { keepSimulation: true });
+      for (const d of state.devices) {
+        const p = action.payload[d.id];
+        if (p) d.position = p;
+      }
     },
 
     /** Позиция во время перетаскивания — без записи в историю, кабели следуют за устройством. */
@@ -188,6 +206,7 @@ const canvasSlice = createSlice({
           cable_type: action.payload.cableType,
           cable_length: 10,
         };
+        newConnection.label = nextCableLabel(state.connections, connectionPrefix(state.devices, newConnection));
         state.connections.push(newConnection);
         state.connectionInProgress = null;
       }
@@ -226,7 +245,7 @@ const canvasSlice = createSlice({
     ) => {
       pushHistory(state);
       state.devices = action.payload.devices;
-      state.connections = action.payload.connections;
+      state.connections = withCableLabels(action.payload.devices, action.payload.connections);
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.connectionInProgress = null;
@@ -275,6 +294,18 @@ const canvasSlice = createSlice({
       state.pan = { x: 0, y: 0 };
     },
 
+    requestFit: (state) => {
+      state.fitRequest += 1;
+    },
+
+    toggleSnapToGrid: (state) => {
+      state.snapToGrid = !state.snapToGrid;
+    },
+
+    toggleCableLabels: (state) => {
+      state.showCableLabels = !state.showCableLabels;
+    },
+
     setSimulation: (state, action: PayloadAction<SimulationResult>) => {
       state.simulation = action.payload;
       state.showSimulation = true;
@@ -303,6 +334,7 @@ export const {
   updateDevicePosition,
   beginDeviceDrag,
   moveDevice,
+  setDevicePositions,
   updateDeviceProperty,
   selectDevice,
   deselectAll,
@@ -319,6 +351,9 @@ export const {
   setZoom,
   setPan,
   resetView,
+  requestFit,
+  toggleSnapToGrid,
+  toggleCableLabels,
   setSimulation,
   setShowSimulation,
   showToast,

@@ -60,6 +60,8 @@ export interface Connection {
   };
   cable_type: CableType;
   cable_length: number;
+  /** Маркировка кабеля для схемы и кабельного журнала, например A-001. */
+  label?: string;
 }
 
 export interface Project {

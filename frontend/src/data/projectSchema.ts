@@ -9,6 +9,7 @@ import {
   PropValue,
 } from '../types/device.types';
 import { withTemplateDefaults } from './equipment';
+import { withCableLabels } from './cableLabels';
 
 /**
  * Схема файла проекта. Проверяет и открытые пользователем файлы, и автосейв:
@@ -53,6 +54,7 @@ const connectionSchema = z.object({
   to: endpointSchema,
   cable_type: z.enum(CABLE_TYPES),
   cable_length: z.number().nonnegative().default(10),
+  label: z.string().optional(),
 });
 
 const projectDocSchema = z.object({
@@ -87,7 +89,7 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
   return {
     ok: true,
     devices: devices.map(withTemplateDefaults),
-    connections: valid,
+    connections: withCableLabels(devices, valid),
     droppedConnections: connections.length - valid.length,
   };
 }
