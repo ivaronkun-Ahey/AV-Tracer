@@ -1,0 +1,930 @@
+{
+  "name": "wiring-errors",
+  "description": "Два кабеля в один вход, занятый Ethernet-порт, несовместимые сигналы, длинный HDMI, активная АС на усилителе, пассивная без усилителя, неподключённый дисплей",
+  "devices": [
+    {
+      "id": "m1",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM58",
+      "full_name": "Shure SM58 Dynamic Microphone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "phantom_power": false,
+        "sensitivity": -54.5
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid",
+        "frequency_response": "50Hz-15kHz"
+      }
+    },
+    {
+      "id": "m2",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM58",
+      "full_name": "Shure SM58 Dynamic Microphone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "phantom_power": false,
+        "sensitivity": -54.5
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid",
+        "frequency_response": "50Hz-15kHz"
+      }
+    },
+    {
+      "id": "mix",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Allen & Heath",
+      "model": "SQ-5",
+      "full_name": "Allen & Heath SQ-5 Digital Mixer",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_7",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_8",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_9",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_10",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_11",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_12",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_13",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_14",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_15",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_16",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_l",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_r",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_1",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_2",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_3",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_4",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_5",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_6",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_7",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_8",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_9",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_10",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "channels": 16,
+        "input_gain": 45,
+        "master_gain": 0,
+        "phantom_power": true
+      }
+    },
+    {
+      "id": "lg",
+      "type": "display",
+      "category": "video",
+      "manufacturer": "LG",
+      "model": "75UP8000",
+      "full_name": "LG 75\" 4K UHD Display",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "size_inches": 75,
+        "resolution": "3840x2160",
+        "brightness_nits": 300
+      }
+    },
+    {
+      "id": "cam",
+      "type": "camera",
+      "category": "video",
+      "manufacturer": "PTZOptics",
+      "model": "20X-SDI",
+      "full_name": "PTZOptics 20X-SDI Camera",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_out",
+          "type": "bnc",
+          "direction": "output",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "resolution": "1920x1080",
+        "fps": 60,
+        "ptz": true,
+        "zoom": 20
+      }
+    },
+    {
+      "id": "tv",
+      "type": "display",
+      "category": "video",
+      "manufacturer": "Samsung",
+      "model": "QM85R",
+      "full_name": "Samsung QM85R 85\" 4K Display",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "size_inches": 85,
+        "resolution": "3840x2160",
+        "brightness_nits": 500
+      }
+    },
+    {
+      "id": "amp",
+      "type": "amplifier",
+      "category": "audio",
+      "manufacturer": "Crown",
+      "model": "XLS 2502",
+      "full_name": "Crown XLS 2502 Power Amplifier",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_l",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_r",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_l",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_r",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 775,
+        "gain": 20,
+        "mode": "stereo",
+        "min_impedance_ohms": 4
+      }
+    },
+    {
+      "id": "active",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "QSC",
+      "model": "K12.2",
+      "full_name": "QSC K12.2 Active Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_thru",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 2000,
+        "impedance_ohms": 8,
+        "active": true
+      }
+    },
+    {
+      "id": "passive",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Yorkville",
+      "model": "YX15P",
+      "full_name": "Yorkville YX15P Passive Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "speakon_in",
+          "type": "speakon",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "impedance_ohms": 8,
+        "active": false,
+        "power_handling_watts": 400
+      }
+    },
+    {
+      "id": "lonely",
+      "type": "projector",
+      "category": "video",
+      "manufacturer": "Barco",
+      "model": "F90-4K13",
+      "full_name": "Barco F90-4K13 Laser Projector",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_in",
+          "type": "bnc",
+          "direction": "input",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "lumens": 13000,
+        "resolution": "4096x2160",
+        "throw_ratio": 1.2
+      }
+    },
+    {
+      "id": "sw",
+      "type": "network_switch",
+      "category": "network",
+      "manufacturer": "Netgear",
+      "model": "GS728TP",
+      "full_name": "Netgear GS728TP PoE Switch",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "eth_1",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_2",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_3",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_4",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_5",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_6",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_7",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_8",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_9",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_10",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_11",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_12",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_13",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_14",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_15",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_16",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_17",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_18",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_19",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_20",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_21",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_22",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_23",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_24",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "ports": 24,
+        "poe": true,
+        "managed": true
+      }
+    },
+    {
+      "id": "cp3",
+      "type": "controller",
+      "category": "control",
+      "manufacturer": "Crestron",
+      "model": "CP3",
+      "full_name": "Crestron CP3 Control Processor",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "eth",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "control": true,
+        "programming": "simpl"
+      }
+    },
+    {
+      "id": "panel",
+      "type": "touch_panel",
+      "category": "control",
+      "manufacturer": "Crestron",
+      "model": "TSW-770",
+      "full_name": "Crestron TSW-770 Touch Panel",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "eth",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "screen_size_in": 7
+      },
+      "specs": {
+        "requires_poe": true
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "m1",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "mix",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "m2",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "mix",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_l"
+      },
+      "to": {
+        "device": "lg",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c4",
+      "from": {
+        "device": "cam",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "tv",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 30
+    },
+    {
+      "id": "c5",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_r"
+      },
+      "to": {
+        "device": "amp",
+        "port": "xlr_in_l"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c6",
+      "from": {
+        "device": "amp",
+        "port": "speakon_out_l"
+      },
+      "to": {
+        "device": "active",
+        "port": "xlr_in"
+      },
+      "cable_type": "speakon",
+      "cable_length": 10
+    },
+    {
+      "id": "c7",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_1"
+      },
+      "to": {
+        "device": "passive",
+        "port": "speakon_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c8",
+      "from": {
+        "device": "cp3",
+        "port": "eth"
+      },
+      "to": {
+        "device": "sw",
+        "port": "eth_1"
+      },
+      "cable_type": "cat6",
+      "cable_length": 10
+    },
+    {
+      "id": "c9",
+      "from": {
+        "device": "sw",
+        "port": "eth_1"
+      },
+      "to": {
+        "device": "panel",
+        "port": "eth"
+      },
+      "cable_type": "cat6",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "m1",
+        "path": [
+          "m1",
+          "mix",
+          "amp",
+          "active"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "m1",
+        "path": [
+          "m1",
+          "mix",
+          "passive"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "passive",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "m2",
+        "path": [
+          "m2",
+          "mix",
+          "amp",
+          "active"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "m2",
+        "path": [
+          "m2",
+          "mix",
+          "passive"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "passive",
+        "status": "ok"
+      },
+      {
+        "type": "video",
+        "source": "cam",
+        "path": [
+          "cam",
+          "tv"
+        ],
+        "resolution": "1920x1080",
+        "status": "ok"
+      }
+    ],
+    "warnings": [
+      {
+        "type": "cable_length",
+        "device": "cam",
+        "connection": "c4",
+        "message": "Кабель HDMI 30 м превышает рекомендуемые 15 м — возможны потери сигнала",
+        "severity": "low"
+      }
+    ],
+    "errors": [
+      {
+        "type": "signal_mismatch",
+        "device": "mix",
+        "connection": "c3",
+        "message": "Несовместимые сигналы: аналог. аудио → HDMI",
+        "severity": "high"
+      },
+      {
+        "type": "input_busy",
+        "device": "mix",
+        "connection": "c2",
+        "message": "К порту XLR IN 1 устройства «SQ-5» подключено несколько кабелей (2) — в разъём входит только один",
+        "severity": "high"
+      },
+      {
+        "type": "input_busy",
+        "device": "sw",
+        "connection": "c9",
+        "message": "К порту ETH 1 устройства «GS728TP» подключено несколько кабелей (2) — в разъём входит только один",
+        "severity": "high"
+      },
+      {
+        "type": "active_on_amp",
+        "device": "active",
+        "message": "«K12.2» — активная колонка со встроенным усилителем: к выходу усилителя мощности не подключается, подайте линейный сигнал",
+        "severity": "high"
+      },
+      {
+        "type": "passive_no_amp",
+        "device": "passive",
+        "message": "«YX15P» — пассивная колонка: нужен усилитель мощности",
+        "severity": "high"
+      },
+      {
+        "type": "no_input",
+        "device": "lonely",
+        "message": "На вход «F90-4K13» (проектор) не подан сигнал — подключите источник",
+        "severity": "high"
+      }
+    ]
+  }
+}

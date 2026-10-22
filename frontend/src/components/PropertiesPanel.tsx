@@ -21,10 +21,11 @@ import {
   removeConnection,
   showToast,
 } from '../features/canvasSlice';
-import { Device } from '../types/device.types';
+import { Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
 import { signalColor } from './deviceGeometry';
 import ConnectionInspector from './ConnectionInspector';
+import NumberField from './NumberField';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -59,7 +60,7 @@ const PropertiesPanel: React.FC = () => {
     (c) => c.from.device === device.id || c.to.device === device.id
   );
 
-  const onChange = (property: string, value: any) =>
+  const onChange = (property: string, value: PropValue) =>
     dispatch(updateDeviceProperty({ id: device.id, property, value }));
 
   return (
@@ -176,7 +177,7 @@ const PropertiesPanel: React.FC = () => {
 };
 
 /** Универсальный рендер параметров: тип поля выбирается по типу значения. */
-function renderProperties(device: Device, onChange: (prop: string, value: any) => void) {
+function renderProperties(device: Device, onChange: (prop: string, value: PropValue) => void) {
   const props = device.properties || {};
   const keys = Object.keys(props);
   if (keys.length === 0) {
@@ -202,25 +203,25 @@ function renderProperties(device: Device, onChange: (prop: string, value: any) =
         }
         if (typeof value === 'number') {
           return (
-            <TextField
-              key={key}
+            <NumberField
+              key={`${device.id}:${key}`}
               label={propertyLabel(key)}
-              type="number"
               size="small"
               fullWidth
               value={value}
-              onChange={(e) => onChange(key, Number(e.target.value))}
+              onCommit={(n) => onChange(key, n)}
               sx={{ mb: 1.5 }}
             />
           );
         }
         return (
           <TextField
-            key={key}
+            key={`${device.id}:${key}`}
             label={propertyLabel(key)}
             size="small"
             fullWidth
-            value={String(value)}
+            value={Array.isArray(value) ? value.join(', ') : String(value ?? '')}
+            disabled={Array.isArray(value)}
             onChange={(e) => onChange(key, e.target.value)}
             sx={{ mb: 1.5 }}
           />

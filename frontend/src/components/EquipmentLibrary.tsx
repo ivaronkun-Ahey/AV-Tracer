@@ -14,6 +14,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import { EQUIPMENT_LIBRARY } from '../data/equipment';
+import { EquipmentTemplate } from '../types/device.types';
 import { CATEGORY_LABELS, SUBCATEGORY_LABELS, deviceTypeLabel } from '../data/labels';
 import { deviceEmoji } from './deviceGeometry';
 
@@ -34,8 +35,8 @@ const EquipmentLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string>('audio');
 
-  const handleDragStart = (equipment: any) => (e: React.DragEvent) => {
-    e.dataTransfer.setData('deviceData', JSON.stringify(equipment));
+  const handleDragStart = (equipment: EquipmentTemplate) => (e: React.DragEvent) => {
+    e.dataTransfer.setData('equipmentId', equipment._id);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -102,7 +103,10 @@ const EquipmentLibrary: React.FC = () => {
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' },
               }}
             >
-              <Typography sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', fontWeight: 600 }}>
+              <Typography
+                component="div"
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', fontWeight: 600 }}
+              >
                 <span>{category.icon}</span>
                 {CATEGORY_LABELS[category.category] || category.name}
                 <Chip

@@ -1,23 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import canvasReducer from '../features/canvasSlice';
-import type { Device, Connection } from '../types/device.types';
+import canvasReducer, { initialCanvasState } from '../features/canvasSlice';
+import { parseProjectDoc } from '../data/projectSchema';
 
 const STORAGE_KEY = 'av-tracer:autosave';
 
-interface PersistedDoc {
-  devices: Device[];
-  connections: Connection[];
-}
-
-function loadPersisted(): PersistedDoc | undefined {
+function loadPersisted() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return undefined;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.devices) && Array.isArray(parsed.connections)) {
-      return { devices: parsed.devices, connections: parsed.connections };
-    }
+    const parsed = parseProjectDoc(JSON.parse(raw));
+    if (parsed.ok) return { devices: parsed.devices, connections: parsed.connections };
   } catch {
     /* поврежденный автосейв игнорируем */
   }
@@ -30,26 +23,8 @@ export const store = configureStore({
   reducer: {
     canvas: canvasReducer,
   },
-  preloadedState: persisted
-    ? { canvas: { ...defaultUiState(), devices: persisted.devices, connections: persisted.connections } }
-    : undefined,
+  preloadedState: persisted ? { canvas: { ...initialCanvasState, ...persisted } } : undefined,
 });
-
-// Минимальные значения UI-полей для корректной гидратации стора из автосейва.
-function defaultUiState() {
-  return {
-    selectedDeviceId: null,
-    selectedConnectionId: null,
-    connectionInProgress: null,
-    zoom: 1,
-    pan: { x: 0, y: 0 },
-    past: [],
-    future: [],
-    simulation: null,
-    showSimulation: false,
-    toast: null,
-  };
-}
 
 // Автосохранение схемы в localStorage (с лёгким троттлингом).
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

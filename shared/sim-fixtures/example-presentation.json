@@ -1,0 +1,202 @@
+{
+  "name": "example-presentation",
+  "description": "Пример «Презентационная видеосистема»: Камера → видеокоммутатор → проектор",
+  "devices": [
+    {
+      "id": "ex_cam",
+      "type": "camera",
+      "category": "video",
+      "manufacturer": "Sony",
+      "model": "SRG-300H",
+      "full_name": "Sony SRG-300H PTZ Camera",
+      "position": {
+        "x": 420,
+        "y": 80
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_out",
+          "type": "bnc",
+          "direction": "output",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "resolution": "1920x1080",
+        "fps": 60,
+        "ptz": true,
+        "zoom": 30
+      }
+    },
+    {
+      "id": "ex_sw",
+      "type": "switcher",
+      "category": "video",
+      "manufacturer": "Extron",
+      "model": "IN1608",
+      "full_name": "Extron IN1608 Scaling Presentation Switcher",
+      "position": {
+        "x": 420,
+        "y": 280
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_4",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_5",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_6",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_7",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_8",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_1",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_2",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "inputs": 8,
+        "outputs": 2,
+        "switching_type": "seamless",
+        "max_resolution": "1920x1200",
+        "resolution_out": "1920x1080"
+      }
+    },
+    {
+      "id": "ex_proj",
+      "type": "projector",
+      "category": "video",
+      "manufacturer": "Epson",
+      "model": "EB-L1755U",
+      "full_name": "Epson EB-L1755U Laser Projector",
+      "position": {
+        "x": 420,
+        "y": 500
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_in",
+          "type": "bnc",
+          "direction": "input",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "lumens": 15000,
+        "resolution": "1920x1200",
+        "throw_ratio": 1.5
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "ex_cam",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "ex_sw",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "ex_sw",
+        "port": "hdmi_out_1"
+      },
+      "to": {
+        "device": "ex_proj",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "signal_flows": [
+      {
+        "type": "video",
+        "source": "ex_cam",
+        "path": [
+          "ex_cam",
+          "ex_sw",
+          "ex_proj"
+        ],
+        "resolution": "1920x1080",
+        "status": "ok"
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  }
+}

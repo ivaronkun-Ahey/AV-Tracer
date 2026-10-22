@@ -1,0 +1,301 @@
+{
+  "name": "example-basic-pa",
+  "description": "Пример «Базовая система оповещения (PA)»: Микрофон → микшер → активная акустическая система",
+  "devices": [
+    {
+      "id": "ex_mic",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM58",
+      "full_name": "Shure SM58 Dynamic Microphone",
+      "position": {
+        "x": 120,
+        "y": 80
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "phantom_power": false,
+        "sensitivity": -54.5
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid",
+        "frequency_response": "50Hz-15kHz"
+      }
+    },
+    {
+      "id": "ex_mixer",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Allen & Heath",
+      "model": "SQ-5",
+      "full_name": "Allen & Heath SQ-5 Digital Mixer",
+      "position": {
+        "x": 120,
+        "y": 280
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_7",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_8",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_9",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_10",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_11",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_12",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_13",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_14",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_15",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_16",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_l",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_r",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_1",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_2",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_3",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_4",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_5",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_6",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_7",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_8",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_9",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_10",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "channels": 16,
+        "input_gain": 45,
+        "master_gain": 0,
+        "phantom_power": true
+      }
+    },
+    {
+      "id": "ex_speaker",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "JBL",
+      "model": "PRX815W",
+      "full_name": "JBL PRX815W Powered Speaker",
+      "position": {
+        "x": 120,
+        "y": 500
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_thru",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 1500,
+        "impedance_ohms": 8,
+        "active": true
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "ex_mic",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "ex_mixer",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "ex_mixer",
+        "port": "xlr_out_l"
+      },
+      "to": {
+        "device": "ex_speaker",
+        "port": "xlr_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "ex_mic",
+        "path": [
+          "ex_mic",
+          "ex_mixer",
+          "ex_speaker"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "ex_speaker",
+        "status": "ok"
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  }
+}

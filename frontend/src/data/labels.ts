@@ -75,9 +75,10 @@ export const DIRECTION_LABELS: Record<string, string> = {
 /** Подпись параметра устройства в панели свойств. */
 export const PROPERTY_LABELS: Record<string, string> = {
   gain: 'Усиление (дБ)',
+  input_gain: 'Усиление входа (дБ)',
   master_gain: 'Общее усиление (дБ)',
   phantom_power: 'Фантомное питание +48V',
-  sensitivity: 'Чувствительность (дБ)',
+  sensitivity: 'Чувствительность (дБВ/Па)',
   channels: 'Каналов',
   power_watts: 'Мощность (Вт)',
   impedance_ohms: 'Сопротивление (Ω)',
@@ -96,6 +97,7 @@ export const PROPERTY_LABELS: Record<string, string> = {
   streaming: 'Стриминг',
   scaling: 'Масштабирование',
   resolution_out: 'Выходное разрешение',
+  max_resolution: 'Макс. разрешение входа',
   ports: 'Портов',
   poe: 'PoE (питание по сети)',
   managed: 'Управляемый',

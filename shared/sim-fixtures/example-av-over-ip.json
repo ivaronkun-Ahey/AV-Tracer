@@ -1,0 +1,204 @@
+{
+  "name": "example-av-over-ip",
+  "description": "Пример «Видео по сети (AV-over-IP)»: Камера → кодер → декодер → дисплей",
+  "devices": [
+    {
+      "id": "ip_cam",
+      "type": "camera",
+      "category": "video",
+      "manufacturer": "Panasonic",
+      "model": "AW-UE150",
+      "full_name": "Panasonic AW-UE150 4K PTZ Camera",
+      "position": {
+        "x": 720,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_out",
+          "type": "bnc",
+          "direction": "output",
+          "signal_type": "sdi"
+        },
+        {
+          "id": "ip_out",
+          "type": "cat6",
+          "direction": "output",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "resolution": "3840x2160",
+        "fps": 60,
+        "ptz": true,
+        "zoom": 20
+      }
+    },
+    {
+      "id": "ip_enc",
+      "type": "encoder",
+      "category": "video",
+      "manufacturer": "Crestron",
+      "model": "DM-NVX-360 (Enc)",
+      "full_name": "Crestron DM-NVX-360 Encoder",
+      "position": {
+        "x": 720,
+        "y": 240
+      },
+      "ports": [
+        {
+          "id": "hdmi_in",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "network_out",
+          "type": "cat6",
+          "direction": "output",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "codec": "Pixel Perfect",
+        "max_resolution": "3840x2160",
+        "bitrate_mbps": 950,
+        "latency_ms": 1
+      }
+    },
+    {
+      "id": "ip_dec",
+      "type": "decoder",
+      "category": "video",
+      "manufacturer": "Crestron",
+      "model": "DM-NVX-360 (Dec)",
+      "full_name": "Crestron DM-NVX-360 Decoder",
+      "position": {
+        "x": 720,
+        "y": 420
+      },
+      "ports": [
+        {
+          "id": "network_in",
+          "type": "cat6",
+          "direction": "input",
+          "signal_type": "network"
+        },
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "codec": "Pixel Perfect",
+        "max_resolution": "3840x2160",
+        "latency_ms": 1
+      }
+    },
+    {
+      "id": "ip_disp",
+      "type": "display",
+      "category": "video",
+      "manufacturer": "Samsung",
+      "model": "QM85R",
+      "full_name": "Samsung QM85R 85\" 4K Display",
+      "position": {
+        "x": 720,
+        "y": 600
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "size_inches": 85,
+        "resolution": "3840x2160",
+        "brightness_nits": 500
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "ip_cam",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "ip_enc",
+        "port": "hdmi_in"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "ip_enc",
+        "port": "network_out"
+      },
+      "to": {
+        "device": "ip_dec",
+        "port": "network_in"
+      },
+      "cable_type": "cat6",
+      "cable_length": 10
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "ip_dec",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "ip_disp",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "signal_flows": [
+      {
+        "type": "video",
+        "source": "ip_cam",
+        "path": [
+          "ip_cam",
+          "ip_enc",
+          "ip_dec",
+          "ip_disp"
+        ],
+        "resolution": "3840x2160",
+        "status": "ok"
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  }
+}

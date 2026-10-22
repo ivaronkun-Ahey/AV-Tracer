@@ -1,0 +1,3 @@
+# Зависимости для разработки и тестов backend.
+-r requirements.txt
+pytest>=8.3,<10

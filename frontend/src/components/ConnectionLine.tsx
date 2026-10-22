@@ -1,5 +1,6 @@
 import React from 'react';
 import { Line, Circle } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import { Connection, Device } from '../types/device.types';
 import { useAppDispatch, useAppSelector } from '../store';
 import { selectConnection } from '../features/canvasSlice';
@@ -35,7 +36,7 @@ const ConnectionLine: React.FC<ConnectionLineProps> = ({ connection, devices }) 
     toPos.x, toPos.y,
   ];
 
-  const handleSelect = (e: any) => {
+  const handleSelect = (e: KonvaEventObject<Event>) => {
     e.cancelBubble = true;
     dispatch(selectConnection(connection.id));
   };

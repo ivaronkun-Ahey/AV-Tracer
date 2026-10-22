@@ -1,0 +1,158 @@
+{
+  "name": "loops-and-bare-devices",
+  "description": "Петля микшер → DSP → микшер, соединение с несуществующим устройством, устройства без портов",
+  "devices": [
+    {
+      "id": "mic",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Test",
+      "model": "mic",
+      "full_name": "mic",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [],
+      "properties": {
+        "sensitivity": -54.5
+      }
+    },
+    {
+      "id": "mix",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Test",
+      "model": "mix",
+      "full_name": "mix",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [],
+      "properties": {
+        "input_gain": 40,
+        "master_gain": 5
+      }
+    },
+    {
+      "id": "dsp",
+      "type": "dsp",
+      "category": "audio",
+      "manufacturer": "Test",
+      "model": "dsp",
+      "full_name": "dsp",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [],
+      "properties": {
+        "gain": -2
+      }
+    },
+    {
+      "id": "spk",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Test",
+      "model": "spk",
+      "full_name": "spk",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [],
+      "properties": {
+        "active": true
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "mic",
+        "port": "o"
+      },
+      "to": {
+        "device": "mix",
+        "port": "i"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "mix",
+        "port": "o"
+      },
+      "to": {
+        "device": "dsp",
+        "port": "i"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "dsp",
+        "port": "o"
+      },
+      "to": {
+        "device": "mix",
+        "port": "i2"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c4",
+      "from": {
+        "device": "dsp",
+        "port": "o2"
+      },
+      "to": {
+        "device": "spk",
+        "port": "i"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c5",
+      "from": {
+        "device": "mix",
+        "port": "o3"
+      },
+      "to": {
+        "device": "ghost",
+        "port": "i"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "dsp",
+          "spk"
+        ],
+        "final_level_db": -9.3,
+        "level_at": "spk",
+        "status": "ok"
+      }
+    ],
+    "warnings": [],
+    "errors": []
+  }
+}

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
-import { Device, Connection, SimulationResult } from '../types/device.types';
+import { Device, Connection, SimulationResult, CableType, PropValue } from '../types/device.types';
+import { isPortBusy, findPort } from './connectionRules';
 
 interface CanvasDoc {
   devices: Device[];
@@ -20,6 +21,8 @@ interface CanvasState {
   // История для undo/redo
   past: CanvasDoc[];
   future: CanvasDoc[];
+  /** Ключ последней правки: подряд идущие правки одного поля — один шаг отмены. */
+  lastHistoryKey: string | null;
   // Результаты симуляции
   simulation: SimulationResult | null;
   showSimulation: boolean;
@@ -29,7 +32,7 @@ interface CanvasState {
 
 const HISTORY_LIMIT = 50;
 
-const initialState: CanvasState = {
+export const initialCanvasState: CanvasState = {
   devices: [],
   connections: [],
   selectedDeviceId: null,
@@ -39,26 +42,39 @@ const initialState: CanvasState = {
   pan: { x: 0, y: 0 },
   past: [],
   future: [],
+  lastHistoryKey: null,
   simulation: null,
   showSimulation: false,
   toast: null,
 };
 
-/** Снимок текущего документа кладётся в историю перед структурным изменением. */
-function pushHistory(state: CanvasState) {
+interface HistoryOptions {
+  /** Правки с одинаковым ключом подряд (ввод числа по символам) склеиваются в один шаг. */
+  key?: string;
+  /** Перемещение устройства не меняет схему — результат симуляции остаётся актуальным. */
+  keepSimulation?: boolean;
+}
+
+/** Снимок текущего документа кладётся в историю перед изменением. */
+function pushHistory(state: CanvasState, opts: HistoryOptions = {}) {
+  const coalesce = opts.key !== undefined && opts.key === state.lastHistoryKey;
+  state.lastHistoryKey = opts.key ?? null;
+  if (!opts.keepSimulation) {
+    // Любое изменение схемы делает прежний результат симуляции неактуальным
+    state.simulation = null;
+  }
+  if (coalesce) return;
   state.past.push({
     devices: JSON.parse(JSON.stringify(current(state).devices)),
     connections: JSON.parse(JSON.stringify(current(state).connections)),
   });
   if (state.past.length > HISTORY_LIMIT) state.past.shift();
   state.future = [];
-  // Любое изменение делает прежний результат симуляции неактуальным
-  state.simulation = null;
 }
 
 const canvasSlice = createSlice({
   name: 'canvas',
-  initialState,
+  initialState: initialCanvasState,
   reducers: {
     addDevice: (state, action: PayloadAction<Device>) => {
       pushHistory(state);
@@ -82,18 +98,31 @@ const canvasSlice = createSlice({
       state,
       action: PayloadAction<{ id: string; position: { x: number; y: number } }>
     ) => {
-      pushHistory(state);
+      pushHistory(state, { keepSimulation: true });
       const device = state.devices.find((d) => d.id === action.payload.id);
       if (device) {
         device.position = action.payload.position;
       }
     },
 
+    /** Начало перетаскивания: один снимок в историю на всё перемещение. */
+    beginDeviceDrag: (state, action: PayloadAction<string>) => {
+      pushHistory(state, { keepSimulation: true });
+      state.selectedDeviceId = action.payload;
+      state.selectedConnectionId = null;
+    },
+
+    /** Позиция во время перетаскивания — без записи в историю, кабели следуют за устройством. */
+    moveDevice: (state, action: PayloadAction<{ id: string; position: { x: number; y: number } }>) => {
+      const device = state.devices.find((d) => d.id === action.payload.id);
+      if (device) device.position = action.payload.position;
+    },
+
     updateDeviceProperty: (
       state,
-      action: PayloadAction<{ id: string; property: string; value: any }>
+      action: PayloadAction<{ id: string; property: string; value: PropValue }>
     ) => {
-      pushHistory(state);
+      pushHistory(state, { key: `prop:${action.payload.id}:${action.payload.property}` });
       const device = state.devices.find((d) => d.id === action.payload.id);
       if (device) {
         device.properties[action.payload.property] = action.payload.value;
@@ -103,17 +132,20 @@ const canvasSlice = createSlice({
     selectDevice: (state, action: PayloadAction<string>) => {
       state.selectedDeviceId = action.payload;
       state.selectedConnectionId = null;
+      state.lastHistoryKey = null;
     },
 
     deselectAll: (state) => {
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.connectionInProgress = null;
+      state.lastHistoryKey = null;
     },
 
     selectConnection: (state, action: PayloadAction<string>) => {
       state.selectedConnectionId = action.payload;
       state.selectedDeviceId = null;
+      state.lastHistoryKey = null;
     },
 
     startConnection: (
@@ -128,21 +160,32 @@ const canvasSlice = createSlice({
 
     completeConnection: (
       state,
-      action: PayloadAction<{ toDeviceId: string; toPortId: string; cableType: string }>
+      action: PayloadAction<{ toDeviceId: string; toPortId: string; cableType: CableType }>
     ) => {
-      if (state.connectionInProgress) {
+      const pending = state.connectionInProgress;
+      if (pending) {
+        // В занятый вход (или занятый Ethernet-порт) второй кабель не подключается
+        const toPort = findPort(state.devices, action.payload.toDeviceId, action.payload.toPortId);
+        const fromPort = findPort(state.devices, pending.fromDeviceId, pending.fromPortId);
+        if (
+          (toPort && isPortBusy(state.connections, action.payload.toDeviceId, toPort)) ||
+          (fromPort && isPortBusy(state.connections, pending.fromDeviceId, fromPort))
+        ) {
+          state.connectionInProgress = null;
+          return;
+        }
         pushHistory(state);
         const newConnection: Connection = {
-          id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
           from: {
-            device: state.connectionInProgress.fromDeviceId,
-            port: state.connectionInProgress.fromPortId,
+            device: pending.fromDeviceId,
+            port: pending.fromPortId,
           },
           to: {
             device: action.payload.toDeviceId,
             port: action.payload.toPortId,
           },
-          cable_type: action.payload.cableType as any,
+          cable_type: action.payload.cableType,
           cable_length: 10,
         };
         state.connections.push(newConnection);
@@ -163,7 +206,7 @@ const canvasSlice = createSlice({
     },
 
     updateConnectionLength: (state, action: PayloadAction<{ id: string; length: number }>) => {
-      pushHistory(state);
+      pushHistory(state, { key: `len:${action.payload.id}` });
       const conn = state.connections.find((c) => c.id === action.payload.id);
       if (conn) conn.cable_length = Math.max(0, action.payload.length);
     },
@@ -201,6 +244,7 @@ const canvasSlice = createSlice({
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.simulation = null;
+      state.lastHistoryKey = null;
     },
 
     redo: (state) => {
@@ -215,6 +259,7 @@ const canvasSlice = createSlice({
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.simulation = null;
+      state.lastHistoryKey = null;
     },
 
     setZoom: (state, action: PayloadAction<number>) => {
@@ -256,6 +301,8 @@ export const {
   addDevice,
   removeDevice,
   updateDevicePosition,
+  beginDeviceDrag,
+  moveDevice,
   updateDeviceProperty,
   selectDevice,
   deselectAll,

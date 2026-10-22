@@ -1,22 +1,11 @@
 import { Device, Connection, CableType } from '../types/device.types';
-import { getAllEquipment } from './equipment';
+import { createDevice, findEquipment } from './equipment';
 
 /** Создаёт экземпляр устройства из библиотечной карточки по её _id. */
 function instantiate(equipmentId: string, id: string, x: number, y: number): Device {
-  const tpl = getAllEquipment().find((e) => e._id === equipmentId);
+  const tpl = findEquipment(equipmentId);
   if (!tpl) throw new Error(`Неизвестное оборудование: ${equipmentId}`);
-  return {
-    id,
-    type: tpl.type,
-    manufacturer: tpl.manufacturer,
-    model: tpl.model,
-    full_name: tpl.full_name,
-    category: tpl.category,
-    position: { x, y },
-    properties: { ...tpl.default_properties },
-    ports: tpl.ports,
-    specs: (tpl as any).specs,
-  };
+  return createDevice(tpl, id, { x, y });
 }
 
 function connect(
@@ -25,7 +14,7 @@ function connect(
   cable: CableType
 ): Connection {
   return {
-    id: `conn_${from[0]}_${to[0]}_${Math.random().toString(36).substr(2, 5)}`,
+    id: `conn_${from[0]}_${to[0]}_${Math.random().toString(36).slice(2, 7)}`,
     from: { device: from[0], port: from[1] },
     to: { device: to[0], port: to[1] },
     cable_type: cable,

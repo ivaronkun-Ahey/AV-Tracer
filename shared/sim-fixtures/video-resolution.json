@@ -1,0 +1,884 @@
+{
+  "name": "video-resolution",
+  "description": "4K в HD-коммутатор и проектор, масштабатор понижает до 1080p, 4K-плеер через матрицу на WUXGA-проектор",
+  "devices": [
+    {
+      "id": "cam4k",
+      "type": "camera",
+      "category": "video",
+      "manufacturer": "Panasonic",
+      "model": "AW-UE150",
+      "full_name": "Panasonic AW-UE150 4K PTZ Camera",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_out",
+          "type": "bnc",
+          "direction": "output",
+          "signal_type": "sdi"
+        },
+        {
+          "id": "ip_out",
+          "type": "cat6",
+          "direction": "output",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "resolution": "3840x2160",
+        "fps": 60,
+        "ptz": true,
+        "zoom": 20
+      }
+    },
+    {
+      "id": "atem",
+      "type": "switcher",
+      "category": "video",
+      "manufacturer": "Blackmagic Design",
+      "model": "ATEM Mini Pro",
+      "full_name": "Blackmagic ATEM Mini Pro",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_4",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "usb_out",
+          "type": "usb",
+          "direction": "output",
+          "signal_type": "usb"
+        },
+        {
+          "id": "eth",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "inputs": 4,
+        "outputs": 1,
+        "streaming": true,
+        "max_resolution": "1920x1080"
+      }
+    },
+    {
+      "id": "proj",
+      "type": "projector",
+      "category": "video",
+      "manufacturer": "Epson",
+      "model": "EB-L1755U",
+      "full_name": "Epson EB-L1755U Laser Projector",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_in",
+          "type": "bnc",
+          "direction": "input",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "lumens": 15000,
+        "resolution": "1920x1200",
+        "throw_ratio": 1.5
+      }
+    },
+    {
+      "id": "camhd",
+      "type": "camera",
+      "category": "video",
+      "manufacturer": "Sony",
+      "model": "SRG-300H",
+      "full_name": "Sony SRG-300H PTZ Camera",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_out",
+          "type": "bnc",
+          "direction": "output",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "resolution": "1920x1080",
+        "fps": 60,
+        "ptz": true,
+        "zoom": 30
+      }
+    },
+    {
+      "id": "scaler",
+      "type": "scaler",
+      "category": "video",
+      "manufacturer": "Kramer",
+      "model": "VP-558",
+      "full_name": "Kramer VP-558 Presentation Scaler",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "scaling": true,
+        "resolution_out": "1920x1080"
+      }
+    },
+    {
+      "id": "lg",
+      "type": "display",
+      "category": "video",
+      "manufacturer": "LG",
+      "model": "75UP8000",
+      "full_name": "LG 75\" 4K UHD Display",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "size_inches": 75,
+        "resolution": "3840x2160",
+        "brightness_nits": 300
+      }
+    },
+    {
+      "id": "atv",
+      "type": "media_player",
+      "category": "video",
+      "manufacturer": "Apple",
+      "model": "TV 4K",
+      "full_name": "Apple TV 4K (3rd Gen)",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "eth",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "resolution": "3840x2160",
+        "fps": 60,
+        "hdr": true
+      }
+    },
+    {
+      "id": "matrix",
+      "type": "switcher",
+      "category": "video",
+      "manufacturer": "Lightware",
+      "model": "MX2-8x8-HDMI20",
+      "full_name": "Lightware MX2-8x8 HDMI Matrix",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_4",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_5",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_6",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_7",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_8",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_1",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_2",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_3",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_4",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_5",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_6",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_7",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_out_8",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "inputs": 8,
+        "outputs": 8,
+        "switching_type": "matrix",
+        "max_resolution": "3840x2160"
+      }
+    },
+    {
+      "id": "christie",
+      "type": "projector",
+      "category": "video",
+      "manufacturer": "Christie",
+      "model": "DWU1100-GS",
+      "full_name": "Christie DWU1100-GS Laser Projector",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_in",
+          "type": "bnc",
+          "direction": "input",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "lumens": 11000,
+        "resolution": "1920x1200",
+        "throw_ratio": 1.3
+      }
+    },
+    {
+      "id": "barco",
+      "type": "projector",
+      "category": "video",
+      "manufacturer": "Barco",
+      "model": "F90-4K13",
+      "full_name": "Barco F90-4K13 Laser Projector",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "sdi_in",
+          "type": "bnc",
+          "direction": "input",
+          "signal_type": "sdi"
+        }
+      ],
+      "properties": {
+        "lumens": 13000,
+        "resolution": "4096x2160",
+        "throw_ratio": 1.2
+      }
+    },
+    {
+      "id": "sw",
+      "type": "network_switch",
+      "category": "network",
+      "manufacturer": "Netgear",
+      "model": "GS728TP",
+      "full_name": "Netgear GS728TP PoE Switch",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "eth_1",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_2",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_3",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_4",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_5",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_6",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_7",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_8",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_9",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_10",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_11",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_12",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_13",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_14",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_15",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_16",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_17",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_18",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_19",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_20",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_21",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_22",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_23",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        },
+        {
+          "id": "eth_24",
+          "type": "cat6",
+          "direction": "bidirectional",
+          "signal_type": "network"
+        }
+      ],
+      "properties": {
+        "ports": 24,
+        "poe": true,
+        "managed": true
+      }
+    },
+    {
+      "id": "dec",
+      "type": "decoder",
+      "category": "video",
+      "manufacturer": "Crestron",
+      "model": "DM-NVX-360 (Dec)",
+      "full_name": "Crestron DM-NVX-360 Decoder",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "network_in",
+          "type": "cat6",
+          "direction": "input",
+          "signal_type": "network"
+        },
+        {
+          "id": "hdmi_out",
+          "type": "hdmi",
+          "direction": "output",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "codec": "Pixel Perfect",
+        "max_resolution": "3840x2160",
+        "latency_ms": 1
+      }
+    },
+    {
+      "id": "tv",
+      "type": "display",
+      "category": "video",
+      "manufacturer": "Samsung",
+      "model": "QM85R",
+      "full_name": "Samsung QM85R 85\" 4K Display",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "hdmi_in_1",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_2",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        },
+        {
+          "id": "hdmi_in_3",
+          "type": "hdmi",
+          "direction": "input",
+          "signal_type": "hdmi"
+        }
+      ],
+      "properties": {
+        "size_inches": 85,
+        "resolution": "3840x2160",
+        "brightness_nits": 500
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "cam4k",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "atem",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 3
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "atem",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "proj",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 12
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "camhd",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "scaler",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c4",
+      "from": {
+        "device": "scaler",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "lg",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c5",
+      "from": {
+        "device": "atv",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "matrix",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c6",
+      "from": {
+        "device": "matrix",
+        "port": "hdmi_out_1"
+      },
+      "to": {
+        "device": "christie",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c7",
+      "from": {
+        "device": "matrix",
+        "port": "hdmi_out_2"
+      },
+      "to": {
+        "device": "barco",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    },
+    {
+      "id": "c8",
+      "from": {
+        "device": "atv",
+        "port": "eth"
+      },
+      "to": {
+        "device": "sw",
+        "port": "eth_1"
+      },
+      "cable_type": "cat6",
+      "cable_length": 10
+    },
+    {
+      "id": "c9",
+      "from": {
+        "device": "sw",
+        "port": "eth_2"
+      },
+      "to": {
+        "device": "dec",
+        "port": "network_in"
+      },
+      "cable_type": "cat6",
+      "cable_length": 10
+    },
+    {
+      "id": "c10",
+      "from": {
+        "device": "dec",
+        "port": "hdmi_out"
+      },
+      "to": {
+        "device": "tv",
+        "port": "hdmi_in_1"
+      },
+      "cable_type": "hdmi",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": true,
+    "signal_flows": [
+      {
+        "type": "video",
+        "source": "cam4k",
+        "path": [
+          "cam4k",
+          "atem",
+          "proj"
+        ],
+        "resolution": "3840x2160",
+        "status": "warning"
+      },
+      {
+        "type": "video",
+        "source": "camhd",
+        "path": [
+          "camhd",
+          "scaler",
+          "lg"
+        ],
+        "resolution": "1920x1080",
+        "status": "ok"
+      },
+      {
+        "type": "video",
+        "source": "atv",
+        "path": [
+          "atv",
+          "matrix",
+          "christie"
+        ],
+        "resolution": "3840x2160",
+        "status": "warning"
+      },
+      {
+        "type": "video",
+        "source": "atv",
+        "path": [
+          "atv",
+          "matrix",
+          "barco"
+        ],
+        "resolution": "3840x2160",
+        "status": "ok"
+      }
+    ],
+    "warnings": [
+      {
+        "type": "resolution_unsupported",
+        "device": "atem",
+        "message": "«ATEM Mini Pro» принимает до 1920×1080, а источник выдаёт 3840×2160 — понизьте разрешение источника (EDID) или поставьте масштабатор",
+        "severity": "medium"
+      },
+      {
+        "type": "resolution_downscale",
+        "device": "proj",
+        "message": "Сигнал 3840×2160 выше родного разрешения 1920×1200 у «EB-L1755U» — изображение будет уменьшено",
+        "severity": "low"
+      },
+      {
+        "type": "resolution_downscale",
+        "device": "christie",
+        "message": "Сигнал 3840×2160 выше родного разрешения 1920×1200 у «DWU1100-GS» — изображение будет уменьшено",
+        "severity": "low"
+      }
+    ],
+    "errors": []
+  }
+}

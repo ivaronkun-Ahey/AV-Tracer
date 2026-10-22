@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Chip, Divider, TextField, Button, Alert, Stack } from '@mui/material';
+import { Box, Typography, Chip, Divider, Button, Alert, Stack } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useAppSelector, useAppDispatch } from '../store';
@@ -7,6 +7,7 @@ import { updateConnectionLength, removeConnection, selectDevice, showToast } fro
 import { SIGNAL_LABELS, portLabel, deviceTypeLabel } from '../data/labels';
 import { cableMaxLength, CABLE_DESCRIPTION } from '../data/cables';
 import { signalColor } from './deviceGeometry';
+import NumberField from './NumberField';
 
 const ConnectionInspector: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -81,13 +82,13 @@ const ConnectionInspector: React.FC = () => {
         {CABLE_DESCRIPTION[conn.cable_type] || ''}
       </Typography>
 
-      <TextField
+      <NumberField
+        key={conn.id}
         label="Длина кабеля (м)"
-        type="number"
         size="small"
         fullWidth
         value={conn.cable_length}
-        onChange={(e) => dispatch(updateConnectionLength({ id: conn.id, length: Number(e.target.value) }))}
+        onCommit={(length) => dispatch(updateConnectionLength({ id: conn.id, length }))}
         helperText={`Рекомендуемый максимум для ${conn.cable_type.toUpperCase()}: ${maxLen} м`}
         sx={{ mb: 1.5 }}
       />

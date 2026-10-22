@@ -34,9 +34,12 @@ import {
   clearToast,
 } from '../features/canvasSlice';
 import { runSimulation } from '../sim/engine';
+import { parseProjectDoc } from '../data/projectSchema';
 import { SimulationResult } from '../types/device.types';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '';
+// Сколько ждать backend, прежде чем посчитать в браузере
+const SERVER_TIMEOUT_MS = 3000;
 
 const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -48,6 +51,8 @@ const MainLayout: React.FC = () => {
 
   const [simulationRunning, setSimulationRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // О недоступности сервера сообщаем один раз, а не при каждом запуске
+  const serverNoticeShown = useRef(false);
 
   const handleClear = () => {
     if (devices.length === 0) return;
@@ -73,16 +78,29 @@ const MainLayout: React.FC = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      let raw: unknown;
       try {
-        const parsed = JSON.parse(String(reader.result));
-        if (!Array.isArray(parsed.devices) || !Array.isArray(parsed.connections)) {
-          throw new Error('bad format');
-        }
-        dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections }));
-        dispatch(showToast({ message: 'Проект загружен', severity: 'success' }));
+        raw = JSON.parse(String(reader.result));
       } catch {
-        dispatch(showToast({ message: 'Не удалось открыть файл: неверный формат', severity: 'error' }));
+        dispatch(showToast({ message: 'Не удалось открыть файл: это не JSON', severity: 'error' }));
+        return;
       }
+      const parsed = parseProjectDoc(raw);
+      if (!parsed.ok) {
+        dispatch(showToast({ message: `Не удалось открыть файл: ${parsed.error}`, severity: 'error' }));
+        return;
+      }
+      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections }));
+      dispatch(
+        showToast(
+          parsed.droppedConnections > 0
+            ? {
+                message: `Проект загружен; пропущено соединений с несуществующими портами: ${parsed.droppedConnections}`,
+                severity: 'warning',
+              }
+            : { message: 'Проект загружен', severity: 'success' }
+        )
+      );
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -99,6 +117,7 @@ const MainLayout: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ devices, connections }),
+        signal: AbortSignal.timeout(SERVER_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const result = (await response.json()) as SimulationResult;
@@ -107,7 +126,10 @@ const MainLayout: React.FC = () => {
       // Сервер недоступен — считаем в браузере, чтобы функция работала всегда
       const result = runSimulation(devices, connections);
       dispatch(setSimulation(result));
-      dispatch(showToast({ message: 'Сервер недоступен — выполнен локальный расчёт', severity: 'info' }));
+      if (!serverNoticeShown.current) {
+        serverNoticeShown.current = true;
+        dispatch(showToast({ message: 'Сервер недоступен — расчёт выполняется в браузере', severity: 'info' }));
+      }
     } finally {
       setSimulationRunning(false);
     }

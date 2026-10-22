@@ -1,8 +1,11 @@
 import { Device, Port } from '../types/device.types';
 
+/** Минимальная ширина узла; с большим числом портов узел становится шире. */
 export const NODE_W = 140;
 export const NODE_H = 92;
 export const PORT_R = 7;
+/** Шаг между центрами портов, чтобы кружки не налезали друг на друга. */
+export const PORT_GAP = 20;
 
 export function inputPorts(device: Device): Port[] {
   return device.ports.filter((p) => p.direction === 'input' || p.direction === 'bidirectional');
@@ -12,9 +15,14 @@ export function outputPorts(device: Device): Port[] {
   return device.ports.filter((p) => p.direction === 'output' || p.direction === 'bidirectional');
 }
 
+export function nodeWidth(device: Device): number {
+  const most = Math.max(inputPorts(device).length, outputPorts(device).length);
+  return Math.max(NODE_W, (most + 1) * PORT_GAP);
+}
+
 /** Локальная X-координата порта внутри узла (относительно левого верхнего угла). */
-export function portLocalX(count: number, index: number): number {
-  return (NODE_W / (count + 1)) * (index + 1);
+export function portLocalX(width: number, count: number, index: number): number {
+  return (width / (count + 1)) * (index + 1);
 }
 
 /** Абсолютная позиция выходного порта (нижняя кромка узла). */
@@ -23,7 +31,7 @@ export function outputPortPos(device: Device, portId: string): { x: number; y: n
   const idx = outs.findIndex((p) => p.id === portId);
   if (idx === -1) return null;
   return {
-    x: device.position.x + portLocalX(outs.length, idx),
+    x: device.position.x + portLocalX(nodeWidth(device), outs.length, idx),
     y: device.position.y + NODE_H,
   };
 }
@@ -34,7 +42,7 @@ export function inputPortPos(device: Device, portId: string): { x: number; y: nu
   const idx = ins.findIndex((p) => p.id === portId);
   if (idx === -1) return null;
   return {
-    x: device.position.x + portLocalX(ins.length, idx),
+    x: device.position.x + portLocalX(nodeWidth(device), ins.length, idx),
     y: device.position.y,
   };
 }

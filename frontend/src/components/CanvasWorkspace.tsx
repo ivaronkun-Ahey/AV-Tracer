@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
+import type Konva from 'konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import { useAppSelector, useAppDispatch } from '../store';
 import {
   addDevice,
@@ -18,13 +20,13 @@ import DeviceNode from './DeviceNode';
 import ConnectionLine from './ConnectionLine';
 import EmptyState from './EmptyState';
 import ZoomControls from './ZoomControls';
-import { Device } from '../types/device.types';
-import { outputPortPos, signalColor, NODE_W, NODE_H } from './deviceGeometry';
+import { createDevice, findEquipment } from '../data/equipment';
+import { outputPortPos, signalColor, nodeWidth, NODE_H } from './deviceGeometry';
 
 const CanvasWorkspace: React.FC = () => {
   const dispatch = useAppDispatch();
   const containerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<any>(null);
+  const stageRef = useRef<Konva.Stage>(null);
 
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
@@ -96,26 +98,17 @@ const CanvasWorkspace: React.FC = () => {
     const x = (px - stage.x()) / stage.scaleX();
     const y = (py - stage.y()) / stage.scaleY();
 
-    const data = e.dataTransfer.getData('deviceData');
-    if (!data) return;
-    const tpl = JSON.parse(data);
+    const tpl = findEquipment(e.dataTransfer.getData('equipmentId'));
+    if (!tpl) return;
 
-    const newDevice: Device = {
-      id: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: tpl.type,
-      manufacturer: tpl.manufacturer,
-      model: tpl.model,
-      full_name: tpl.full_name,
-      category: tpl.category,
-      position: { x: x - NODE_W / 2, y: y - NODE_H / 2 },
-      properties: { ...tpl.default_properties },
-      ports: tpl.ports,
-      specs: tpl.specs,
-    };
+    const id = `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const newDevice = createDevice(tpl, id, { x, y });
+    // Центр устройства — под курсором
+    newDevice.position = { x: x - nodeWidth(newDevice) / 2, y: y - NODE_H / 2 };
     dispatch(addDevice(newDevice));
   };
 
-  const handleWheel = (e: any) => {
+  const handleWheel = (e: KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
     const stage = stageRef.current;
     if (!stage) return;
@@ -137,14 +130,14 @@ const CanvasWorkspace: React.FC = () => {
     );
   };
 
-  const handleStageMouseDown = (e: any) => {
+  const handleStageMouseDown = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     // Клик по пустому месту сцены — снять выделение
     if (e.target === e.target.getStage()) {
       dispatch(deselectAll());
     }
   };
 
-  const handleStageDragEnd = (e: any) => {
+  const handleStageDragEnd = (e: KonvaEventObject<DragEvent>) => {
     // Панорама только при перетаскивании самой сцены (не узла)
     if (e.target === e.target.getStage()) {
       dispatch(setPan({ x: e.target.x(), y: e.target.y() }));
