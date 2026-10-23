@@ -43,7 +43,7 @@ const NATIVE: Record<Domain, Set<string>> = {
 // Сигналы, по которым аудио или видео идёт по кабелю (включая IP: Dante, AV-over-IP)
 const TRANSPORT: Record<Domain, Set<string>> = {
   audio: new Set(['analog_audio', 'digital_audio', 'usb', 'network']),
-  video: new Set(['hdmi', 'sdi', 'video', 'network']),
+  video: new Set(['hdmi', 'sdi', 'video', 'hdbaset', 'network']),
 };
 
 // Сигналы, физически передаваемые по сети/IP (Dante, AV-over-IP).
@@ -55,6 +55,7 @@ const SIG_RU: Record<string, string> = {
   video: 'видео',
   hdmi: 'HDMI',
   sdi: 'SDI',
+  hdbaset: 'HDBaseT',
   network: 'сеть',
   control: 'управление',
   usb: 'USB',

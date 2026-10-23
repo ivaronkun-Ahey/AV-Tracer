@@ -6,8 +6,8 @@ import {
   SIGNAL_TYPES,
   Connection,
   Device,
-  PropValue,
 } from '../types/device.types';
+import { propMapSchema, describeZodError } from './propSchema';
 import { withTemplateDefaults } from './equipment';
 import { withCableLabels } from './cableLabels';
 
@@ -15,14 +15,6 @@ import { withCableLabels } from './cableLabels';
  * Схема файла проекта. Проверяет и открытые пользователем файлы, и автосейв:
  * повреждённый или чужой JSON не должен ронять отрисовку холста.
  */
-const propValue: z.ZodType<PropValue> = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-  z.array(z.union([z.string(), z.number()])),
-]);
-
 const portSchema = z.object({
   id: z.string(),
   type: z.enum(CABLE_TYPES),
@@ -40,8 +32,8 @@ const deviceSchema = z.object({
   full_name: z.string().default(''),
   position: z.object({ x: z.number(), y: z.number() }),
   ports: z.array(portSchema),
-  properties: z.record(propValue).default({}),
-  specs: z.record(propValue).optional(),
+  properties: propMapSchema.default({}),
+  specs: propMapSchema.optional(),
   icon_url: z.string().optional(),
   image_url: z.string().optional(),
 });
@@ -62,25 +54,13 @@ const projectDocSchema = z.object({
   connections: z.array(connectionSchema),
 });
 
-function describeIssue(issue: z.ZodIssue): string {
-  if (issue.code === 'invalid_type') {
-    return issue.received === 'undefined' ? 'нет обязательного поля' : `неверный тип: ${issue.received}`;
-  }
-  if (issue.code === 'invalid_enum_value') return `недопустимое значение «${String(issue.received)}»`;
-  return issue.message;
-}
-
 export type ParsedProject =
   | { ok: true; devices: Device[]; connections: Connection[]; droppedConnections: number }
   | { ok: false; error: string };
 
 export function parseProjectDoc(raw: unknown): ParsedProject {
   const parsed = projectDocSchema.safeParse(raw);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue.path.length ? ` (${issue.path.join('.')})` : '';
-    return { ok: false, error: `${describeIssue(issue)}${where}` };
-  }
+  if (!parsed.success) return { ok: false, error: describeZodError(parsed.error) };
   const { devices, connections } = parsed.data;
   // Соединения, ссылающиеся на несуществующие устройства или порты, отбрасываем
   const hasPort = (deviceId: string, portId: string) =>

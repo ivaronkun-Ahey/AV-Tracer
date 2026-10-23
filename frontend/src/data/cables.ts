@@ -20,7 +20,7 @@ export const CABLE_DESCRIPTION: Record<CableType, string> = {
   speakon: 'Speakon — спикерный кабель (усилитель → пассивная АС)',
   hdmi: 'HDMI — цифровое видео и аудио',
   sdi: 'SDI (BNC) — профессиональное видео по коаксиалу',
-  cat6: 'Cat6 — витая пара (сеть, Dante, AV-over-IP)',
+  cat6: 'Cat6 — витая пара (сеть, Dante, AV-over-IP, HDBaseT)',
   rca: 'RCA — небалансный аналоговый сигнал',
   bnc: 'BNC — коаксиальный разъём (SDI/видео)',
   usb: 'USB — подключение к компьютеру',

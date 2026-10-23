@@ -1,12 +1,30 @@
-export const SIGNAL_TYPES = ['analog_audio', 'digital_audio', 'video', 'hdmi', 'sdi', 'network', 'control', 'usb'] as const;
+export const SIGNAL_TYPES = [
+  'analog_audio',
+  'digital_audio',
+  'video',
+  'hdmi',
+  'sdi',
+  'hdbaset',
+  'network',
+  'control',
+  'usb',
+] as const;
 export const CABLE_TYPES = ['xlr', 'trs', 'speakon', 'hdmi', 'sdi', 'cat6', 'rca', 'bnc', 'usb'] as const;
 export const PORT_DIRECTIONS = ['input', 'output', 'bidirectional'] as const;
 export const DEVICE_CATEGORIES = ['audio', 'video', 'network', 'control'] as const;
+/**
+ * Как сигнал проходит через устройство: all — с любого входа на все выходы
+ * (микшер, DSP); channel — вход на выход того же канала (усилитель L→L);
+ * select — на выходы идёт только выбранный вход (презентационный коммутатор);
+ * matrix — по таблице коммутации вход→выход (матрица).
+ */
+export const ROUTING_MODES = ['all', 'channel', 'select', 'matrix'] as const;
 
 export type SignalType = (typeof SIGNAL_TYPES)[number];
 export type CableType = (typeof CABLE_TYPES)[number];
 export type PortDirection = (typeof PORT_DIRECTIONS)[number];
 export type DeviceCategory = (typeof DEVICE_CATEGORIES)[number];
+export type RoutingMode = (typeof ROUTING_MODES)[number];
 
 /** Значение параметра устройства: число, флаг, строка или список. */
 export type PropValue = string | number | boolean | null | Array<string | number>;
@@ -46,6 +64,7 @@ export interface EquipmentTemplate {
   ports: Port[];
   default_properties: PropMap;
   specs?: PropMap;
+  routing?: RoutingMode;
 }
 
 export interface Connection {

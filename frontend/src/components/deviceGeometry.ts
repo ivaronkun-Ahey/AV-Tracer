@@ -225,6 +225,7 @@ const SIGNAL_COLORS: Record<string, string> = {
   video: '#00B8D4',
   hdmi: '#00B8D4',
   sdi: '#00C8FF',
+  hdbaset: '#7C4DFF',
   network: '#00C853',
   control: '#9C27B0',
   usb: '#E91E63',

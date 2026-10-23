@@ -61,6 +61,7 @@ export const SIGNAL_LABELS: Record<SignalType, string> = {
   video: 'Видео',
   hdmi: 'HDMI',
   sdi: 'SDI',
+  hdbaset: 'HDBaseT',
   network: 'Сеть',
   control: 'Управление',
   usb: 'USB',
