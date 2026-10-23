@@ -66,11 +66,6 @@ const SimulationPanel: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
               {header.text}
             </Typography>
-            <Chip
-              size="small"
-              label={simulation.computed_by === 'server' ? 'расчёт на сервере' : 'расчёт в браузере'}
-              sx={{ ml: 2, bgcolor: 'rgba(255,255,255,0.08)' }}
-            />
             <IconButton onClick={close} sx={{ ml: 'auto' }} size="small">
               <CloseIcon />
             </IconButton>

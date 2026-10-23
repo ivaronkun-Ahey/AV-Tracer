@@ -73,7 +73,7 @@ export interface Project {
   updated_at: string;
 }
 
-/** Результаты работы движка симуляции (совпадает с ответом backend и локального движка). */
+/** Результаты работы движка симуляции (frontend/src/sim/engine.ts). */
 export interface SignalFlow {
   type: 'audio' | 'video';
   source: string;
@@ -100,6 +100,4 @@ export interface SimulationResult {
   signal_flows: SignalFlow[];
   warnings: SimIssue[];
   errors: SimIssue[];
-  /** Откуда получен результат: 'server' — Python backend, 'local' — расчёт в браузере. */
-  computed_by?: 'server' | 'local';
 }

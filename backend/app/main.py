@@ -1,13 +1,11 @@
-import logging
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict, Any
 from app.core.config import settings
-from app.services.engine import SimulationEngine
 
-logger = logging.getLogger("av-tracer")
+# Симуляция считается в браузере (frontend/src/sim/engine.ts) — это единственный
+# движок. Сервер оставлен как основа для будущих функций: хранение проектов,
+# учётные записи, ИИ-ассистент. Прежний Python-движок и эндпоинт /api/simulate
+# перенесены в archive/ (см. archive/README.md).
 
 app = FastAPI(
     title="AV-Tracer API",
@@ -25,11 +23,6 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# Request models
-class SimulationRequest(BaseModel):
-    devices: List[Dict[str, Any]]
-    connections: List[Dict[str, Any]]
-
 # Routes
 @app.get("/")
 def root():
@@ -42,18 +35,3 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
-
-@app.post("/api/simulate")
-async def simulate_system(request: SimulationRequest):
-    """
-    Simulate an AV system topology
-    """
-    try:
-        engine = SimulationEngine()
-        engine.load_topology(request.devices, request.connections)
-        result = engine.run_simulation()
-        return result
-    except Exception:
-        # Подробности — в лог сервера, клиенту — понятное сообщение без внутренностей
-        logger.exception("Simulation failed")
-        raise HTTPException(status_code=500, detail="Ошибка расчёта симуляции")

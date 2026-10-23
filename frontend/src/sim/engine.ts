@@ -2,10 +2,10 @@ import { Device, Connection, SimulationResult, SignalFlow, SimIssue } from '../t
 import { cableMaxLength } from '../data/cables';
 
 /**
- * Клиентский движок симуляции — точный аналог backend/app/services/engine.py.
- * Используется как резерв, когда Python-сервер недоступен, чтобы функция
- * «Симуляция» работала всегда. Совпадение результатов двух движков проверяют
- * общие тестовые схемы из shared/sim-fixtures.
+ * Движок симуляции AV-системы — единственный в проекте, считает в браузере.
+ * Если понадобится проверка на сервере (оценки, ИИ-ассистент, API), этот же
+ * модуль запускается в Node, а не переписывается на другом языке.
+ * Эталонные схемы для регрессии — shared/sim-fixtures (npm run fixtures:update).
  */
 
 /** Нормальный линейный уровень (дБu) на входе усилителя или активной АС. */
@@ -508,6 +508,5 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     signal_flows: [...audioFlows, ...videoFlows],
     warnings,
     errors,
-    computed_by: 'local',
   };
 }

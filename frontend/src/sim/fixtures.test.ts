@@ -6,10 +6,10 @@ interface Fixture {
   name: string;
   devices: Device[];
   connections: Connection[];
-  expected: Omit<SimulationResult, 'computed_by'>;
+  expected: SimulationResult;
 }
 
-// Общие эталоны для TS- и Python-движка (backend/tests/test_sim_fixtures.py).
+// Эталонные схемы: любое изменение результата симуляции видно в diff эталонов.
 // Пересчитать после намеренного изменения логики: npm run fixtures:update
 const fixtures = import.meta.glob<Fixture>('../../../shared/sim-fixtures/*.json', { eager: true, import: 'default' });
 
@@ -21,7 +21,6 @@ describe('общие эталоны симуляции', () => {
   for (const [file, fx] of Object.entries(fixtures)) {
     it(file.split('/').pop()!, () => {
       const result = runSimulation(fx.devices, fx.connections);
-      delete result.computed_by;
       expect(JSON.parse(JSON.stringify(result))).toEqual(fx.expected);
     });
   }

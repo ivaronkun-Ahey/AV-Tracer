@@ -63,11 +63,7 @@ import {
 import { EXAMPLE_PROJECTS } from '../data/examples';
 import { runSimulation } from '../sim/engine';
 import { parseProjectDoc } from '../data/projectSchema';
-import { SimulationResult } from '../types/device.types';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
-// Сколько ждать backend, прежде чем посчитать в браузере
-const SERVER_TIMEOUT_MS = 3000;
 
 const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -77,10 +73,7 @@ const MainLayout: React.FC = () => {
   const canRedo = useAppSelector((s) => s.canvas.future.length > 0);
   const toast = useAppSelector((s) => s.canvas.toast);
 
-  const [simulationRunning, setSimulationRunning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // О недоступности сервера сообщаем один раз, а не при каждом запуске
-  const serverNoticeShown = useRef(false);
   const snapToGrid = useAppSelector((s) => s.canvas.snapToGrid);
   const showCableLabels = useAppSelector((s) => s.canvas.showCableLabels);
   const [menu, setMenu] = useState<{ name: 'examples' | 'view' | 'export'; anchor: HTMLElement } | null>(null);
@@ -204,33 +197,13 @@ const MainLayout: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleSimulate = async () => {
+  // Симуляция считается в браузере: мгновенно и без сервера
+  const handleSimulate = () => {
     if (devices.length === 0) {
       dispatch(showToast({ message: 'Добавьте устройства, чтобы запустить симуляцию', severity: 'info' }));
       return;
     }
-    setSimulationRunning(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ devices, connections }),
-        signal: AbortSignal.timeout(SERVER_TIMEOUT_MS),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const result = (await response.json()) as SimulationResult;
-      dispatch(setSimulation({ ...result, computed_by: 'server' }));
-    } catch {
-      // Сервер недоступен — считаем в браузере, чтобы функция работала всегда
-      const result = runSimulation(devices, connections);
-      dispatch(setSimulation(result));
-      if (!serverNoticeShown.current) {
-        serverNoticeShown.current = true;
-        dispatch(showToast({ message: 'Сервер недоступен — расчёт выполняется в браузере', severity: 'info' }));
-      }
-    } finally {
-      setSimulationRunning(false);
-    }
+    dispatch(setSimulation(runSimulation(devices, connections)));
   };
 
   return (
@@ -307,9 +280,8 @@ const MainLayout: React.FC = () => {
             size="small"
             startIcon={<PlayArrowIcon />}
             onClick={handleSimulate}
-            disabled={simulationRunning}
           >
-            {simulationRunning ? 'Идёт расчёт…' : 'Симуляция'}
+            Симуляция
           </Button>
           <Button variant="outlined" color="error" size="small" startIcon={<DeleteIcon />} onClick={handleClear}>
             Очистить
