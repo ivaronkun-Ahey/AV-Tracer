@@ -32,6 +32,7 @@ test('пример «Концертный звук»: симуляция про�
   await page.getByRole('button', { name: 'Симуляция' }).click();
   await expect(page.getByText('Система собрана корректно')).toBeVisible();
   await expect(page.getByText('Цепочки сигнала (2)')).toBeVisible();
+  await expect(page.getByText(/Учебная оценка в пределах модели/)).toBeVisible();
   expect(errors).toEqual([]);
 });
 

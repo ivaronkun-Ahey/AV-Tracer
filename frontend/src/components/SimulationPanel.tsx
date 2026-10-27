@@ -153,6 +153,12 @@ const SimulationPanel: React.FC = () => {
               </Stack>
             </Box>
           </Box>
+
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+            Учебная оценка в пределах модели. Не проверяются: пропускная способность сети, кодеки,
+            подписки и тактирование Dante, HDCP/EDID, частота кадров, электрика линий и акустика.
+            Длины кабелей и уровни сигнала — упрощённые оценки.
+          </Typography>
         </Box>
       )}
     </Drawer>

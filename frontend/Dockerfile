@@ -3,7 +3,7 @@
 #   docker run --rm -p 8080:8080 av-tracer      → http://localhost:8080
 # Для разработки используется Dockerfile.dev (docker compose up).
 
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
