@@ -193,6 +193,7 @@ npm run lint                # ESLint
 npm run typecheck           # TypeScript
 npm run icons:generate      # пересобрать пиктограммы устройств (src/components/deviceIcons.ts)
 npm run test:e2e            # браузерные смоук-тесты (Playwright, собранное приложение с CSP)
+E2E_BASE_URL=http://localhost:8080 npm run test:e2e   # те же тесты против запущенного образа
 
 cd backend
 pip install -r requirements-dev.txt
@@ -208,7 +209,8 @@ pytest                      # заготовка API поднимается и �
 
 Зависимости обновляются партиями после `npm audit`; версии инструментов с
 исправлениями безопасности закреплены точно. CI проверяет продакшен-зависимости
-(`npm audit --omit=dev`), собирает продакшен-образ и прогоняет браузерные тесты.
+(`npm audit --omit=dev`), собирает продакшен-образ и прогоняет браузерные тесты
+против него (nginx с теми же заголовками, что в продакшене).
 
 ## 📖 Дополнительно
 

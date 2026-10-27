@@ -24,6 +24,7 @@ jobs:
       - run: npx vitest run
       - run: npx vite build
 
+  # Продакшен-образ (nginx, CSP) и браузерные тесты против него
   e2e:
     runs-on: ubuntu-latest
     defaults:
@@ -38,14 +39,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
       - name: Build production image
-        run: docker build -t av-tracer ./frontend
+        run: docker build -t av-tracer .
       - name: Serve and check headers
         run: |
           docker run -d --name av-tracer -p 8080:8080 av-tracer
@@ -54,7 +49,12 @@ jobs:
           curl -fsSI http://localhost:8080/ | grep -qi 'content-security-policy'
           curl -fsSI http://localhost:8080/some/deep/link | grep -q '200'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/assets/missing.js.map)" = "404"
-          docker logs av-tracer
+      - name: Browser tests against the image
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:8080
+      - if: always()
+        run: docker logs av-tracer
 
   backend:
     runs-on: ubuntu-latest
