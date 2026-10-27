@@ -32,6 +32,11 @@ import Theaters from '@mui/icons-material/Theaters';
 import Tune from '@mui/icons-material/Tune';
 import Tv from '@mui/icons-material/Tv';
 import Videocam from '@mui/icons-material/Videocam';
+import Laptop from '@mui/icons-material/Laptop';
+import DocumentScanner from '@mui/icons-material/DocumentScanner';
+import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
+import SwapHoriz from '@mui/icons-material/SwapHoriz';
+import VideoCameraFront from '@mui/icons-material/VideoCameraFront';
 import Wifi from '@mui/icons-material/Wifi';
 
 const ICONS: Record<string, SvgIconComponent> = {
@@ -51,6 +56,11 @@ const ICONS: Record<string, SvgIconComponent> = {
   switcher: AltRoute,
   scaler: AspectRatio,
   media_player: PlayCircle,
+  computer: Laptop,
+  document_camera: DocumentScanner,
+  extender: SettingsEthernet,
+  converter: SwapHoriz,
+  video_bar: VideoCameraFront,
   encoder: Output,
   decoder: Input,
   video_recorder: FiberSmartRecord,

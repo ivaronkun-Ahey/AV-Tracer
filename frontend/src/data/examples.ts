@@ -104,4 +104,29 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       };
     },
   },
+  {
+    id: 'meeting-room',
+    name: 'Переговорная с ВКС',
+    description: 'Видеобар → ноутбук (USB) → HDBaseT по витой паре 40 м → дисплей',
+    build: () => {
+      const bar = instantiate('generic-video-bar', 'm_bar', 40, 80);
+      const pc = instantiate('generic-laptop', 'm_pc', 340, 80);
+      const tx = instantiate('generic-hdbt-tx', 'm_tx', 640, 80);
+      const rx = instantiate('generic-hdbt-rx', 'm_rx', 940, 80);
+      const tv = instantiate('samsung-qm85r', 'm_tv', 1240, 80);
+      const run = connect(['m_tx', 'hdbt_out'], ['m_rx', 'hdbt_in'], 'cat6');
+      run.cable_length = 40;
+      const usb = connect(['m_bar', 'usb_out'], ['m_pc', 'usb_in'], 'usb');
+      usb.cable_length = 2;
+      return {
+        devices: [bar, pc, tx, rx, tv],
+        connections: [
+          usb,
+          connect(['m_pc', 'hdmi_out'], ['m_tx', 'hdmi_in'], 'hdmi'),
+          run,
+          connect(['m_rx', 'hdmi_out'], ['m_tv', 'hdmi_in_1'], 'hdmi'),
+        ],
+      };
+    },
+  },
 ];

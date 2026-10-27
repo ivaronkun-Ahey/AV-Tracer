@@ -113,6 +113,15 @@ export interface SignalFlow {
   status: 'ok' | 'warning' | 'error';
 }
 
+/**
+ * Исправление, которое приложение может применить само (кнопка «Исправить»):
+ * изменить параметр устройства или отключить кабель. Это обычная правка —
+ * отменяется через Ctrl+Z.
+ */
+export type SimFix =
+  | { kind: 'set_property'; label: string; device: string; property: string; value: PropValue }
+  | { kind: 'remove_connection'; label: string; connection: string };
+
 export interface SimIssue {
   type: string;
   device: string;
@@ -120,6 +129,7 @@ export interface SimIssue {
   connection?: string;
   message: string;
   severity?: 'low' | 'medium' | 'high';
+  fix?: SimFix;
 }
 
 export interface SimulationResult {

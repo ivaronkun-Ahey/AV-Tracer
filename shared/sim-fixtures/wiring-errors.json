@@ -918,21 +918,36 @@
         "device": "mix",
         "connection": "c3",
         "message": "Несовместимые сигналы: аналог. аудио → HDMI",
-        "severity": "high"
+        "severity": "high",
+        "fix": {
+          "kind": "remove_connection",
+          "label": "Отключить кабель",
+          "connection": "c3"
+        }
       },
       {
         "type": "input_busy",
         "device": "mix",
         "connection": "c2",
         "message": "К порту XLR IN 1 устройства «SQ-5» подключено несколько кабелей (2) — в разъём входит только один",
-        "severity": "high"
+        "severity": "high",
+        "fix": {
+          "kind": "remove_connection",
+          "label": "Отключить лишний кабель",
+          "connection": "c2"
+        }
       },
       {
         "type": "input_busy",
         "device": "sw",
         "connection": "c9",
         "message": "К порту ETH 1 устройства «GS728TP» подключено несколько кабелей (2) — в разъём входит только один",
-        "severity": "high"
+        "severity": "high",
+        "fix": {
+          "kind": "remove_connection",
+          "label": "Отключить лишний кабель",
+          "connection": "c9"
+        }
       },
       {
         "type": "active_on_amp",
@@ -949,7 +964,7 @@
       {
         "type": "no_signal",
         "device": "lg",
-        "message": "На «75UP8000» не приходит видео: в подключённой цепочке нет источника (камеры, плеера)",
+        "message": "На «75UP8000» не приходит видео: в подключённой цепочке нет источника (камеры, плеера, компьютера)",
         "severity": "high"
       },
       {

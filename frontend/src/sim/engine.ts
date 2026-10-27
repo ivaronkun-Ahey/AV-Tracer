@@ -1,4 +1,4 @@
-import { Device, Connection, SimulationResult, SignalFlow, SimIssue } from '../types/device.types';
+import { Device, Connection, SimulationResult, SignalFlow, SimIssue, SimFix } from '../types/device.types';
 import { cableMaxLength } from '../data/cables';
 import { buildEdges, routingMode, signalsCompatible, tracePaths, TracedPath, Domain } from './signalPaths';
 
@@ -12,11 +12,16 @@ import { buildEdges, routingMode, signalsCompatible, tracePaths, TracedPath, Dom
 /** Нормальный линейный уровень (дБu) на входе усилителя или активной АС. */
 export const LINE_MIN_DBU = -10;
 export const LINE_MAX_DBU = 20;
+/** Номинальный профессиональный линейный уровень — цель исправления «усиление». */
+const NOMINAL_DBU = 4;
+/** Больше типичного предусилителя не предлагаем: значит, ошибка в схеме, а не в ручке. */
+const MAX_FIX_GAIN_DB = 70;
 
-const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic'];
+// Компьютер и видеобар выдают звук линейного уровня (параметр output_level, дБu)
+const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'computer', 'video_bar'];
 // DI-бокс без подключённого входа изображает инструмент (гитару, клавиши)
 const DI_LEVEL_DBU = -35;
-const VIDEO_SOURCES = ['camera', 'media_player'];
+const VIDEO_SOURCES = ['camera', 'media_player', 'computer', 'document_camera', 'video_bar'];
 const AUDIO_SINKS = ['speaker', 'subwoofer'];
 const VIDEO_SINKS = ['display', 'projector'];
 // Каскады с регулируемым усилением: предусилитель входа + выходной уровень
@@ -103,6 +108,7 @@ function startLevel(d: Device): number {
   const p = d.properties || {};
   if (d.type === 'array_microphone') return ARRAY_MIC_LEVEL_DBU;
   if (d.type === 'di_box') return DI_LEVEL_DBU - Math.abs(num(p.pad, 0));
+  if (typeof p.output_level === 'number') return p.output_level - Math.abs(num(p.pad, 0));
   const base = typeof p.sensitivity === 'number' ? p.sensitivity + DBV_TO_DBU : MIC_LEVEL_DBU;
   return base - Math.abs(num(p.pad, 0));
 }
@@ -118,6 +124,23 @@ export function channelGain(d: Device, entry: string | null): number {
   const port = entry ? d.ports.find((x) => x.id === entry) : undefined;
   if (port?.signal_type === 'digital_audio') return 0;
   return num(p.input_gain, 0);
+}
+
+/** Поле fix только когда исправление есть (без ключа со значением undefined). */
+const withFix = (fix: SimFix | null | undefined | false): { fix?: SimFix } => (fix ? { fix } : {});
+
+/** Исправление уровня: усиление канала entry так, чтобы на выходе каскада был номинал. */
+function gainFix(d: Device, entry: string | null, levelOut: number, verb: string): SimFix | undefined {
+  if (!entry) return undefined;
+  const value = Math.round(channelGain(d, entry) + NOMINAL_DBU - levelOut);
+  if (value > MAX_FIX_GAIN_DB) return undefined;
+  return {
+    kind: 'set_property',
+    label: `${verb} усиление входа ${portName(entry)} на «${d.model}» до ${value} дБ`,
+    device: d.id,
+    property: `gain:${entry}`,
+    value,
+  };
 }
 
 function stageGain(d: Device, entry: string | null): number {
@@ -145,14 +168,14 @@ function analyzeAudioPath(traced: TracedPath, byId: Record<string, Device>) {
     }
   }
   const end = measureIdx === -1 ? path.length : measureIdx;
-  let lastStage: Device | null = null;
-  let clip: { device: Device; level: number } | null = null;
+  let lastStage: { device: Device; entry: string | null } | null = null;
+  let clip: { device: Device; entry: string | null; level: number } | null = null;
   for (let i = 1; i < end; i++) {
     const d = byId[path[i]];
     if (!GAIN_STAGES.includes(d.type)) continue;
     level = level + stageGain(d, traced.entries[i]);
-    lastStage = d;
-    if (!clip && level > LINE_MAX_DBU) clip = { device: d, level };
+    lastStage = { device: d, entry: traced.entries[i] };
+    if (!clip && level > LINE_MAX_DBU) clip = { device: d, entry: traced.entries[i], level };
   }
   const at = byId[measureIdx === -1 ? path[path.length - 1] : path[measureIdx]];
   const issues: SimIssue[] = [];
@@ -164,6 +187,7 @@ function analyzeAudioPath(traced: TracedPath, byId: Record<string, Device>) {
         device: clip.device.id,
         message: `Перегрузка: ${round1(clip.level)} дБu на выходе «${clip.device.model}» — выше +${LINE_MAX_DBU} дБu, уменьшите усиление`,
         severity: 'medium',
+        ...withFix(gainFix(clip.device, clip.entry, clip.level, 'Уменьшить')),
       });
     } else if (level > LINE_MAX_DBU) {
       issues.push({
@@ -176,11 +200,12 @@ function analyzeAudioPath(traced: TracedPath, byId: Record<string, Device>) {
     if (level < LINE_MIN_DBU) {
       issues.push({
         type: 'level_low',
-        device: (lastStage ?? src).id,
+        device: (lastStage?.device ?? src).id,
         message: lastStage
-          ? `Слабый сигнал: ${lvl} дБu на «${at.model}» (норма ${LINE_MIN_DBU}…+${LINE_MAX_DBU} дБu) — увеличьте усиление «${lastStage.model}»`
+          ? `Слабый сигнал: ${lvl} дБu на «${at.model}» (норма ${LINE_MIN_DBU}…+${LINE_MAX_DBU} дБu) — увеличьте усиление «${lastStage.device.model}»`
           : `Слабый сигнал: ${lvl} дБu на «${at.model}» — микрофонный уровень нужно поднять предусилителем (микшер, DSP, аудиоинтерфейс)`,
         severity: 'medium',
+        ...withFix(lastStage && gainFix(lastStage.device, lastStage.entry, level, 'Поднять')),
       });
     }
   }
@@ -192,6 +217,8 @@ function analyzeVideoPath(path: string[], byId: Record<string, Device>) {
   const src = byId[path[0]];
   const srcRes = src.properties?.resolution;
   let resolution = typeof srcRes === 'string' ? srcRes : '1920x1080';
+  // Кто задаёт текущее разрешение: источник (resolution) или масштабатор (resolution_out)
+  let setBy = { device: src, property: 'resolution' };
   const issues: SimIssue[] = [];
   for (let i = 1; i < path.length; i++) {
     const d = byId[path[i]];
@@ -215,9 +242,19 @@ function analyzeVideoPath(path: string[], byId: Record<string, Device>) {
           device: d.id,
           message: `«${d.model}» принимает до ${fmtRes(max)}, а источник выдаёт ${fmtRes(sig)} — понизьте разрешение источника (EDID) или поставьте масштабатор`,
           severity: 'medium',
+          fix: {
+            kind: 'set_property',
+            label: `Выставить на «${setBy.device.model}» разрешение ${fmtRes(max)}`,
+            device: setBy.device.id,
+            property: setBy.property,
+            value: fmtRes(max).replace('×', 'x'),
+          },
         });
       }
-      if (typeof p.resolution_out === 'string' && p.resolution_out) resolution = p.resolution_out;
+      if (typeof p.resolution_out === 'string' && p.resolution_out) {
+        resolution = p.resolution_out;
+        setBy = { device: d, property: 'resolution_out' };
+      }
     }
   }
   return { resolution, issues };
@@ -256,6 +293,8 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
       if (perPort === true || (perPort === undefined && deviceWide === true)) continue;
       phantomMissing.add(d.id);
       const canSupply = typeof perPort === 'boolean' || typeof deviceWide === 'boolean';
+      // Свой переключатель у входа — включаем его, иначе общий +48V устройства
+      const property = typeof perPort === 'boolean' ? `phantom:${c.to.port}` : 'phantom_power';
       errors.push({
         type: 'phantom_power',
         device: d.id,
@@ -264,19 +303,40 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
           ? `Для «${d.model}» нужно фантомное питание +48 В, но на «${r.model}» оно выключено — включите его на «${r.model}»`
           : `Для «${d.model}» нужно фантомное питание +48 В, а «${r.model}» не может его подать — подключите через микшер, предусилитель или блок питания +48 В`,
         severity: 'high',
+        ...withFix(
+          canSupply && { kind: 'set_property', label: `Включить +48 В на «${r.model}»`, device: r.id, property, value: true }
+        ),
       });
     }
   }
 
   // --- Аудиоцепочки: все ветви от каждого источника, по портам и каналам ---
   const audioFlows: SignalFlow[] = [];
-  const blocked = new Map<string, string>();
+  // Где и почему ветвь остановилась (для подсказки «нет сигнала») и как это исправить
+  const blocked = new Map<string, { note: string; fix?: SimFix }>();
+  const noteBlocked = (traced: TracedPath) => {
+    if (!traced.blockedAt || !traced.note || blocked.has(traced.blockedAt)) return;
+    const router = byId[traced.blockedAt];
+    const entry = traced.entries[traced.entries.length - 1];
+    const index = router.ports.filter((p) => p.direction === 'input').findIndex((p) => p.id === entry) + 1;
+    const fix: SimFix | undefined =
+      routingMode(router) === 'select' && index > 0
+        ? {
+            kind: 'set_property',
+            label: `Выбрать вход ${index} на «${router.model}»`,
+            device: router.id,
+            property: 'selected_input',
+            value: index,
+          }
+        : undefined;
+    blocked.set(traced.blockedAt, { note: traced.note, ...withFix(fix) });
+  };
   for (const d of devices) {
     if (!isAudioSource(d)) continue;
     for (const traced of tracePaths(d.id, 'audio', byId, edges)) {
       const r = analyzeAudioPath(traced, byId);
       r.issues.forEach(addFlowWarning);
-      if (traced.blockedAt && traced.note && !blocked.has(traced.blockedAt)) blocked.set(traced.blockedAt, traced.note);
+      noteBlocked(traced);
       const unpowered = phantomMissing.has(d.id);
       audioFlows.push({
         type: 'audio',
@@ -298,7 +358,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     for (const traced of tracePaths(d.id, 'video', byId, edges)) {
       const r = analyzeVideoPath(traced.devices, byId);
       r.issues.forEach(addFlowWarning);
-      if (traced.blockedAt && traced.note && !blocked.has(traced.blockedAt)) blocked.set(traced.blockedAt, traced.note);
+      noteBlocked(traced);
       videoFlows.push({
         type: 'video',
         source: d.id,
@@ -326,6 +386,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
         connection: c.id,
         message: `Несовместимые сигналы: ${SIG_RU[fromSig] || fromSig} → ${SIG_RU[toSig] || toSig}`,
         severity: 'high',
+        fix: { kind: 'remove_connection', label: `Отключить кабель ${c.label ?? ''}`.trim(), connection: c.id },
       });
     }
   }
@@ -346,6 +407,11 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
           connection: using[using.length - 1].id,
           message: `К порту ${portName(port.id)} устройства «${d.model}» подключено несколько кабелей (${using.length}) — в разъём входит только один`,
           severity: 'high',
+          fix: {
+            kind: 'remove_connection',
+            label: `Отключить лишний кабель ${using[using.length - 1].label ?? ''}`.trim(),
+            connection: using[using.length - 1].id,
+          },
         });
       }
     }
@@ -493,7 +559,8 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     }
     if (reached[domain].has(d.id)) continue;
     const up = [...upstream(d.id)];
-    const blockNote = up.map((id) => blocked.get(id)).find(Boolean);
+    const block = up.map((id) => blocked.get(id)).find(Boolean);
+    const blockNote = block?.note;
     const hasSource = up.some((id) => (domain === 'audio' ? isAudioSource(byId[id]) : VIDEO_SOURCES.includes(byId[id].type)));
     // Ближайшее по цепочке устройство, которое коммутирует сигнал не «на все выходы»
     const router = up.map((id) => byId[id]).find((x) => routingMode(x) !== 'all' && x.ports.length > 0);
@@ -505,7 +572,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     const hint = blockNote
       ? blockNote
       : !hasSource
-        ? `в подключённой цепочке нет источника (${domain === 'audio' ? 'микрофона, радиосистемы' : 'камеры, плеера'})`
+        ? `в подключённой цепочке нет источника (${domain === 'audio' ? 'микрофона, радиосистемы, компьютера' : 'камеры, плеера, компьютера'})`
         : router && routingMode(router) !== 'all'
           ? `${ROUTER_HINT[routingMode(router) as keyof typeof ROUTER_HINT]} «${router.model}»`
           : 'сигнал теряется по дороге — проверьте, что кабели идут в порты с этим сигналом (Ethernet-порт управления видео и звук не передаёт)';
@@ -514,6 +581,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
       device: d.id,
       message: `На «${d.model}» не приходит ${domain === 'audio' ? 'звук' : 'видео'}: ${hint}`,
       severity: 'high',
+      ...withFix(block?.fix),
     });
   }
 

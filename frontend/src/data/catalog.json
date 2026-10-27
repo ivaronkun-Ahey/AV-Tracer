@@ -660,6 +660,94 @@
           ]
         },
         {
+          "name": "Extenders & Converters",
+          "items": [
+            {
+              "_id": "generic-hdbt-tx",
+              "type": "extender",
+              "manufacturer": "Типовое",
+              "model": "Передатчик HDBaseT",
+              "full_name": "HDBaseT-передатчик (типовой): HDMI по витой паре до 100 м, в паре с приёмником",
+              "ports": ["hdmi_in", "hdbt_out"],
+              "default_properties": {
+                "max_resolution": "3840x2160"
+              }
+            },
+            {
+              "_id": "generic-hdbt-rx",
+              "type": "extender",
+              "manufacturer": "Типовое",
+              "model": "Приёмник HDBaseT",
+              "full_name": "HDBaseT-приёмник (типовой): витая пара от передатчика → HDMI",
+              "ports": ["hdbt_in", "hdmi_out"],
+              "default_properties": {
+                "max_resolution": "3840x2160"
+              }
+            },
+            {
+              "_id": "generic-hdmi-to-sdi",
+              "type": "converter",
+              "manufacturer": "Типовое",
+              "model": "Конвертер HDMI → SDI",
+              "full_name": "Конвертер HDMI → 3G-SDI (типовой), до 1080p",
+              "ports": ["hdmi_in", "sdi_out"],
+              "default_properties": {
+                "max_resolution": "1920x1080"
+              }
+            },
+            {
+              "_id": "generic-sdi-to-hdmi",
+              "type": "converter",
+              "manufacturer": "Типовое",
+              "model": "Конвертер SDI → HDMI",
+              "full_name": "Конвертер 3G-SDI → HDMI (типовой), до 1080p",
+              "ports": ["sdi_in", "hdmi_out"],
+              "default_properties": {
+                "max_resolution": "1920x1080"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Computers & Document Cameras",
+          "items": [
+            {
+              "_id": "generic-laptop",
+              "type": "computer",
+              "manufacturer": "Типовое",
+              "model": "Ноутбук",
+              "full_name": "Ноутбук (типовой): HDMI-выход, аудиовыход 3,5 мм, USB для камеры или видеобара",
+              "ports": [
+                "hdmi_out",
+                {
+                  "id": "trs_out",
+                  "type": "trs",
+                  "direction": "output",
+                  "signal_type": "analog_audio",
+                  "label": "AUDIO OUT 3.5"
+                },
+                "usb_in",
+                "eth"
+              ],
+              "default_properties": {
+                "resolution": "1920x1080",
+                "output_level": -10
+              }
+            },
+            {
+              "_id": "generic-document-camera",
+              "type": "document_camera",
+              "manufacturer": "Типовое",
+              "model": "Документ-камера",
+              "full_name": "Документ-камера (типовая): HDMI-выход и USB",
+              "ports": ["hdmi_out", "usb_out"],
+              "default_properties": {
+                "resolution": "1920x1080"
+              }
+            }
+          ]
+        },
+        {
           "name": "Media Players",
           "items": [
             {
@@ -777,6 +865,23 @@
                 "bitrate_mbps": 20,
                 "streaming": true,
                 "max_resolution": "1920x1080"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conferencing",
+          "items": [
+            {
+              "_id": "generic-video-bar",
+              "type": "video_bar",
+              "manufacturer": "Типовое",
+              "model": "Видеобар",
+              "full_name": "Видеобар для ВКС (типовой): камера, микрофоны и динамик, USB к компьютеру",
+              "ports": ["usb_out", "eth"],
+              "default_properties": {
+                "resolution": "1920x1080",
+                "output_level": -10
               }
             }
           ]

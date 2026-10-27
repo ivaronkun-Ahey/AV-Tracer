@@ -934,13 +934,27 @@
         "type": "level_high",
         "device": "hot",
         "message": "Перегрузка: 33.2 дБu на выходе «MG12XU» — выше +20 дБu, уменьшите усиление",
-        "severity": "medium"
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Уменьшить усиление входа XLR IN 1 на «MG12XU» до 31 дБ",
+          "device": "hot",
+          "property": "gain:xlr_in_1",
+          "value": 31
+        }
       },
       {
         "type": "level_low",
         "device": "cold",
         "message": "Слабый сигнал: -49.2 дБu на «K12.2» (норма -10…+20 дБu) — увеличьте усиление «SQ-5»",
-        "severity": "medium"
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Поднять усиление входа XLR IN 1 на «SQ-5» до 53 дБ",
+          "device": "cold",
+          "property": "gain:xlr_in_1",
+          "value": 53
+        }
       },
       {
         "type": "level_low",
@@ -952,7 +966,14 @@
         "type": "level_low",
         "device": "dsp",
         "message": "Слабый сигнал: -13 дБu на «PRX818XLFW» (норма -10…+20 дБu) — увеличьте усиление «Core 110f»",
-        "severity": "medium"
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Поднять усиление входа XLR IN 1 на «Core 110f» до 57 дБ",
+          "device": "dsp",
+          "property": "gain:xlr_in_1",
+          "value": 57
+        }
       }
     ],
     "errors": [
@@ -961,7 +982,14 @@
         "device": "c414",
         "connection": "c6",
         "message": "Для «C414 XLII» нужно фантомное питание +48 В, но на «Scarlett 2i2» оно выключено — включите его на «Scarlett 2i2»",
-        "severity": "high"
+        "severity": "high",
+        "fix": {
+          "kind": "set_property",
+          "label": "Включить +48 В на «Scarlett 2i2»",
+          "device": "iface",
+          "property": "phantom_power",
+          "value": true
+        }
       }
     ]
   }

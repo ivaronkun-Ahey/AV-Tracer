@@ -17,6 +17,11 @@ export const DEVICE_TYPE_LABELS: Record<string, string> = {
   switcher: 'Видеокоммутатор',
   scaler: 'Масштабатор',
   media_player: 'Медиаплеер',
+  computer: 'Компьютер',
+  document_camera: 'Документ-камера',
+  extender: 'Удлинитель',
+  converter: 'Конвертер',
+  video_bar: 'Видеобар (ВКС)',
   encoder: 'AV-over-IP кодер',
   decoder: 'AV-over-IP декодер',
   video_recorder: 'Видеорекордер',
@@ -46,6 +51,9 @@ export const SUBCATEGORY_LABELS: Record<string, string> = {
   'Displays & Projectors': 'Дисплеи и проекторы',
   'Switchers & Processors': 'Коммутаторы и процессоры',
   'Media Players': 'Медиаплееры',
+  'Computers & Document Cameras': 'Компьютеры и документ-камеры',
+  'Extenders & Converters': 'Удлинители и конвертеры',
+  Conferencing: 'Видеоконференцсвязь',
   'AV-over-IP': 'AV-over-IP (кодеры/декодеры)',
   'Recording & Streaming': 'Запись и стриминг',
   'Network Switches': 'Сетевые коммутаторы',
@@ -85,6 +93,7 @@ export const PROPERTY_LABELS: Record<string, string> = {
   impedance_ohms: 'Сопротивление (Ω)',
   active: 'Активная (со встроенным усилителем)',
   resolution: 'Разрешение',
+  output_level: 'Уровень выхода (дБu)',
   fps: 'Частота кадров',
   ptz: 'PTZ (поворот/наклон/зум)',
   zoom: 'Кратность зума',
@@ -155,7 +164,8 @@ export function propertyLabel(key: string): string {
 }
 
 /** Короткая подпись для порта на холсте/в списке. */
-export function portLabel(port: { id: string; type: CableType; signal_type: SignalType }): string {
+export function portLabel(port: { id: string; type: CableType; signal_type: SignalType; label?: string }): string {
+  if (port.label) return port.label;
   if (port.id) {
     // Превращаем "xlr_in_1" -> "XLR IN 1"
     return port.id.replace(/_/g, ' ').toUpperCase();

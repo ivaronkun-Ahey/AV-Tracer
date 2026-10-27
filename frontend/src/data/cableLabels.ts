@@ -14,6 +14,7 @@ export function cablePrefix(signal: SignalType | undefined, cable: CableType): s
       return 'D';
     case 'hdmi':
     case 'sdi':
+    case 'hdbaset':
     case 'video':
       return 'V';
     case 'network':

@@ -880,7 +880,14 @@
         "type": "resolution_unsupported",
         "device": "atem",
         "message": "«ATEM Mini Pro» принимает до 1920×1080, а источник выдаёт 3840×2160 — понизьте разрешение источника (EDID) или поставьте масштабатор",
-        "severity": "medium"
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Выставить на «AW-UE150» разрешение 1920×1080",
+          "device": "cam4k",
+          "property": "resolution",
+          "value": "1920x1080"
+        }
       },
       {
         "type": "resolution_downscale",

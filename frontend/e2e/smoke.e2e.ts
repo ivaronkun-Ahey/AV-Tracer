@@ -51,6 +51,25 @@ test('колонка без источника — «нет сигнала»', a
   await expect(page.getByText(/не приходит звук/)).toBeVisible();
 });
 
+test('«Исправить»: выбран не тот вход коммутатора — исправление одним нажатием и Ctrl+Z', async ({ page }) => {
+  await openClean(page);
+  await loadExample(page, 'Презентационная видеосистема');
+  await expect(page.getByText(/Сохранено в браузере/)).toBeVisible();
+  const doc = await page.evaluate(() => JSON.parse(localStorage.getItem('av-tracer:autosave') || '{}'));
+  doc.devices.find((d: { id: string }) => d.id === 'ex_sw').properties.selected_input = 2;
+  await page.evaluate((d) => localStorage.setItem('av-tracer:autosave', JSON.stringify(d)), doc);
+  await page.reload();
+  await page.getByRole('button', { name: 'Симуляция' }).click();
+  await expect(page.getByText('Найдены ошибки')).toBeVisible();
+  await page.getByRole('button', { name: /Исправить: Выбрать вход 1/ }).click();
+  await expect(page.getByText('Система собрана корректно')).toBeVisible();
+  // Исправление — обычная правка: отменяется
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+z');
+  await page.getByRole('button', { name: 'Симуляция' }).click();
+  await expect(page.getByText('Найдены ошибки')).toBeVisible();
+});
+
 test('сохранение в файл и открытие обратно', async ({ page }) => {
   await openClean(page);
   await loadExample(page, 'Видео по сети');

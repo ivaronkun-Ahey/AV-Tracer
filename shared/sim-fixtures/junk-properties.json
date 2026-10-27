@@ -457,7 +457,14 @@
         "type": "level_low",
         "device": "mix",
         "message": "Слабый сигнал: -50 дБu на «XLS 2502» (норма -10…+20 дБu) — увеличьте усиление «SQ-5»",
-        "severity": "medium"
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Поднять усиление входа XLR IN 1 на «SQ-5» до 54 дБ",
+          "device": "mix",
+          "property": "gain:xlr_in_1",
+          "value": 54
+        }
       }
     ],
     "errors": []

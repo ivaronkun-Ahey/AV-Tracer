@@ -1,15 +1,25 @@
 import React from 'react';
-import { Drawer, Box, Typography, IconButton, Chip, Stack, Alert, Divider } from '@mui/material';
+import { Drawer, Box, Typography, IconButton, Chip, Stack, Alert, Divider, Button, Tooltip } from '@mui/material';
+import { useStore } from 'react-redux';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { useAppSelector, useAppDispatch } from '../store';
-import { setShowSimulation, selectDevice, selectConnection } from '../features/canvasSlice';
+import BuildIcon from '@mui/icons-material/Build';
+import { useAppSelector, useAppDispatch, RootState } from '../store';
+import {
+  setShowSimulation,
+  selectDevice,
+  selectConnection,
+  updateDeviceProperty,
+  removeConnection,
+  setSimulation,
+  showToast,
+} from '../features/canvasSlice';
 import { deviceTypeLabel } from '../data/labels';
-import { LINE_MAX_DBU, LINE_MIN_DBU } from '../sim/engine';
-import { SignalFlow, SimIssue } from '../types/device.types';
+import { LINE_MAX_DBU, LINE_MIN_DBU, runSimulation } from '../sim/engine';
+import { SignalFlow, SimFix, SimIssue } from '../types/device.types';
 
 function levelVerdict(db: number): string {
   if (db < LINE_MIN_DBU) return 'слабый сигнал';
@@ -27,9 +37,42 @@ const SimulationPanel: React.FC = () => {
 
   const close = () => dispatch(setShowSimulation(false));
 
+  const store = useStore<RootState>();
+
   // Проблема с кабелем выделяет кабель, остальные — устройство
   const focusIssue = (issue: SimIssue) =>
     dispatch(issue.connection ? selectConnection(issue.connection) : selectDevice(issue.device));
+
+  // Исправление — обычная правка схемы (отменяется Ctrl+Z); затем симуляция пересчитывается
+  const applyFix = (fix: SimFix) => {
+    if (fix.kind === 'set_property') {
+      dispatch(updateDeviceProperty({ id: fix.device, property: fix.property, value: fix.value }));
+    } else {
+      dispatch(removeConnection(fix.connection));
+    }
+    const { devices: ds, connections: cs } = store.getState().canvas;
+    dispatch(setSimulation(runSimulation(ds, cs)));
+    dispatch(showToast({ message: `Исправлено: ${fix.label} · Ctrl+Z — отменить`, severity: 'success' }));
+  };
+
+  const fixButton = (issue: SimIssue) =>
+    issue.fix ? (
+      <Tooltip title={issue.fix.label}>
+        <Button
+          size="small"
+          color="inherit"
+          startIcon={<BuildIcon fontSize="small" />}
+          aria-label={`Исправить: ${issue.fix.label}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            applyFix(issue.fix!);
+          }}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          Исправить
+        </Button>
+      </Tooltip>
+    ) : undefined;
 
   const flowCaption = (flow: SignalFlow) => {
     const note = flow.note ? ` · ${flow.note}` : '';
@@ -90,6 +133,7 @@ const SimulationPanel: React.FC = () => {
                     severity="error"
                     variant="outlined"
                     onClick={() => focusIssue(e)}
+                    action={fixButton(e)}
                     sx={{ cursor: 'pointer' }}
                   >
                     <b>{name(e.device)}:</b> {e.message}
@@ -101,6 +145,7 @@ const SimulationPanel: React.FC = () => {
                     severity="warning"
                     variant="outlined"
                     onClick={() => focusIssue(w)}
+                    action={fixButton(w)}
                     sx={{ cursor: 'pointer' }}
                   >
                     <b>{name(w.device)}:</b> {w.message}
