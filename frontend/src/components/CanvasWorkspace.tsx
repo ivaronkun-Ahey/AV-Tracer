@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { Box } from '@mui/material';
 import { Stage, Layer, Path } from 'react-konva';
 import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -11,6 +12,8 @@ import {
   cancelConnection,
   setZoom,
   setPan,
+  setViewportSize,
+  nudgeDevice,
   resetView,
   requestFit,
   showToast,
@@ -21,7 +24,7 @@ import DeviceNode from './DeviceNode';
 import ConnectionLine from './ConnectionLine';
 import EmptyState from './EmptyState';
 import ZoomControls from './ZoomControls';
-import { createDevice, findEquipment } from '../data/equipment';
+import { createDevice, findEquipment, newDeviceId } from '../data/equipment';
 import { deviceTags } from '../data/deviceTags';
 import {
   portAnchor,
@@ -36,6 +39,22 @@ import {
 import { CanvasRenderContext, DARK_PALETTE } from './canvasTheme';
 
 const FIT_PADDING = 60;
+
+/** Клавиши холста не должны срабатывать, пока человек вводит текст или работает в меню. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable) return true;
+  return !!el.closest?.('[role="menu"], [role="listbox"], [role="dialog"]');
+}
+
+const ARROWS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
 
 const CanvasWorkspace: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -62,20 +81,20 @@ const CanvasWorkspace: React.FC = () => {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
-  // Размер холста под контейнер
+  // Размер холста под контейнер: меняется и при сворачивании панелей, не только окна
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
     const measure = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
-      }
+      const size = { width: el.clientWidth, height: el.clientHeight };
+      setDimensions(size);
+      dispatch(setViewportSize(size));
     };
     measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [dispatch]);
 
   // «Вписать в экран»: масштаб и панорама так, чтобы была видна вся схема
   const devicesRef = useRef(devices);
@@ -108,8 +127,7 @@ const CanvasWorkspace: React.FC = () => {
   // Клавиатура: удаление и отмена
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // не мешаем вводу в поля
+      if (isTypingTarget(e.target)) return; // не мешаем вводу в поля и меню
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) dispatch(redo());
@@ -152,13 +170,21 @@ const CanvasWorkspace: React.FC = () => {
     const tpl = findEquipment(e.dataTransfer.getData('equipmentId'));
     if (!tpl) return;
 
-    const id = `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-    const newDevice = createDevice(tpl, id, { x, y });
+    const newDevice = createDevice(tpl, newDeviceId(), { x, y });
     // Центр устройства — под курсором (с привязкой к сетке)
     const size = nodeSize(newDevice);
     const pos = { x: x - size.width / 2, y: y - size.height / 2 };
     newDevice.position = snap ? { x: snapToGrid(pos.x), y: snapToGrid(pos.y) } : pos;
     dispatch(addDevice(newDevice));
+  };
+
+  // Стрелки двигают выбранное устройство, когда фокус на холсте (Shift — на 5 клеток)
+  const handleCanvasKey = (e: React.KeyboardEvent) => {
+    const dir = ARROWS[e.key];
+    if (!dir || !selectedDeviceId || e.target !== containerRef.current) return;
+    e.preventDefault();
+    const step = GRID * (e.shiftKey ? 5 : 1);
+    dispatch(nudgeDevice({ id: selectedDeviceId, dx: dir[0] * step, dy: dir[1] * step }));
   };
 
   const handleWheel = (e: KonvaEventObject<WheelEvent>) => {
@@ -218,11 +244,18 @@ const CanvasWorkspace: React.FC = () => {
   }
 
   return (
-    <div
+    <Box
       ref={containerRef}
+      tabIndex={0}
+      role="application"
+      aria-label="Холст схемы. Стрелки двигают выбранное устройство, Delete удаляет, Esc снимает выделение"
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
-      style={{
+      onKeyDown={handleCanvasKey}
+      // Konva отменяет действие mousedown по умолчанию, и фокус сам не переходит на холст
+      onMouseDown={() => containerRef.current?.focus({ preventScroll: true })}
+      sx={{
+        '&:focus-visible': { outline: '2px solid #0066CC', outlineOffset: '-2px' },
         position: 'relative',
         width: '100%',
         height: '100%',
@@ -294,7 +327,7 @@ const CanvasWorkspace: React.FC = () => {
         onReset={() => dispatch(resetView())}
         onFit={() => dispatch(requestFit())}
       />
-    </div>
+    </Box>
   );
 };
 

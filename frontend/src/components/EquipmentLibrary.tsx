@@ -10,18 +10,45 @@ import {
   CardContent,
   Chip,
   InputAdornment,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
-import { EQUIPMENT_LIBRARY } from '../data/equipment';
+import AddIcon from '@mui/icons-material/Add';
+import { EQUIPMENT_LIBRARY, createDevice, newDeviceId } from '../data/equipment';
+import { useAppDispatch, useAppSelector } from '../store';
+import { addDevice, showToast } from '../features/canvasSlice';
 import { EquipmentTemplate } from '../types/device.types';
 import { CATEGORY_LABELS, SUBCATEGORY_LABELS, deviceTypeLabel } from '../data/labels';
 import DeviceIcon from './DeviceIcon';
-import { categoryColor } from './deviceGeometry';
+import { categoryColor, freeSpot, nodeSize } from './deviceGeometry';
 
-const EquipmentLibrary: React.FC = () => {
+/** onAdded — устройство добавлено кнопкой (на узком экране панель закрывается). */
+const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
+  const dispatch = useAppDispatch();
+  const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
+  const zoom = useAppSelector((s) => s.canvas.zoom);
+  const pan = useAppSelector((s) => s.canvas.pan);
+  const viewport = useAppSelector((s) => s.canvas.viewport);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string>('audio');
+
+  // Без перетаскивания (клавиатура, сенсорный экран): устройство встаёт в центр
+  // видимой части холста, на ближайшее свободное место
+  const addToDiagram = (equipment: EquipmentTemplate) => {
+    const device = createDevice(equipment, newDeviceId(), { x: 0, y: 0 });
+    const size = nodeSize(device);
+    const center = {
+      x: (viewport.width / 2 - pan.x) / zoom - size.width / 2,
+      y: (viewport.height / 2 - pan.y) / zoom - size.height / 2,
+    };
+    device.position = freeSpot(devices, size, center, connections);
+    dispatch(addDevice(device));
+    dispatch(showToast({ message: `Добавлено на схему: ${equipment.model}`, severity: 'success' }));
+    onAdded?.();
+  };
 
   const handleDragStart = (equipment: EquipmentTemplate) => (e: React.DragEvent) => {
     e.dataTransfer.setData('equipmentId', equipment._id);
@@ -52,7 +79,7 @@ const EquipmentLibrary: React.FC = () => {
         Библиотека оборудования
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-        Перетащите устройство на холст
+        Перетащите устройство на холст или нажмите «+»
       </Typography>
 
       <TextField
@@ -118,7 +145,17 @@ const EquipmentLibrary: React.FC = () => {
                       key={item._id}
                       draggable
                       onDragStart={handleDragStart(item)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${item.model}, ${deviceTypeLabel(item.type)}: добавить на схему`}
+                      onKeyDown={(e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          addToDiagram(item);
+                        }
+                      }}
                       sx={{
+                        '&:focus-visible': { outline: '2px solid #0066CC', outlineOffset: 1 },
                         mb: 0.75,
                         cursor: 'grab',
                         bgcolor: 'rgba(255,255,255,0.04)',
@@ -136,7 +173,7 @@ const EquipmentLibrary: React.FC = () => {
                         <Box sx={{ display: 'flex', flexShrink: 0 }}>
                           <DeviceIcon type={item.type} color={categoryColor(item.category)} />
                         </Box>
-                        <Box sx={{ minWidth: 0 }}>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
                             {item.model}
                           </Typography>
@@ -144,6 +181,18 @@ const EquipmentLibrary: React.FC = () => {
                             {deviceTypeLabel(item.type)} · {item.manufacturer} · {item.ports.length} порт.
                           </Typography>
                         </Box>
+                        <Tooltip title="Добавить на схему">
+                          <IconButton
+                            size="small"
+                            // Карточка сама — кнопка для клавиатуры и чтения с экрана
+                            tabIndex={-1}
+                            aria-hidden
+                            onClick={() => addToDiagram(item)}
+                            sx={{ flexShrink: 0, opacity: 0.75, '&:hover': { opacity: 1 } }}
+                          >
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </CardContent>
                     </Card>
                   ))}

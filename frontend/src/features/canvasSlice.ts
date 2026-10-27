@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
 import { Device, Connection, SimulationResult, CableType, PropValue } from '../types/device.types';
-import { connectionProblem } from './connectionRules';
+import { connectionProblem, PortRef } from './connectionRules';
 import { nextDeviceTag, withDeviceTags } from '../data/deviceTags';
 import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
 
@@ -20,6 +20,8 @@ interface CanvasState {
   } | null;
   zoom: number;
   pan: { x: number; y: number };
+  /** Размер видимой области холста — новое устройство с клавиатуры ставится в её центр. */
+  viewport: { width: number; height: number };
   // Настройки вида
   snapToGrid: boolean;
   showCableLabels: boolean;
@@ -47,6 +49,7 @@ export const initialCanvasState: CanvasState = {
   connectionInProgress: null,
   zoom: 1,
   pan: { x: 0, y: 0 },
+  viewport: { width: 800, height: 600 },
   snapToGrid: true,
   showCableLabels: true,
   fitRequest: 0,
@@ -80,6 +83,26 @@ function pushHistory(state: CanvasState, opts: HistoryOptions = {}) {
   });
   if (state.past.length > HISTORY_LIMIT) state.past.shift();
   state.future = [];
+}
+
+/**
+ * Добавляет кабель, если он допустим: концы существуют, направления верные,
+ * сигналы совместимы, порты свободны. Редьюсер проверяет сам, даже если
+ * интерфейс уже проверил. Возвращает false, если кабель не добавлен.
+ */
+function addCable(state: CanvasState, from: PortRef, to: PortRef, cableType: CableType): boolean {
+  if (connectionProblem(state.devices, state.connections, from, to)) return false;
+  pushHistory(state);
+  const newConnection: Connection = {
+    id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+    from: { ...from },
+    to: { ...to },
+    cable_type: cableType,
+    cable_length: 10,
+  };
+  newConnection.label = nextCableLabel(state.connections, connectionPrefix(state.devices, newConnection));
+  state.connections.push(newConnection);
+  return true;
 }
 
 const canvasSlice = createSlice({
@@ -133,6 +156,14 @@ const canvasSlice = createSlice({
         const p = action.payload[d.id];
         if (p) d.position = p;
       }
+    },
+
+    /** Сдвиг стрелками: серия нажатий для одного устройства — один шаг отмены. */
+    nudgeDevice: (state, action: PayloadAction<{ id: string; dx: number; dy: number }>) => {
+      const device = state.devices.find((d) => d.id === action.payload.id);
+      if (!device) return;
+      pushHistory(state, { key: `nudge:${device.id}`, keepSimulation: true });
+      device.position = { x: device.position.x + action.payload.dx, y: device.position.y + action.payload.dy };
     },
 
     /** Позиция во время перетаскивания — без записи в историю, кабели следуют за устройством. */
@@ -196,37 +227,19 @@ const canvasSlice = createSlice({
       action: PayloadAction<{ toDeviceId: string; toPortId: string; cableType: CableType }>
     ) => {
       const pending = state.connectionInProgress;
-      if (pending) {
-        // Редьюсер сам проверяет кабель, даже если интерфейс уже проверил:
-        // концы существуют, направления верные, сигналы совместимы, порты свободны
-        const problem = connectionProblem(
-          state.devices,
-          state.connections,
-          { device: pending.fromDeviceId, port: pending.fromPortId },
-          { device: action.payload.toDeviceId, port: action.payload.toPortId }
-        );
-        if (problem) {
-          state.connectionInProgress = null;
-          return;
-        }
-        pushHistory(state);
-        const newConnection: Connection = {
-          id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-          from: {
-            device: pending.fromDeviceId,
-            port: pending.fromPortId,
-          },
-          to: {
-            device: action.payload.toDeviceId,
-            port: action.payload.toPortId,
-          },
-          cable_type: action.payload.cableType,
-          cable_length: 10,
-        };
-        newConnection.label = nextCableLabel(state.connections, connectionPrefix(state.devices, newConnection));
-        state.connections.push(newConnection);
-        state.connectionInProgress = null;
-      }
+      if (!pending) return;
+      addCable(
+        state,
+        { device: pending.fromDeviceId, port: pending.fromPortId },
+        { device: action.payload.toDeviceId, port: action.payload.toPortId },
+        action.payload.cableType
+      );
+      state.connectionInProgress = null;
+    },
+
+    /** Кабель между двумя портами без «начать/закончить» на холсте (из панели свойств). */
+    connect: (state, action: PayloadAction<{ from: PortRef; to: PortRef; cableType: CableType }>) => {
+      addCable(state, action.payload.from, action.payload.to, action.payload.cableType);
     },
 
     cancelConnection: (state) => {
@@ -308,6 +321,10 @@ const canvasSlice = createSlice({
       state.pan = action.payload;
     },
 
+    setViewportSize: (state, action: PayloadAction<{ width: number; height: number }>) => {
+      state.viewport = action.payload;
+    },
+
     resetView: (state) => {
       state.zoom = 1;
       state.pan = { x: 0, y: 0 };
@@ -353,6 +370,7 @@ export const {
   updateDevicePosition,
   beginDeviceDrag,
   moveDevice,
+  nudgeDevice,
   setDevicePositions,
   updateDeviceProperty,
   setDeviceTag,
@@ -361,6 +379,7 @@ export const {
   selectConnection,
   startConnection,
   completeConnection,
+  connect,
   cancelConnection,
   removeConnection,
   updateConnectionLength,
@@ -370,6 +389,7 @@ export const {
   redo,
   setZoom,
   setPan,
+  setViewportSize,
   resetView,
   requestFit,
   toggleSnapToGrid,

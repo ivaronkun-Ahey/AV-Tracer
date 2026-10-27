@@ -207,6 +207,41 @@ export function diagramBounds(
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
+/**
+ * Свободное место для нового устройства: ближайшая к желаемой точке позиция на
+ * сетке, где оно не перекрывает другие устройства (с отступом в две клетки).
+ * Поиск идёт по расширяющимся кольцам вокруг желаемой точки.
+ */
+export function freeSpot(
+  devices: Device[],
+  size: { width: number; height: number },
+  preferred: { x: number; y: number },
+  connections: Connection[] = []
+): { x: number; y: number } {
+  const margin = GRID * 2;
+  const rects = devices.map((d) => {
+    const s = nodeSize(d, connections);
+    return { x: d.position.x - margin, y: d.position.y - margin, w: s.width + margin * 2, h: s.height + margin * 2 };
+  });
+  const fits = (x: number, y: number) =>
+    rects.every((r) => x + size.width <= r.x || x >= r.x + r.w || y + size.height <= r.y || y >= r.y + r.h);
+  const start = { x: snapToGrid(preferred.x), y: snapToGrid(preferred.y) };
+  const step = GRID * 2;
+  for (let ring = 0; ring <= 60; ring++) {
+    let best: { x: number; y: number; dist: number } | null = null;
+    for (let i = -ring; i <= ring; i++) {
+      for (const [dx, dy] of [[i, -ring], [i, ring], [-ring, i], [ring, i]]) {
+        const x = start.x + dx * step;
+        const y = start.y + dy * step;
+        const dist = dx * dx + dy * dy;
+        if ((!best || dist < best.dist) && fits(x, y)) best = { x, y, dist };
+      }
+    }
+    if (best) return { x: best.x, y: best.y };
+  }
+  return start;
+}
+
 /** Цвет категории устройства: полоса и пиктограмма на холсте, карточки библиотеки. */
 const CATEGORY_COLORS: Record<string, string> = {
   audio: '#FF6B00',

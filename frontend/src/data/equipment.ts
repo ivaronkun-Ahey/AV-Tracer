@@ -20,6 +20,11 @@ export function findEquipment(equipmentId: string): EquipmentTemplate | undefine
   return getAllEquipment().find((e) => e._id === equipmentId);
 }
 
+/** Уникальный идентификатор нового устройства на схеме. */
+export function newDeviceId(): string {
+  return `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
 /** Новый экземпляр устройства на холсте из библиотечной карточки. */
 export function createDevice(tpl: EquipmentTemplate, id: string, position: { x: number; y: number }): Device {
   return {

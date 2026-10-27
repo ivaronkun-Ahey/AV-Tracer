@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Typography, Button, Stack } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useAppDispatch } from '../store';
 import { loadProject, requestFit, showToast } from '../features/canvasSlice';
@@ -36,23 +35,15 @@ const EmptyState: React.FC = () => {
           Холст пуст
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-          Перетащите устройство из <b>библиотеки слева</b>, чтобы начать собирать схему.
+          Перетащите устройство из <b>библиотеки</b> или нажмите «+» на его карточке, чтобы начать собирать схему.
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Соединяйте устройства: кликните по выходу <b>справа</b> у одного устройства, затем по входу{' '}
-          <b>слева</b> у другого. Другие примеры — в меню «Примеры».
+          <b>слева</b> у другого — или выберите порты в панели свойств. Другие примеры — в меню «Примеры».
         </Typography>
         <Stack direction="row" spacing={2} justifyContent="center">
           <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={loadExample}>
             Загрузить пример
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            sx={{ pointerEvents: 'none', opacity: 0.7 }}
-            disableRipple
-          >
-            или перетащите устройство
           </Button>
         </Stack>
       </Box>

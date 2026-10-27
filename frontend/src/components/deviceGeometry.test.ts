@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { portSlots, portAnchor, routeCable, roundedPath, labelPoint, nodeSize, HEADER_H, ROW_H, NODE_W } from './deviceGeometry';
+import { portSlots, portAnchor, routeCable, roundedPath, labelPoint, nodeSize, freeSpot, HEADER_H, ROW_H, NODE_W } from './deviceGeometry';
 import { createDevice, findEquipment } from '../data/equipment';
 
 const make = (eq: string, id: string, x = 0, y = 0) => createDevice(findEquipment(eq)!, id, { x, y });
@@ -83,5 +83,28 @@ describe('routeCable', () => {
       { x: 50, y: 50 },
     ]);
     expect(d).toBe('M0 0 L42 0 Q50 0 50 8 L50 50');
+  });
+});
+
+describe('место для нового устройства', () => {
+  const overlaps = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+  it('на пустой схеме — желаемая точка (по сетке)', () => {
+    expect(freeSpot([], { width: 210, height: 80 }, { x: 103, y: 47 })).toEqual({ x: 100, y: 40 });
+  });
+
+  it('занятое место обходится: новое устройство не перекрывает существующие', () => {
+    const existing = [make('shure-sm58', 'a', 100, 100), make('allen-heath-sq5', 'b', 400, 80)];
+    const size = nodeSize(make('shure-sm58', 'n'));
+    for (const preferred of [{ x: 100, y: 100 }, { x: 420, y: 200 }]) {
+      const spot = freeSpot(existing, size, preferred);
+      for (const d of existing) {
+        const s = nodeSize(d);
+        expect(overlaps({ ...spot, w: size.width, h: size.height }, { ...d.position, w: s.width, h: s.height })).toBe(false);
+      }
+      // и стоит рядом с желаемой точкой, а не где-то далеко
+      expect(Math.hypot(spot.x - preferred.x, spot.y - preferred.y)).toBeLessThan(600);
+    }
   });
 });

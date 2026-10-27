@@ -11,17 +11,27 @@ import {
   Stack,
   IconButton,
   Tooltip,
+  ButtonBase,
+  List,
+  ListItemButton,
+  ListItemText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAppSelector, useAppDispatch } from '../store';
 import {
   updateDeviceProperty,
   setDeviceTag,
   removeDevice,
   removeConnection,
+  selectDevice,
+  selectConnection,
+  deselectAll,
+  connect,
   showToast,
 } from '../features/canvasSlice';
+import { isPortBusy, possibleLinks, Link } from '../features/connectionRules';
 import { Connection, Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
 import { signalColor, categoryColor } from './deviceGeometry';
@@ -44,14 +54,7 @@ const PropertiesPanel: React.FC = () => {
     if (selectedConnectionId) {
       return <ConnectionInspector />;
     }
-    return (
-      <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
-        <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Выберите устройство или кабель на холсте, чтобы увидеть и изменить параметры
-        </Typography>
-      </Box>
-    );
+    return <DeviceList devices={devices} onSelect={(id) => dispatch(selectDevice(id))} />;
   }
 
   const deviceName = (id: string) => {
@@ -68,9 +71,14 @@ const PropertiesPanel: React.FC = () => {
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-        Свойства
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          Свойства
+        </Typography>
+        <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => dispatch(deselectAll())} sx={{ ml: 'auto' }}>
+          Все устройства
+        </Button>
+      </Box>
 
       {/* Шапка устройства */}
       <Box sx={{ mb: 2 }}>
@@ -130,14 +138,19 @@ const PropertiesPanel: React.FC = () => {
                 borderRadius: 1,
               }}
             >
-              <Box sx={{ minWidth: 0, flex: 1 }}>
+              <ButtonBase
+                onClick={() => dispatch(selectConnection(c.id))}
+                aria-label={`Кабель ${c.label ?? ''} ${outgoing ? 'к' : 'от'} ${deviceName(otherId)}: открыть`}
+                sx={{ minWidth: 0, flex: 1, display: 'block', textAlign: 'left', borderRadius: 1 }}
+              >
                 <Typography variant="body2" noWrap>
                   {outgoing ? '→' : '←'} {deviceName(otherId)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
+                  {c.label ? `${c.label} · ` : ''}
                   {c.cable_type.toUpperCase()}
                 </Typography>
-              </Box>
+              </ButtonBase>
               <Tooltip title="Удалить соединение">
                 <IconButton size="small" onClick={() => dispatch(removeConnection(c.id))}>
                   <LinkOffIcon fontSize="small" />
@@ -147,6 +160,8 @@ const PropertiesPanel: React.FC = () => {
           );
         })}
       </Stack>
+
+      <ConnectForm key={device.id} device={device} />
 
       {/* Порты */}
       <Divider sx={{ my: 2 }} />
@@ -185,7 +200,133 @@ const PropertiesPanel: React.FC = () => {
   );
 };
 
-/** Универсальный рендер параметров: тип поля выбирается по типу значения. */
+/** Список устройств схемы, когда ничего не выбрано: выбор без холста (с клавиатуры). */
+const DeviceList: React.FC<{ devices: Device[]; onSelect: (id: string) => void }> = ({ devices, onSelect }) => {
+  if (devices.length === 0) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
+        <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Здесь появятся параметры устройства или кабеля, выбранного на холсте
+        </Typography>
+      </Box>
+    );
+  }
+  const sorted = [...devices].sort((a, b) => (a.tag ?? '').localeCompare(b.tag ?? '', 'ru', { numeric: true }));
+  return (
+    <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        Устройства на схеме ({devices.length})
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Выберите устройство здесь или на холсте
+      </Typography>
+      <List dense disablePadding aria-label="Устройства на схеме">
+        {sorted.map((d) => (
+          <ListItemButton key={d.id} onClick={() => onSelect(d.id)} sx={{ borderRadius: 1 }}>
+            <Box
+              sx={{ width: 4, alignSelf: 'stretch', mr: 1.5, borderRadius: 1, bgcolor: categoryColor(d.category), flexShrink: 0 }}
+            />
+            <ListItemText
+              primary={`${d.tag ?? ''} · ${d.model}`}
+              secondary={deviceTypeLabel(d.type)}
+              primaryTypographyProps={{ noWrap: true, variant: 'body2' }}
+            />
+          </ListItemButton>
+        ))}
+      </List>
+    </Box>
+  );
+};
+
+/**
+ * Подключение кабеля без холста: порт этого устройства и подходящий порт
+ * другого. Варианты — только допустимые кабели (совместимые свободные порты).
+ */
+const ConnectForm: React.FC<{ device: Device }> = ({ device }) => {
+  const dispatch = useAppDispatch();
+  const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
+  const [portId, setPortId] = useState('');
+  const [choice, setChoice] = useState('');
+
+  const freePorts = device.ports.filter((p) => !isPortBusy(connections, device.id, p));
+  const links: Link[] = portId ? possibleLinks(devices, connections, { device: device.id, port: portId }) : [];
+  const linkKey = (l: Link) => `${l.from.device}|${l.from.port}|${l.to.device}|${l.to.port}`;
+  const describe = (l: Link) => {
+    const outgoing = l.from.device === device.id;
+    const end = outgoing ? l.to : l.from;
+    const other = devices.find((d) => d.id === end.device);
+    const port = other?.ports.find((p) => p.id === end.port);
+    return `${outgoing ? '→' : '←'} ${other?.tag ?? ''} ${other?.model ?? ''} · ${port ? portLabel(port) : end.port}`;
+  };
+
+  const submit = () => {
+    const link = links.find((l) => linkKey(l) === choice);
+    const toPort = link && devices.find((d) => d.id === link.to.device)?.ports.find((p) => p.id === link.to.port);
+    if (!link || !toPort) return;
+    dispatch(connect({ from: link.from, to: link.to, cableType: toPort.type }));
+    dispatch(showToast({ message: 'Соединение создано', severity: 'success' }));
+    setPortId('');
+    setChoice('');
+  };
+
+  if (freePorts.length === 0) return null;
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Подключить кабель
+      </Typography>
+      <TextField
+        select
+        label="Порт этого устройства"
+        size="small"
+        fullWidth
+        value={portId}
+        onChange={(e) => {
+          setPortId(e.target.value);
+          setChoice('');
+        }}
+        SelectProps={{ native: true }}
+        InputLabelProps={{ shrink: true }}
+        sx={{ mb: 1.5 }}
+      >
+        <option value="">— выберите порт —</option>
+        {freePorts.map((p) => (
+          <option key={p.id} value={p.id}>
+            {portLabel(p)} ({DIRECTION_LABELS[p.direction]})
+          </option>
+        ))}
+      </TextField>
+      {portId && (
+        <TextField
+          select
+          label="С чем соединить"
+          size="small"
+          fullWidth
+          value={choice}
+          onChange={(e) => setChoice(e.target.value)}
+          disabled={links.length === 0}
+          helperText={links.length === 0 ? 'Нет свободных совместимых портов на других устройствах' : undefined}
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ mb: 1.5 }}
+        >
+          <option value="">— выберите —</option>
+          {links.map((l) => (
+            <option key={linkKey(l)} value={linkKey(l)}>
+              {describe(l)}
+            </option>
+          ))}
+        </TextField>
+      )}
+      <Button variant="outlined" size="small" fullWidth disabled={!choice} onClick={submit}>
+        Соединить
+      </Button>
+    </Box>
+  );
+};
+
 /** Обозначение устройства (MIC-01): редактируется, должно быть уникальным. */
 const TagField: React.FC<{ value: string; isTaken: (tag: string) => boolean; onCommit: (tag: string) => void }> = ({
   value,
@@ -261,6 +402,7 @@ function renderChannelGains(
   );
 }
 
+/** Универсальный рендер параметров: тип поля выбирается по типу значения. */
 function renderProperties(device: Device, onChange: (prop: string, value: PropValue) => void) {
   const props = device.properties || {};
   // Параметры каналов (gain:<порт>, phantom:<порт>) показываются отдельным блоком

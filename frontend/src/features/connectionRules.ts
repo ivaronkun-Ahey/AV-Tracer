@@ -42,3 +42,34 @@ export function connectionProblem(
   if (isPortBusy(connections, from.device, fromPort)) return 'порт уже занят';
   return null;
 }
+
+export interface PortRef {
+  device: string;
+  port: string;
+}
+
+export interface Link {
+  from: PortRef;
+  to: PortRef;
+}
+
+/**
+ * Все допустимые кабели, один конец которых — заданный порт: с его выхода на
+ * свободные входы других устройств или с чужих выходов на этот вход.
+ * Варианты для подключения без холста (из панели свойств, с клавиатуры).
+ */
+export function possibleLinks(devices: Device[], connections: Connection[], end: PortRef): Link[] {
+  const endPort = findPort(devices, end.device, end.port);
+  if (!endPort) return [];
+  const links: Link[] = [];
+  for (const d of devices) {
+    if (d.id === end.device) continue;
+    for (const p of d.ports) {
+      if (!signalsCompatible(endPort.signal_type, p.signal_type)) continue;
+      const other = { device: d.id, port: p.id };
+      if (!connectionProblem(devices, connections, end, other)) links.push({ from: end, to: other });
+      else if (!connectionProblem(devices, connections, other, end)) links.push({ from: other, to: end });
+    }
+  }
+  return links;
+}

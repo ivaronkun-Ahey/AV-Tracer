@@ -4,6 +4,8 @@ import reducer, {
   removeDevice,
   startConnection,
   completeConnection,
+  connect as connectPorts,
+  nudgeDevice,
   beginDeviceDrag,
   moveDevice,
   updateDeviceProperty,
@@ -13,6 +15,7 @@ import reducer, {
   redo,
 } from './canvasSlice';
 import { Device, Port } from '../types/device.types';
+import { possibleLinks } from './connectionRules';
 
 const OUT: Port = { id: 'p', type: 'xlr', direction: 'output', signal_type: 'analog_audio' };
 const IN: Port = { id: 'in', type: 'xlr', direction: 'input', signal_type: 'analog_audio' };
@@ -180,5 +183,48 @@ describe('R7: обозначения устройств постоянные', (
     expect(state.devices[0].tag).toBe('VOX-1');
     state = reducer(state, setDeviceTag({ id: 'm2', tag: 'VOX-1' }));
     expect(state.devices[1].tag).toBe('MIC-02');
+  });
+
+  it('кабель из панели свойств проходит те же проверки, что и на холсте', () => {
+    let state = withDevices('a', 'b');
+    const cable = { from: { device: 'a', port: 'p' }, to: { device: 'b', port: 'in' }, cableType: 'xlr' as const };
+    state = reducer(state, connectPorts(cable));
+    expect(state.connections).toHaveLength(1);
+    expect(state.connections[0].label).toBe('A-001');
+    // Вход занят — второй кабель не добавляется и история не растёт
+    const pastBefore = state.past.length;
+    state = reducer(state, connectPorts(cable));
+    expect(state.connections).toHaveLength(1);
+    expect(state.past).toHaveLength(pastBefore);
+    // Не в ту сторону и несовместимые сигналы — тоже нет
+    state = reducer(state, connectPorts({ ...cable, from: { device: 'b', port: 'in' }, to: { device: 'a', port: 'p' } }));
+    state = reducer(state, connectPorts({ ...cable, to: { device: 'a', port: 'eth' } }));
+    expect(state.connections).toHaveLength(1);
+  });
+
+  it('варианты подключения: только свободные совместимые порты, в обе стороны', () => {
+    let state = withDevices('a', 'b', 'c');
+    const fromOut = possibleLinks(state.devices, state.connections, { device: 'a', port: 'p' });
+    expect(fromOut.map((l) => `${l.to.device}.${l.to.port}`)).toEqual(['b.in', 'c.in']);
+    const intoIn = possibleLinks(state.devices, state.connections, { device: 'a', port: 'in' });
+    expect(intoIn.map((l) => `${l.from.device}.${l.from.port}`)).toEqual(['b.p', 'c.p']);
+    // Ethernet ↔ Ethernet: кабель возможен, направление — от выбранного порта
+    const lan = possibleLinks(state.devices, state.connections, { device: 'a', port: 'eth' });
+    expect(lan.map((l) => `${l.from.device}>${l.to.device}`)).toEqual(['a>b', 'a>c']);
+    state = connect(state, 'b', 'p', 'c', 'in');
+    const after = possibleLinks(state.devices, state.connections, { device: 'a', port: 'p' });
+    expect(after.map((l) => `${l.to.device}.${l.to.port}`)).toEqual(['b.in']);
+  });
+
+  it('сдвиг стрелками: серия нажатий — один шаг отмены', () => {
+    let state = withDevices('a');
+    const pastBefore = state.past.length;
+    state = reducer(state, nudgeDevice({ id: 'a', dx: 20, dy: 0 }));
+    state = reducer(state, nudgeDevice({ id: 'a', dx: 20, dy: 0 }));
+    state = reducer(state, nudgeDevice({ id: 'a', dx: 0, dy: 100 }));
+    expect(state.devices[0].position).toEqual({ x: 40, y: 100 });
+    expect(state.past).toHaveLength(pastBefore + 1);
+    state = reducer(state, undo());
+    expect(state.devices[0].position).toEqual({ x: 0, y: 0 });
   });
 });

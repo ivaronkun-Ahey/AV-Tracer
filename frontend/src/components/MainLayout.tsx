@@ -6,7 +6,6 @@ import {
   Typography,
   Button,
   ButtonGroup,
-  Drawer,
   Snackbar,
   Alert,
   Tooltip,
@@ -16,6 +15,8 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
@@ -32,6 +33,9 @@ import PrintIcon from '@mui/icons-material/Print';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import CableIcon from '@mui/icons-material/Cable';
 import CheckIcon from '@mui/icons-material/Check';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import TuneIcon from '@mui/icons-material/Tune';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExportStage from './ExportStage';
 import AutosaveIndicator from './AutosaveIndicator';
 import EquipmentLibrary from './EquipmentLibrary';
@@ -65,6 +69,55 @@ import { EXAMPLE_PROJECTS } from '../data/examples';
 import { runSimulation } from '../sim/engine';
 import { parseProjectDoc, serializeProject, PROJECT_LIMITS } from '../data/projectSchema';
 
+type PanelName = 'library' | 'properties';
+type MenuName = 'examples' | 'view' | 'export' | 'more';
+type PanelState = Record<PanelName, boolean>;
+const PANELS_KEY = 'av-tracer:panels';
+
+/** Какие панели открыты на широком экране — удобство конкретного браузера. */
+function loadPanels(): PanelState {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PANELS_KEY) || '{}');
+    return { library: raw.library !== false, properties: raw.properties !== false };
+  } catch {
+    return { library: true, properties: true };
+  }
+}
+
+function savePanels(state: PanelState) {
+  try {
+    localStorage.setItem(PANELS_KEY, JSON.stringify(state));
+  } catch {
+    /* хранилище недоступно — панели просто откроются по умолчанию */
+  }
+}
+
+/** Кнопка панели инструментов: на узком экране — только значок с подсказкой. */
+const ToolButton: React.FC<{
+  compact: boolean;
+  icon: React.ReactNode;
+  label: string;
+  tooltip?: string;
+  onClick: (e: React.MouseEvent<HTMLElement>) => void;
+  disabled?: boolean;
+  pressed?: boolean;
+}> = ({ compact, icon, label, tooltip, onClick, disabled, pressed }) => {
+  const button = compact ? (
+    <IconButton size="small" aria-label={label} aria-pressed={pressed} onClick={onClick} disabled={disabled}>
+      {icon}
+    </IconButton>
+  ) : (
+    <Button size="small" startIcon={icon} aria-pressed={pressed} onClick={onClick} disabled={disabled}>
+      {label}
+    </Button>
+  );
+  if (!compact && !tooltip) return button;
+  return (
+    <Tooltip title={tooltip ?? label}>
+      <span style={{ flexShrink: 0 }}>{button}</span>
+    </Tooltip>
+  );
+};
 
 const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -77,11 +130,48 @@ const MainLayout: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const snapToGrid = useAppSelector((s) => s.canvas.snapToGrid);
   const showCableLabels = useAppSelector((s) => s.canvas.showCableLabels);
-  const [menu, setMenu] = useState<{ name: 'examples' | 'view' | 'export'; anchor: HTMLElement } | null>(null);
+  const [menu, setMenu] = useState<{ name: MenuName; anchor: HTMLElement } | null>(null);
   const [layoutRunning, setLayoutRunning] = useState(false);
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
-  const openMenu = (name: 'examples' | 'view' | 'export') => (e: React.MouseEvent<HTMLElement>) =>
+
+  // Если хватает ширины, панель стоит сбоку от холста и сворачивается (библиотека —
+  // от 900 px, свойства — от 1200 px). Иначе открывается поверх холста по кнопке,
+  // по одной, и по умолчанию закрыта.
+  const theme = useTheme();
+  const wide = useMediaQuery(theme.breakpoints.up('lg'), { noSsr: true });
+  const medium = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
+  const phone = !useMediaQuery(theme.breakpoints.up('sm'), { noSsr: true });
+  const compact = !wide;
+  const dockable: PanelState = { library: medium, properties: wide };
+  const [docked, setDocked] = useState<PanelState>(loadPanels);
+  const [overlay, setOverlay] = useState<PanelName | null>(null);
+  const isOpen = (name: PanelName) => (dockable[name] ? docked[name] : overlay === name);
+  const togglePanel = (name: PanelName) => {
+    if (dockable[name]) {
+      const next = { ...docked, [name]: !docked[name] };
+      setDocked(next);
+      savePanels(next);
+    } else {
+      setOverlay(overlay === name ? null : name);
+    }
+  };
+  const panelSx = (name: PanelName, side: 'left' | 'right', width: number) => ({
+    width,
+    flexShrink: 0,
+    bgcolor: '#161b22',
+    [side === 'left' ? 'borderRight' : 'borderLeft']: '1px solid #30363d',
+    ...(dockable[name]
+      ? {}
+      : { position: 'absolute' as const, top: 0, bottom: 0, [side]: 0, zIndex: 10, width: `min(${width}px, 88vw)`, boxShadow: 8 }),
+  });
+  const openMenu = (name: MenuName) => (e: React.MouseEvent<HTMLElement>) =>
     setMenu({ name, anchor: e.currentTarget });
+  // Пункт меню «Ещё» открывает вложенное меню на том же месте
+  const switchMenu = (name: MenuName) => setMenu((m) => (m ? { name, anchor: m.anchor } : null));
+  const openFile = () => {
+    closeMenu();
+    fileInputRef.current?.click();
+  };
   const closeMenu = () => setMenu(null);
 
   const handleExample = (id: string) => {
@@ -233,117 +323,121 @@ const MainLayout: React.FC = () => {
       />
 
       <AppBar position="static" sx={{ bgcolor: '#0d1117', borderBottom: '1px solid #30363d' }} elevation={0}>
-        <Toolbar variant="dense" sx={{ gap: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, mr: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            ⚡ AV-Tracer
+        <Toolbar variant="dense" sx={{ gap: phone ? 0.5 : 1, overflowX: 'auto', '& > *': { flexShrink: 0 } }}>
+          <ToolButton
+            compact
+            icon={<LibraryBooksIcon fontSize="small" />}
+            label={isOpen('library') ? 'Скрыть библиотеку' : 'Показать библиотеку'}
+            pressed={isOpen('library')}
+            onClick={() => togglePanel('library')}
+          />
+          <Typography variant="h6" sx={{ fontWeight: 800, mr: { xs: 0, lg: 2 }, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            ⚡<Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>AV-Tracer</Box>
           </Typography>
 
-          <ButtonGroup variant="outlined" size="small">
-            <Button startIcon={<FolderOpenIcon />} onClick={() => fileInputRef.current?.click()}>
-              Открыть
-            </Button>
-            <Button startIcon={<SaveIcon />} onClick={handleSave}>
-              Сохранить
-            </Button>
-          </ButtonGroup>
+          {!phone &&
+            (compact ? (
+              <>
+                <ToolButton compact icon={<FolderOpenIcon fontSize="small" />} label="Открыть" onClick={openFile} />
+                <ToolButton compact icon={<SaveIcon fontSize="small" />} label="Сохранить" onClick={handleSave} />
+              </>
+            ) : (
+              <ButtonGroup variant="outlined" size="small">
+                <Button startIcon={<FolderOpenIcon />} onClick={openFile}>
+                  Открыть
+                </Button>
+                <Button startIcon={<SaveIcon />} onClick={handleSave}>
+                  Сохранить
+                </Button>
+              </ButtonGroup>
+            ))}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#30363d' }} />
+          {!phone && <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#30363d' }} />}
 
-          <Tooltip title="Отменить (Ctrl+Z)">
-            <span>
-              <IconButton size="small" onClick={() => dispatch(undo())} disabled={!canUndo}>
-                <UndoIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Повторить">
-            <span>
-              <IconButton size="small" onClick={() => dispatch(redo())} disabled={!canRedo}>
-                <RedoIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <ToolButton
+            compact
+            icon={<UndoIcon fontSize="small" />}
+            label="Отменить"
+            tooltip="Отменить (Ctrl+Z)"
+            onClick={() => dispatch(undo())}
+            disabled={!canUndo}
+          />
+          <ToolButton
+            compact
+            icon={<RedoIcon fontSize="small" />}
+            label="Повторить"
+            tooltip="Повторить (Ctrl+Shift+Z)"
+            onClick={() => dispatch(redo())}
+            disabled={!canRedo}
+          />
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#30363d' }} />
-
-          <Button size="small" startIcon={<AutoAwesomeIcon />} onClick={openMenu('examples')}>
-            Примеры
-          </Button>
-          <Tooltip title="Расставить устройства по ходу сигнала: источники слева, приёмники справа">
-            <span>
-              <Button
-                size="small"
-                startIcon={<AccountTreeIcon />}
+          {!phone && (
+            <>
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#30363d' }} />
+              <ToolButton compact={compact} icon={<AutoAwesomeIcon fontSize="small" />} label="Примеры" onClick={openMenu('examples')} />
+              <ToolButton
+                compact={compact}
+                icon={<AccountTreeIcon fontSize="small" />}
+                label="Упорядочить"
+                tooltip="Расставить устройства по ходу сигнала: источники слева, приёмники справа"
                 onClick={handleAutoLayout}
                 disabled={devices.length === 0 || layoutRunning}
-              >
-                Упорядочить
-              </Button>
-            </span>
-          </Tooltip>
-          <Button size="small" startIcon={<VisibilityIcon />} onClick={openMenu('view')}>
-            Вид
-          </Button>
-          <Button size="small" startIcon={<FileDownloadIcon />} onClick={openMenu('export')}>
-            Экспорт
-          </Button>
+              />
+              <ToolButton compact={compact} icon={<VisibilityIcon fontSize="small" />} label="Вид" onClick={openMenu('view')} />
+              <ToolButton compact={compact} icon={<FileDownloadIcon fontSize="small" />} label="Экспорт" onClick={openMenu('export')} />
+            </>
+          )}
 
           <Box sx={{ flexGrow: 1 }} />
 
-          <Button
-            variant="contained"
-            color="success"
-            size="small"
-            startIcon={<PlayArrowIcon />}
-            onClick={handleSimulate}
-          >
-            Симуляция
-          </Button>
-          <Button variant="outlined" color="error" size="small" startIcon={<DeleteIcon />} onClick={handleClear}>
-            Очистить
-          </Button>
+          {phone ? (
+            <Tooltip title="Симуляция">
+              <IconButton
+                size="small"
+                aria-label="Симуляция"
+                onClick={handleSimulate}
+                sx={{ bgcolor: 'success.main', color: '#fff', '&:hover': { bgcolor: 'success.dark' } }}
+              >
+                <PlayArrowIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button variant="contained" color="success" size="small" startIcon={<PlayArrowIcon />} onClick={handleSimulate}>
+              Симуляция
+            </Button>
+          )}
+          {!phone &&
+            (compact ? (
+              <ToolButton compact icon={<DeleteIcon fontSize="small" />} label="Очистить" onClick={handleClear} />
+            ) : (
+              <Button variant="outlined" color="error" size="small" startIcon={<DeleteIcon />} onClick={handleClear}>
+                Очистить
+              </Button>
+            ))}
+          <ToolButton
+            compact
+            icon={<TuneIcon fontSize="small" />}
+            label={isOpen('properties') ? 'Скрыть свойства' : 'Показать свойства'}
+            pressed={isOpen('properties')}
+            onClick={() => togglePanel('properties')}
+          />
+          {phone && <ToolButton compact icon={<MoreVertIcon fontSize="small" />} label="Ещё" onClick={openMenu('more')} />}
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Drawer
-          variant="permanent"
-          sx={{
-            width: 280,
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: 280,
-              boxSizing: 'border-box',
-              position: 'relative',
-              bgcolor: '#161b22',
-              borderRight: '1px solid #30363d',
-            },
-          }}
-        >
-          <EquipmentLibrary />
-        </Drawer>
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {/* Скрытая панель остаётся в DOM: поиск в библиотеке не сбрасывается */}
+        <Box component="aside" aria-label="Библиотека оборудования" hidden={!isOpen('library')} sx={panelSx('library', 'left', 280)}>
+          <EquipmentLibrary onAdded={() => !dockable.library && setOverlay(null)} />
+        </Box>
 
-        <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative' }}>
           <CanvasWorkspace />
         </Box>
 
-        <Drawer
-          variant="permanent"
-          anchor="right"
-          sx={{
-            width: 320,
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: 320,
-              boxSizing: 'border-box',
-              position: 'relative',
-              bgcolor: '#161b22',
-              borderLeft: '1px solid #30363d',
-            },
-          }}
-        >
+        <Box component="aside" aria-label="Свойства" hidden={!isOpen('properties')} sx={panelSx('properties', 'right', 320)}>
           <PropertiesPanel />
-        </Drawer>
+        </Box>
       </Box>
 
       {/* Статус-бар */}
@@ -354,20 +448,86 @@ const MainLayout: React.FC = () => {
           bgcolor: '#0d1117',
           borderTop: '1px solid #30363d',
           display: 'flex',
-          gap: 3,
+          gap: { xs: 1.5, sm: 3 },
           fontSize: '0.8rem',
           color: 'text.secondary',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
         }}
       >
         <span>Устройств: {devices.length}</span>
         <span>Соединений: {connections.length}</span>
         <AutosaveIndicator />
-        <span style={{ marginLeft: 'auto', opacity: 0.7 }}>
-          Входы — слева, выходы — справа · Удалить — Delete · Отмена — Esc · Зум — колесо мыши
-        </span>
+        <Box component="span" sx={{ ml: 'auto', opacity: 0.7, display: { xs: 'none', lg: 'inline' } }}>
+          Входы — слева, выходы — справа · Удалить — Delete · Отмена — Esc · Стрелки — сдвиг · Зум — колесо мыши
+        </Box>
       </Box>
 
       <SimulationPanel />
+
+      {/* На телефоне второстепенные действия собраны в меню «Ещё» */}
+      <Menu anchorEl={menu?.anchor} open={menu?.name === 'more'} onClose={closeMenu}>
+        <MenuItem onClick={openFile}>
+          <ListItemIcon>
+            <FolderOpenIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Открыть" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            handleSave();
+          }}
+        >
+          <ListItemIcon>
+            <SaveIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Сохранить" />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => switchMenu('examples')}>
+          <ListItemIcon>
+            <AutoAwesomeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Примеры…" />
+        </MenuItem>
+        <MenuItem
+          disabled={devices.length === 0 || layoutRunning}
+          onClick={() => {
+            closeMenu();
+            handleAutoLayout();
+          }}
+        >
+          <ListItemIcon>
+            <AccountTreeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Упорядочить" />
+        </MenuItem>
+        <MenuItem onClick={() => switchMenu('view')}>
+          <ListItemIcon>
+            <VisibilityIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Вид…" />
+        </MenuItem>
+        <MenuItem onClick={() => switchMenu('export')}>
+          <ListItemIcon>
+            <FileDownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Экспорт…" />
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            handleClear();
+          }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText primary="Очистить" />
+        </MenuItem>
+      </Menu>
 
       <Menu anchorEl={menu?.anchor} open={menu?.name === 'examples'} onClose={closeMenu}>
         {EXAMPLE_PROJECTS.map((ex) => (
