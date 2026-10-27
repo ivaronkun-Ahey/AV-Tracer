@@ -7,6 +7,7 @@ import reducer, {
   beginDeviceDrag,
   moveDevice,
   updateDeviceProperty,
+  setDeviceTag,
   setSimulation,
   undo,
   redo,
@@ -119,5 +120,65 @@ describe('canvasSlice', () => {
     expect(state.past.length).toBe(historyBefore + 1);
     state = reducer(state, undo());
     expect(state.devices[0].properties.gain).toBe(0);
+  });
+});
+
+describe('R6: незавершённое соединение не переживает отмену и удаление', () => {
+  it('отмена добавления источника посреди соединения — кабель не создаётся', () => {
+    let state = withDevices('mix');
+    state = reducer(state, addDevice(makeDevice('mic')));
+    state = reducer(state, startConnection({ deviceId: 'mic', portId: 'p' }));
+    state = reducer(state, undo());
+    expect(state.connectionInProgress).toBeNull();
+    state = reducer(state, completeConnection({ toDeviceId: 'mix', toPortId: 'in', cableType: 'xlr' }));
+    expect(state.connections).toHaveLength(0);
+  });
+
+  it('удаление источника посреди соединения сбрасывает его', () => {
+    let state = withDevices('mix', 'mic');
+    state = reducer(state, startConnection({ deviceId: 'mic', portId: 'p' }));
+    state = reducer(state, removeDevice('mic'));
+    expect(state.connectionInProgress).toBeNull();
+  });
+
+  it('редьюсер не соединяет выход с выходом, несуществующий порт и несовместимые сигналы', () => {
+    const video = (id: string): Device => ({
+      ...makeDevice(id),
+      ports: [{ id: 'hdmi_in', type: 'hdmi', direction: 'input', signal_type: 'hdmi' }],
+    });
+    let state = withDevices('a', 'b');
+    state = reducer(state, addDevice(video('tv')));
+    for (const [to, port] of [
+      ['b', 'p'],
+      ['b', 'nope'],
+      ['tv', 'hdmi_in'],
+      ['a', 'in'],
+    ]) {
+      state = reducer(state, startConnection({ deviceId: 'a', portId: 'p' }));
+      state = reducer(state, completeConnection({ toDeviceId: to, toPortId: port, cableType: 'xlr' }));
+    }
+    expect(state.connections).toHaveLength(0);
+  });
+});
+
+describe('R7: обозначения устройств постоянные', () => {
+  it('удаление MIC-01 не перенумеровывает MIC-02, новый получает MIC-03', () => {
+    let state = withDevices('m1', 'm2');
+    expect(state.devices.map((d) => d.tag)).toEqual(['MIC-01', 'MIC-02']);
+    state = reducer(state, removeDevice('m1'));
+    expect(state.devices.map((d) => d.tag)).toEqual(['MIC-02']);
+    state = reducer(state, addDevice(makeDevice('m3')));
+    expect(state.devices.map((d) => d.tag)).toEqual(['MIC-02', 'MIC-03']);
+    state = reducer(state, undo());
+    state = reducer(state, undo());
+    expect(state.devices.map((d) => d.tag)).toEqual(['MIC-01', 'MIC-02']);
+  });
+
+  it('обозначение можно изменить, но не на занятое', () => {
+    let state = withDevices('m1', 'm2');
+    state = reducer(state, setDeviceTag({ id: 'm1', tag: ' vox-1 ' }));
+    expect(state.devices[0].tag).toBe('VOX-1');
+    state = reducer(state, setDeviceTag({ id: 'm2', tag: 'VOX-1' }));
+    expect(state.devices[1].tag).toBe('MIC-02');
   });
 });

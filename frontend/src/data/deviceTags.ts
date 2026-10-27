@@ -27,14 +27,41 @@ const TAG_PREFIX: Record<string, string> = {
   touch_panel: 'TP',
 };
 
-/** Обозначения вида MIC-01, AMP-02 — по порядку добавления устройств. */
-export function deviceTags(devices: Device[]): Record<string, string> {
-  const counters: Record<string, number> = {};
-  const tags: Record<string, string> = {};
+export function tagPrefix(type: string): string {
+  return TAG_PREFIX[type] ?? 'DEV';
+}
+
+function tagNumber(tag: string | undefined, prefix: string): number {
+  const m = tag ? new RegExp(`^${prefix}-(\\d+)$`).exec(tag) : null;
+  return m ? Number(m[1]) : 0;
+}
+
+/**
+ * Следующее свободное обозначение для типа: номер после максимального,
+ * поэтому удаление или перестановка устройств не перенумеровывает остальные.
+ */
+export function nextDeviceTag(devices: Device[], type: string): string {
+  const prefix = tagPrefix(type);
+  const max = devices.reduce((acc, d) => Math.max(acc, tagNumber(d.tag, prefix)), 0);
+  return `${prefix}-${String(max + 1).padStart(2, '0')}`;
+}
+
+/** Проставляет обозначения устройствам без них (старые проекты, примеры), не трогая существующие. */
+export function withDeviceTags(devices: Device[]): Device[] {
+  if (devices.every((d) => d.tag)) return devices;
+  const result: Device[] = [];
   for (const d of devices) {
-    const prefix = TAG_PREFIX[d.type] ?? 'DEV';
-    counters[prefix] = (counters[prefix] ?? 0) + 1;
-    tags[d.id] = `${prefix}-${String(counters[prefix]).padStart(2, '0')}`;
+    if (d.tag) {
+      result.push(d);
+      continue;
+    }
+    result.push({ ...d, tag: nextDeviceTag([...devices, ...result], d.type) });
   }
-  return tags;
+  return result;
+}
+
+/** Обозначения устройств (MIC-01, AMP-02) для схемы, спецификации и кабельного журнала. */
+export function deviceTags(devices: Device[]): Record<string, string> {
+  const withTags = withDeviceTags(devices);
+  return Object.fromEntries(withTags.map((d) => [d.id, d.tag as string]));
 }

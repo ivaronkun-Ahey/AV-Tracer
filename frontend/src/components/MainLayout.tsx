@@ -62,7 +62,7 @@ import {
 } from '../features/exportDocs';
 import { EXAMPLE_PROJECTS } from '../data/examples';
 import { runSimulation } from '../sim/engine';
-import { parseProjectDoc } from '../data/projectSchema';
+import { parseProjectDoc, serializeProject, PROJECT_LIMITS } from '../data/projectSchema';
 
 
 const MainLayout: React.FC = () => {
@@ -153,7 +153,7 @@ const MainLayout: React.FC = () => {
   };
 
   const handleSave = () => {
-    const project = { devices, connections, timestamp: new Date().toISOString() };
+    const project = { ...serializeProject(devices, connections), timestamp: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -167,6 +167,11 @@ const MainLayout: React.FC = () => {
   const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > PROJECT_LIMITS.fileBytes) {
+      dispatch(showToast({ message: 'Файл слишком большой для проекта AV-Tracer (больше 5 МБ)', severity: 'error' }));
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       let raw: unknown;
@@ -182,13 +187,16 @@ const MainLayout: React.FC = () => {
         return;
       }
       dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections }));
+      const remarks = [
+        ...parsed.notes,
+        ...(parsed.droppedConnections > 0
+          ? [`пропущено соединений с несуществующими портами: ${parsed.droppedConnections}`]
+          : []),
+      ];
       dispatch(
         showToast(
-          parsed.droppedConnections > 0
-            ? {
-                message: `Проект загружен; пропущено соединений с несуществующими портами: ${parsed.droppedConnections}`,
-                severity: 'warning',
-              }
+          remarks.length > 0
+            ? { message: `Проект загружен; ${remarks.join('; ')}`, severity: 'warning' }
             : { message: 'Проект загружен', severity: 'success' }
         )
       );

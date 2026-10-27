@@ -61,3 +61,22 @@ describe('спецификация и кабельный журнал', () => {
     expect(html).not.toContain('Allen & Heath');
   });
 });
+
+describe('R8: CSV не превращает текст в формулы', () => {
+  it('текст с =, +, -, @, табуляцией в начале экранируется апострофом', () => {
+    for (const bad of ['=1+1', '+SUM(A1)', '-2+3', '@cmd', '\tx']) {
+      const line = toCsv([[bad]]).slice(1).trim();
+      expect(line.replace(/^"|"$/g, '').startsWith("'")).toBe(true);
+    }
+  });
+
+  it('числа остаются числами, обычный текст не меняется', () => {
+    expect(toCsv([[10, 'SM58', 'MIC-01']])).toBe('﻿10;SM58;MIC-01\r\n');
+  });
+
+  it('модель «=1+1» из импортированного проекта попадает в спецификацию как текст', () => {
+    const { devices } = concert();
+    devices[0] = { ...devices[0], model: '=1+1' };
+    expect(bomCsv(devices)).toContain(";'=1+1;");
+  });
+});

@@ -105,11 +105,20 @@ export function cableTotals(rows: CableRow[]): CableTotal[] {
   return [...totals.values()].sort((a, b) => a.cable.localeCompare(b.cable));
 }
 
+/**
+ * Текст, который табличный редактор принял бы за формулу (=, +, -, @, табуляция,
+ * перевод строки в начале), получает впереди апостроф и остаётся текстом.
+ * Числа (длины, количества) выводятся как числа.
+ */
+export function neutralizeFormula(value: string): string {
+  return /^[=+\-@\t\r\n]/.test(value) ? `'${value}` : value;
+}
+
 /** CSV для Excel в русской локали: разделитель «;», BOM для UTF-8. */
 export function toCsv(rows: (string | number)[][]): string {
   const cell = (v: string | number) => {
-    const s = String(v);
-    return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    const s = typeof v === 'number' ? String(v) : neutralizeFormula(v);
+    return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n') + '\r\n';
 }

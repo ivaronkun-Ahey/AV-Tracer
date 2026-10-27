@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
 import { Device, Connection, SimulationResult, CableType, PropValue } from '../types/device.types';
-import { isPortBusy, findPort } from './connectionRules';
+import { connectionProblem } from './connectionRules';
+import { nextDeviceTag, withDeviceTags } from '../data/deviceTags';
 import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
 
 interface CanvasDoc {
@@ -87,13 +88,17 @@ const canvasSlice = createSlice({
   reducers: {
     addDevice: (state, action: PayloadAction<Device>) => {
       pushHistory(state);
-      state.devices.push(action.payload);
+      // Обозначение — следующее свободное: остальные устройства не перенумеровываются
+      const taken = action.payload.tag && state.devices.some((d) => d.tag === action.payload.tag);
+      const tag = action.payload.tag && !taken ? action.payload.tag : nextDeviceTag(state.devices, action.payload.type);
+      state.devices.push({ ...action.payload, tag });
       state.selectedDeviceId = action.payload.id;
       state.selectedConnectionId = null;
     },
 
     removeDevice: (state, action: PayloadAction<string>) => {
       pushHistory(state);
+      if (state.connectionInProgress?.fromDeviceId === action.payload) state.connectionInProgress = null;
       state.devices = state.devices.filter((d) => d.id !== action.payload);
       state.connections = state.connections.filter(
         (c) => c.from.device !== action.payload && c.to.device !== action.payload
@@ -147,6 +152,16 @@ const canvasSlice = createSlice({
       }
     },
 
+    /** Новое обозначение устройства; пустое или занятое другим устройством не принимается. */
+    setDeviceTag: (state, action: PayloadAction<{ id: string; tag: string }>) => {
+      const tag = action.payload.tag.trim().toUpperCase();
+      const device = state.devices.find((d) => d.id === action.payload.id);
+      if (!device || !tag || tag.length > 32 || device.tag === tag) return;
+      if (state.devices.some((d) => d.id !== device.id && d.tag === tag)) return;
+      pushHistory(state, { keepSimulation: true });
+      device.tag = tag;
+    },
+
     selectDevice: (state, action: PayloadAction<string>) => {
       state.selectedDeviceId = action.payload;
       state.selectedConnectionId = null;
@@ -182,13 +197,15 @@ const canvasSlice = createSlice({
     ) => {
       const pending = state.connectionInProgress;
       if (pending) {
-        // В занятый вход (или занятый Ethernet-порт) второй кабель не подключается
-        const toPort = findPort(state.devices, action.payload.toDeviceId, action.payload.toPortId);
-        const fromPort = findPort(state.devices, pending.fromDeviceId, pending.fromPortId);
-        if (
-          (toPort && isPortBusy(state.connections, action.payload.toDeviceId, toPort)) ||
-          (fromPort && isPortBusy(state.connections, pending.fromDeviceId, fromPort))
-        ) {
+        // Редьюсер сам проверяет кабель, даже если интерфейс уже проверил:
+        // концы существуют, направления верные, сигналы совместимы, порты свободны
+        const problem = connectionProblem(
+          state.devices,
+          state.connections,
+          { device: pending.fromDeviceId, port: pending.fromPortId },
+          { device: action.payload.toDeviceId, port: action.payload.toPortId }
+        );
+        if (problem) {
           state.connectionInProgress = null;
           return;
         }
@@ -244,7 +261,7 @@ const canvasSlice = createSlice({
       action: PayloadAction<{ devices: Device[]; connections: Connection[] }>
     ) => {
       pushHistory(state);
-      state.devices = action.payload.devices;
+      state.devices = withDeviceTags(action.payload.devices);
       state.connections = withCableLabels(action.payload.devices, action.payload.connections);
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
@@ -262,6 +279,7 @@ const canvasSlice = createSlice({
       state.connections = previous.connections;
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
+      state.connectionInProgress = null;
       state.simulation = null;
       state.lastHistoryKey = null;
     },
@@ -277,6 +295,7 @@ const canvasSlice = createSlice({
       state.connections = next.connections;
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
+      state.connectionInProgress = null;
       state.simulation = null;
       state.lastHistoryKey = null;
     },
@@ -336,6 +355,7 @@ export const {
   moveDevice,
   setDevicePositions,
   updateDeviceProperty,
+  setDeviceTag,
   selectDevice,
   deselectAll,
   selectConnection,

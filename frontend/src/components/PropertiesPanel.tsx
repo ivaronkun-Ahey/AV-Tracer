@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -17,6 +17,7 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import { useAppSelector, useAppDispatch } from '../store';
 import {
   updateDeviceProperty,
+  setDeviceTag,
   removeDevice,
   removeConnection,
   showToast,
@@ -94,6 +95,12 @@ const PropertiesPanel: React.FC = () => {
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
         Параметры
       </Typography>
+      <TagField
+        key={device.id}
+        value={tag}
+        isTaken={(t) => devices.some((d) => d.id !== device.id && d.tag === t)}
+        onCommit={(t) => dispatch(setDeviceTag({ id: device.id, tag: t }))}
+      />
       {renderProperties(device, onChange)}
       {renderChannelGains(device, connections, onChange)}
 
@@ -179,6 +186,39 @@ const PropertiesPanel: React.FC = () => {
 };
 
 /** Универсальный рендер параметров: тип поля выбирается по типу значения. */
+/** Обозначение устройства (MIC-01): редактируется, должно быть уникальным. */
+const TagField: React.FC<{ value: string; isTaken: (tag: string) => boolean; onCommit: (tag: string) => void }> = ({
+  value,
+  isTaken,
+  onCommit,
+}) => {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  const normalized = text.trim().toUpperCase();
+  const error = !normalized ? 'Обозначение не может быть пустым' : isTaken(normalized) ? 'Такое обозначение уже есть' : '';
+  const commit = () => {
+    if (!error && normalized !== value) onCommit(normalized);
+    else setText(value);
+  };
+  return (
+    <TextField
+      label="Обозначение на схеме"
+      size="small"
+      fullWidth
+      value={text}
+      error={!!error}
+      helperText={error || 'попадает в спецификацию и кабельный журнал'}
+      inputProps={{ maxLength: 32 }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+      }}
+      sx={{ mb: 1.5 }}
+    />
+  );
+};
+
 const GAIN_STAGES = ['mixer', 'dsp', 'audio_interface'];
 
 /**

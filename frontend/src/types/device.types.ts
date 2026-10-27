@@ -40,6 +40,8 @@ export interface Port {
 
 export interface Device {
   id: string;
+  /** Позиционное обозначение (MIC-01): постоянное, не меняется при удалении других устройств. */
+  tag?: string;
   type: string;
   category: DeviceCategory;
   manufacturer: string;
