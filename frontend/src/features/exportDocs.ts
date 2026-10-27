@@ -231,7 +231,6 @@ export function documentationHtml(imageUrl: string, devices: Device[], connectio
     totals.map((t) => [t.cable, t.count, t.length])
   )}</div>
 </section>
-<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>
 </body>
 </html>`;
 }

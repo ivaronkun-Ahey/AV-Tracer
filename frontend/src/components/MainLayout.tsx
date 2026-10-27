@@ -33,6 +33,7 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import CableIcon from '@mui/icons-material/Cable';
 import CheckIcon from '@mui/icons-material/Check';
 import ExportStage from './ExportStage';
+import AutosaveIndicator from './AutosaveIndicator';
 import EquipmentLibrary from './EquipmentLibrary';
 import CanvasWorkspace from './CanvasWorkspace';
 import PropertiesPanel from './PropertiesPanel';
@@ -139,9 +140,16 @@ const MainLayout: React.FC = () => {
       downloadDataUrl(`av-tracer-schema-${dateStamp()}.png`, dataUrl);
       dispatch(showToast({ message: 'Схема сохранена в PNG', severity: 'success' }));
     } else if (job.win) {
-      job.win.document.open();
-      job.win.document.write(documentationHtml(dataUrl, devices, connections));
-      job.win.document.close();
+      const win = job.win;
+      win.document.open();
+      win.document.write(documentationHtml(dataUrl, devices, connections));
+      win.document.close();
+      // Печать вызывает само приложение: встроенные скрипты в документе запрещены
+      // политикой безопасности (CSP), а диалог печати открывается после загрузки схемы
+      const img = win.document.querySelector('img');
+      const print = () => win.print();
+      if (img && !img.complete) img.addEventListener('load', print, { once: true });
+      else setTimeout(print, 100);
     }
   };
 
@@ -353,6 +361,7 @@ const MainLayout: React.FC = () => {
       >
         <span>Устройств: {devices.length}</span>
         <span>Соединений: {connections.length}</span>
+        <AutosaveIndicator />
         <span style={{ marginLeft: 'auto', opacity: 0.7 }}>
           Входы — слева, выходы — справа · Удалить — Delete · Отмена — Esc · Зум — колесо мыши
         </span>

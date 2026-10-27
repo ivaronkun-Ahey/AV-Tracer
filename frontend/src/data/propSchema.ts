@@ -10,7 +10,10 @@ export const propValueSchema: z.ZodType<PropValue> = z.union([
   z.array(z.union([z.string(), z.number()])),
 ]);
 
-export const propMapSchema = z.record(propValueSchema);
+export const propMapSchema = z.record(z.string(), propValueSchema);
+
+/** Параметры проверки: в ошибках нужно исходное значение, чтобы назвать его по-русски. */
+export const PARSE_OPTIONS = { reportInput: true } as const;
 
 /** Первая ошибка проверки — коротко и по-русски, с путём до поля. */
 export function describeZodError(error: z.ZodError): string {
@@ -18,9 +21,9 @@ export function describeZodError(error: z.ZodError): string {
   const where = issue.path.length ? ` (${issue.path.join('.')})` : '';
   let text = issue.message;
   if (issue.code === 'invalid_type') {
-    text = issue.received === 'undefined' ? 'нет обязательного поля' : `неверный тип: ${issue.received}`;
-  } else if (issue.code === 'invalid_enum_value') {
-    text = `недопустимое значение «${String(issue.received)}»`;
+    text = issue.input === undefined ? 'нет обязательного поля' : `неверный тип: ${typeof issue.input}`;
+  } else if (issue.code === 'invalid_value') {
+    text = `недопустимое значение «${String(issue.input)}»`;
   }
   return `${text}${where}`;
 }

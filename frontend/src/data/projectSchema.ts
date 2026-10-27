@@ -7,7 +7,7 @@ import {
   Connection,
   Device,
 } from '../types/device.types';
-import { propMapSchema, describeZodError } from './propSchema';
+import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
 import { withTemplateDefaults } from './equipment';
 import { withCableLabels } from './cableLabels';
 import { withDeviceTags } from './deviceTags';
@@ -105,7 +105,7 @@ function identityError(devices: Device[], connections: Connection[]): string | n
 }
 
 export function parseProjectDoc(raw: unknown): ParsedProject {
-  const parsed = projectDocSchema.safeParse(raw);
+  const parsed = projectDocSchema.safeParse(raw, PARSE_OPTIONS);
   if (!parsed.success) return { ok: false, error: describeZodError(parsed.error) };
   const version = parsed.data.schemaVersion ?? 1;
   if (version > SCHEMA_VERSION) {

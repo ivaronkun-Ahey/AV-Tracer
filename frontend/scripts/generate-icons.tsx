@@ -61,8 +61,14 @@ const ICONS: Record<string, SvgIconComponent> = {
 };
 const DEFAULT_ICON = SettingsInputComponent;
 
+/** CommonJS-модуль иконки в Node отдаёт компонент в .default — разворачиваем. */
+function unwrap(Icon: SvgIconComponent): SvgIconComponent {
+  return (Icon as unknown as { default?: SvgIconComponent }).default ?? Icon;
+}
+
 /** Все фигуры иконки одной строкой SVG-пути (окружности переводятся в дуги). */
-function pathData(Icon: SvgIconComponent): string {
+function pathData(Raw: SvgIconComponent): string {
+  const Icon = unwrap(Raw);
   const markup = renderToStaticMarkup(<Icon />);
   const parts: string[] = [];
   for (const m of markup.matchAll(/<(path|circle)\b([^>]*)>/g)) {

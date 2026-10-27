@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import canvasReducer, { initialCanvasState } from '../features/canvasSlice';
 import { parseProjectDoc, serializeProject } from '../data/projectSchema';
+import { setSaveStatus } from './saveStatus';
 
 const STORAGE_KEY = 'av-tracer:autosave';
 const PREFS_KEY = 'av-tracer:prefs';
@@ -50,28 +51,56 @@ export const store = configureStore({
   preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...persisted } },
 });
 
+let lastSaved: { devices: unknown; connections: unknown; snapToGrid: boolean; showCableLabels: boolean } | null = null;
+
 function saveNow() {
   const { devices, connections, snapToGrid, showCableLabels } = store.getState().canvas;
+  lastSaved = { devices, connections, snapToGrid, showCableLabels };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject(devices, connections)));
     localStorage.setItem(PREFS_KEY, JSON.stringify({ snapToGrid, showCableLabels }));
+    setSaveStatus({ state: 'saved', at: Date.now() });
   } catch {
-    /* localStorage недоступен — молча пропускаем */
+    // Нет места или хранилище запрещено — показываем это в строке состояния
+    setSaveStatus({ state: 'error', at: Date.now() });
   }
 }
 
 // Обновлённый (мигрированный) автосейв записываем сразу, чтобы миграция не повторялась
 if (persisted) saveNow();
 
-// Автосохранение схемы в localStorage (с лёгким троттлингом).
+// Автосохранение схемы в localStorage (с лёгким троттлингом) — только когда
+// изменилась сама схема или настройки вида, а не выделение, зум и т. п.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 store.subscribe(() => {
-  if (saveTimer) return;
+  const { devices, connections, snapToGrid, showCableLabels } = store.getState().canvas;
+  const changed =
+    !lastSaved ||
+    lastSaved.devices !== devices ||
+    lastSaved.connections !== connections ||
+    lastSaved.snapToGrid !== snapToGrid ||
+    lastSaved.showCableLabels !== showCableLabels;
+  if (!changed || saveTimer) return;
+  setSaveStatus({ state: 'pending' });
   saveTimer = setTimeout(() => {
     saveTimer = null;
     saveNow();
   }, 400);
 });
+
+// Вкладку закрывают или сворачивают — сохраняем не дожидаясь таймера
+function flush() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saveNow();
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+}
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

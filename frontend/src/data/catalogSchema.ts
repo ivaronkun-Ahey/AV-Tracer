@@ -12,7 +12,7 @@ import {
   PortDirection,
   SignalType,
 } from '../types/device.types';
-import { propMapSchema, describeZodError } from './propSchema';
+import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
 
 /**
  * Загрузка библиотеки оборудования из catalog.json. В файле порт задаётся
@@ -114,7 +114,7 @@ export interface EquipmentCategory {
 
 /** Проверяет каталог и разворачивает порты; при ошибке — исключение с путём до поля. */
 export function parseCatalog(raw: unknown): EquipmentCategory[] {
-  const parsed = catalogSchema.safeParse(raw);
+  const parsed = catalogSchema.safeParse(raw, PARSE_OPTIONS);
   if (!parsed.success) throw new Error(`Ошибка в каталоге оборудования: ${describeZodError(parsed.error)}`);
   const seen = new Set<string>();
   return parsed.data.categories.map((cat) => ({

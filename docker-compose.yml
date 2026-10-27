@@ -1,16 +1,17 @@
-# AV-Tracer — запуск всего приложения одной командой:
-#   docker compose up
-# Открыть в браузере: http://localhost:3000
+# AV-Tracer — среда разработки одной командой:
+#   docker compose up                      → интерфейс на http://localhost:3000
+#   docker compose --profile backend up    → плюс заготовка API на http://localhost:8000
 #
-# frontend — интерфейс и симуляция (считается в браузере);
-# backend — заготовка API для будущих функций, для работы приложения не обязателен.
-# Внешние СУБД не требуются — приложение их не использует.
+# frontend — интерфейс и симуляция (считается в браузере), backend не обязателен.
+# Это окружение разработки (горячая перезагрузка). Продакшен-сборка — frontend/Dockerfile
+# (статика через nginx), см. раздел «Развёртывание» в README.
 
 services:
   backend:
+    profiles: ["backend"]
     build: ./backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -20,12 +21,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      # Адрес backend для прокси Vite (/api -> backend)
+      # Адрес backend для прокси Vite (/api -> backend), если он запущен
       - BACKEND_URL=http://backend:8000
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
-    depends_on:
-      - backend

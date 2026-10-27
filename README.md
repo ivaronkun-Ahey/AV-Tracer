@@ -12,47 +12,52 @@
 
 ## 🚀 Запуск
 
-### Вариант 1. Docker — одна команда (рекомендуется)
+Нужен только frontend: симуляция и экспорт работают в браузере. Python-backend —
+необязательная заготовка API для будущих функций (хранение проектов, учётные
+записи, ИИ-ассистент).
+
+### Вариант 1. Вручную (Node.js 20+)
 
 ```bash
-docker compose up
+cd frontend
+npm ci
+npm run dev
 ```
 
-Откройте в браузере **http://localhost:3000**. Готово.
+Откройте **http://localhost:3000**. Сервер разработки слушает только localhost.
 
 ### Вариант 2. Скрипт запуска (Linux / macOS)
 
 ```bash
-./run.sh
+./run.sh                  # интерфейс
+./run.sh --with-backend   # плюс заготовка API на http://localhost:8000
 ```
 
-Скрипт сам создаст окружение Python, поставит зависимости и поднимет backend
-(порт 8000) и frontend (порт 3000).
+### Вариант 3. Docker (среда разработки)
 
-### Вариант 3. Вручную (два терминала)
-
-**Backend (порт 8000):**
 ```bash
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+docker compose up                      # интерфейс на http://localhost:3000
+docker compose --profile backend up    # плюс заготовка API
 ```
 
-**Frontend (порт 3000):**
+## 📦 Развёртывание
+
+Приложение — статический сайт. Продакшен-сборка:
+
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm ci && npm run build   # результат — frontend/dist
 ```
 
-Адреса: интерфейс — http://localhost:3000, API — http://localhost:8000,
-документация API — http://localhost:8000/docs.
+Готовый образ с nginx (без root, порт 8080, заголовки безопасности, CSP):
 
-> **Backend не обязателен.** Симуляция целиком считается в браузере, поэтому
-> достаточно запустить только frontend (`cd frontend && npm install && npm run dev`).
-> Python-сервер сейчас — заготовка для будущих функций (хранение проектов,
-> учётные записи, ИИ-ассистент).
+```bash
+docker build -t av-tracer ./frontend
+docker run --rm -p 8080:8080 av-tracer   # http://localhost:8080
+```
+
+Каталог `dist` можно разместить на любом статическом хостинге; заголовки
+безопасности — в `frontend/nginx.conf` и `frontend/securityHeaders.json`.
+`docker compose` и `Dockerfile.dev` — только для разработки.
 
 ---
 
@@ -187,6 +192,7 @@ npm test                    # тесты движка, состояния и э�
 npm run lint                # ESLint
 npm run typecheck           # TypeScript
 npm run icons:generate      # пересобрать пиктограммы устройств (src/components/deviceIcons.ts)
+npm run test:e2e            # браузерные смоук-тесты (Playwright, собранное приложение с CSP)
 
 cd backend
 pip install -r requirements-dev.txt
@@ -200,10 +206,16 @@ pytest                      # заготовка API поднимается и �
 симуляции сверяется с полем `expected`. После намеренного изменения логики
 обновите эталоны (`npm run fixtures:update` во `frontend`) и проверьте разницу в git.
 
+Зависимости обновляются партиями после `npm audit`; версии инструментов с
+исправлениями безопасности закреплены точно. CI проверяет продакшен-зависимости
+(`npm audit --omit=dev`), собирает продакшен-образ и прогоняет браузерные тесты.
+
 ## 📖 Дополнительно
 
-- Подробные проектные документы — в `docs/`.
-- Прежние инструкции (устаревшие) сохранены в `docs/archive/`.
+- **Текущее состояние, возможности и ограничения — [docs/STATUS.md](docs/STATUS.md).**
+- Независимое ревью проекта — [docs/PROJECT_REVIEW_2026-10-26.md](docs/PROJECT_REVIEW_2026-10-26.md).
+- Исходные планы проекта (исторические) — `docs/AVTrainer_*.md`; прежние инструкции — `docs/archive/`.
+- Устаревший код (прежний Python-движок) — в `archive/`.
 
 ---
 
