@@ -91,8 +91,8 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       const mic = instantiate('shure-sm58', 'c_mic', 40, 80);
       const mix = instantiate('allen-heath-sq5', 'c_mix', 340, 80);
       const amp = instantiate('crown-xls2502', 'c_amp', 640, 80);
-      const sp1 = instantiate('yorkville-yx15p', 'c_sp1', 940, 80);
-      const sp2 = instantiate('yorkville-yx15p', 'c_sp2', 940, 180);
+      const sp1 = instantiate('ev-evf1122', 'c_sp1', 940, 80);
+      const sp2 = instantiate('ev-evf1122', 'c_sp2', 940, 180);
       return {
         devices: [mic, mix, amp, sp1, sp2],
         connections: [

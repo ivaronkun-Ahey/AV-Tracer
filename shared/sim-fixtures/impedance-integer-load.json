@@ -3,6 +3,34 @@
   "description": "Две АС по 8 Ω параллельно на усилителе с минимумом 8 Ω; мощный усилитель на слабую АС",
   "devices": [
     {
+      "id": "mic",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM58",
+      "full_name": "Shure SM58 Dynamic Microphone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "sensitivity": -54.5
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid",
+        "frequency_response": "50Hz-15kHz"
+      }
+    },
+    {
       "id": "mix",
       "type": "mixer",
       "category": "audio",
@@ -231,15 +259,18 @@
         "power_watts": 500,
         "gain": 20,
         "min_impedance_ohms": 8
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
       "id": "s1",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -255,16 +286,16 @@
       "properties": {
         "impedance_ohms": 8,
         "active": false,
-        "power_handling_watts": 400
+        "power_handling_watts": 600
       }
     },
     {
       "id": "s2",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -280,7 +311,7 @@
       "properties": {
         "impedance_ohms": 8,
         "active": false,
-        "power_handling_watts": 400
+        "power_handling_watts": 600
       }
     },
     {
@@ -349,15 +380,18 @@
         "gain": 23,
         "min_impedance_ohms": 2,
         "mode": "4-channel"
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
       "id": "s3",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -418,6 +452,9 @@
         "gain": 20,
         "mode": "stereo",
         "min_impedance_ohms": 4
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
@@ -450,6 +487,19 @@
     {
       "id": "c1",
       "from": {
+        "device": "mic",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "mix",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
         "device": "mix",
         "port": "xlr_out_l"
       },
@@ -461,7 +511,7 @@
       "cable_length": 10
     },
     {
-      "id": "c2",
+      "id": "c3",
       "from": {
         "device": "amp",
         "port": "speakon_out_l"
@@ -474,7 +524,7 @@
       "cable_length": 10
     },
     {
-      "id": "c3",
+      "id": "c4",
       "from": {
         "device": "amp",
         "port": "speakon_out_l"
@@ -487,7 +537,7 @@
       "cable_length": 10
     },
     {
-      "id": "c4",
+      "id": "c5",
       "from": {
         "device": "mix",
         "port": "xlr_out_r"
@@ -500,7 +550,7 @@
       "cable_length": 10
     },
     {
-      "id": "c5",
+      "id": "c6",
       "from": {
         "device": "big",
         "port": "speakon_out_1"
@@ -513,7 +563,7 @@
       "cable_length": 10
     },
     {
-      "id": "c6",
+      "id": "c7",
       "from": {
         "device": "mix",
         "port": "xlr_out_1"
@@ -526,7 +576,7 @@
       "cable_length": 10
     },
     {
-      "id": "c7",
+      "id": "c8",
       "from": {
         "device": "small",
         "port": "speakon_out_l"
@@ -541,8 +591,91 @@
   ],
   "expected": {
     "valid": false,
-    "signal_flows": [],
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "amp",
+          "s1"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "amp",
+          "s2"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "big",
+          "s3"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_1",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "big",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "small",
+          "s4"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "small",
+        "status": "ok"
+      }
+    ],
     "warnings": [
+      {
+        "type": "power_under",
+        "device": "amp",
+        "message": "Усилитель 500 Вт недостаточен для АС 1200 Вт — возможен клиппинг",
+        "severity": "medium"
+      },
       {
         "type": "power_over",
         "device": "big",

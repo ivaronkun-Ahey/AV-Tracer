@@ -1,4 +1,4 @@
-import { Device, EquipmentTemplate } from '../types/device.types';
+import { Device, EquipmentTemplate, PropMap } from '../types/device.types';
 import catalogJson from './catalog.json';
 import { parseCatalog, EquipmentCategory } from './catalogSchema';
 
@@ -45,9 +45,14 @@ export function createDevice(tpl: EquipmentTemplate, id: string, position: { x: 
 export function withTemplateDefaults(device: Device): Device {
   const tpl = getAllEquipment().find((e) => e.manufacturer === device.manufacturer && e.model === device.model);
   if (!tpl) return device;
-  const missing = Object.keys(tpl.default_properties).filter((k) => !(k in device.properties));
-  if (missing.length === 0) return device;
+  const tplSpecs: PropMap = { ...tpl.specs, ...(tpl.routing ? { routing: tpl.routing } : {}) };
+  const missingProps = Object.keys(tpl.default_properties).filter((k) => !(k in device.properties));
+  const missingSpecs = Object.keys(tplSpecs).filter((k) => !(k in (device.specs ?? {})));
+  if (missingProps.length === 0 && missingSpecs.length === 0) return device;
   const properties = { ...device.properties };
-  for (const k of missing) properties[k] = tpl.default_properties[k];
-  return { ...device, properties };
+  for (const k of missingProps) properties[k] = tpl.default_properties[k];
+  // Правила коммутации и требования (фантом, PoE) берутся из каталога, если их нет в старом файле
+  const specs = { ...device.specs };
+  for (const k of missingSpecs) specs[k] = tplSpecs[k];
+  return { ...device, properties, ...(Object.keys(specs).length ? { specs } : {}) };
 }

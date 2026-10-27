@@ -1,5 +1,6 @@
 import { Device, Connection, SimulationResult, SignalFlow, SimIssue } from '../types/device.types';
 import { cableMaxLength } from '../data/cables';
+import { buildEdges, routingMode, signalsCompatible, tracePaths, TracedPath, Domain } from './signalPaths';
 
 /**
  * Движок симуляции AV-системы — единственный в проекте, считает в браузере.
@@ -12,16 +13,9 @@ import { cableMaxLength } from '../data/cables';
 export const LINE_MIN_DBU = -10;
 export const LINE_MAX_DBU = 20;
 
-interface Hop {
-  id: string;
-  to: string;
-  from_port: string;
-  to_port: string;
-}
-type Graph = Record<string, Hop[]>;
-type Domain = 'audio' | 'video';
-
 const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic'];
+// DI-бокс без подключённого входа изображает инструмент (гитару, клавиши)
+const DI_LEVEL_DBU = -35;
 const VIDEO_SOURCES = ['camera', 'media_player'];
 const AUDIO_SINKS = ['speaker', 'subwoofer'];
 const VIDEO_SINKS = ['display', 'projector'];
@@ -34,20 +28,6 @@ const MIC_LEVEL_DBU = -50;
 const ARRAY_MIC_LEVEL_DBU = 4;
 // Перевод дБВ (чувствительность микрофона) в дБu
 const DBV_TO_DBU = 2.2;
-
-// Сигналы, которые устройство «понимает» как аудио или видео
-const NATIVE: Record<Domain, Set<string>> = {
-  audio: new Set(['analog_audio', 'digital_audio', 'usb']),
-  video: new Set(['hdmi', 'sdi', 'video']),
-};
-// Сигналы, по которым аудио или видео идёт по кабелю (включая IP: Dante, AV-over-IP)
-const TRANSPORT: Record<Domain, Set<string>> = {
-  audio: new Set(['analog_audio', 'digital_audio', 'usb', 'network']),
-  video: new Set(['hdmi', 'sdi', 'video', 'hdbaset', 'network']),
-};
-
-// Сигналы, физически передаваемые по сети/IP (Dante, AV-over-IP).
-const IP_SIGNALS = new Set(['network', 'digital_audio']);
 
 const SIG_RU: Record<string, string> = {
   analog_audio: 'аналог. аудио',
@@ -110,23 +90,8 @@ function positive(value: unknown, fallback: number): number {
   return n > 0 ? n : fallback;
 }
 
-function signalsCompatible(a: string, b: string): boolean {
-  if (a === b) return true;
-  return IP_SIGNALS.has(a) && IP_SIGNALS.has(b);
-}
-
-function buildGraph(connections: Connection[]): Graph {
-  const graph: Graph = {};
-  for (const c of connections) {
-    if (!c.from?.device) continue;
-    (graph[c.from.device] ||= []).push({
-      id: c.id,
-      to: c.to.device,
-      from_port: c.from.port,
-      to_port: c.to.port,
-    });
-  }
-  return graph;
+function portDirection(device: Device | undefined, portId: string): string | null {
+  return device?.ports.find((p) => p.id === portId)?.direction ?? null;
 }
 
 function portSignal(device: Device | undefined, portId: string): string | null {
@@ -134,57 +99,32 @@ function portSignal(device: Device | undefined, portId: string): string | null {
   return device.ports.find((p) => p.id === portId)?.signal_type ?? null;
 }
 
-/** Может ли аудио/видео пройти по кабелю hop от устройства from к устройству to. */
-function hopAllowed(from: Device, hop: Hop, to: Device | undefined, domain: Domain): boolean {
-  if (!to) return false;
-  const fromPort = from.ports.find((p) => p.id === hop.from_port);
-  if (fromPort) {
-    if (!TRANSPORT[domain].has(fromPort.signal_type)) return false;
-    // LAN-порт оконечного устройства служит для управления, а не для медиапотока
-    if (fromPort.direction === 'bidirectional' && fromPort.signal_type === 'network' && from.type !== 'network_switch') {
-      return false;
-    }
-  }
-  if (to.type === 'network_switch' || to.ports.length === 0) return true;
-  return to.ports.some((p) => NATIVE[domain].has(p.signal_type));
-}
-
-/**
- * Все ветви сигнала от источника: обход в глубину по всем кабелям (а не только
- * по первому). Каждое устройство посещается один раз; каждая ветвь — путь от
- * источника до конечного устройства.
- */
-function tracePaths(sourceId: string, domain: Domain, byId: Record<string, Device>, graph: Graph): string[][] {
-  const visited = new Set<string>([sourceId]);
-  const paths: string[][] = [];
-  const walk = (path: string[]) => {
-    const node = path[path.length - 1];
-    let extended = false;
-    for (const hop of graph[node] || []) {
-      if (visited.has(hop.to)) continue;
-      if (!hopAllowed(byId[node], hop, byId[hop.to], domain)) continue;
-      visited.add(hop.to);
-      extended = true;
-      walk([...path, hop.to]);
-    }
-    if (!extended) paths.push(path);
-  };
-  walk([sourceId]);
-  return paths;
-}
-
 function startLevel(d: Device): number {
   const p = d.properties || {};
   if (d.type === 'array_microphone') return ARRAY_MIC_LEVEL_DBU;
+  if (d.type === 'di_box') return DI_LEVEL_DBU - Math.abs(num(p.pad, 0));
   const base = typeof p.sensitivity === 'number' ? p.sensitivity + DBV_TO_DBU : MIC_LEVEL_DBU;
   return base - Math.abs(num(p.pad, 0));
 }
 
-function stageGain(d: Device): number {
+/**
+ * Усиление канала, на который пришёл сигнал: gain:<порт> (своё у каждого входа),
+ * иначе общее «Усиление входа». Цифровой вход (Dante) предусилителя не имеет.
+ */
+export function channelGain(d: Device, entry: string | null): number {
   const p = d.properties || {};
-  if (d.type === 'mixer') return num(p.input_gain, 0) + num(p.master_gain, 0);
-  if (d.type === 'dsp') return num(p.input_gain, 0) + num(p.gain, 0);
-  if (d.type === 'audio_interface') return num(p.input_gain, 0);
+  const own = entry ? p[`gain:${entry}`] : undefined;
+  if (typeof own === 'number' && Number.isFinite(own)) return own;
+  const port = entry ? d.ports.find((x) => x.id === entry) : undefined;
+  if (port?.signal_type === 'digital_audio') return 0;
+  return num(p.input_gain, 0);
+}
+
+function stageGain(d: Device, entry: string | null): number {
+  const p = d.properties || {};
+  if (d.type === 'mixer') return channelGain(d, entry) + num(p.master_gain, 0);
+  if (d.type === 'dsp') return channelGain(d, entry) + num(p.gain, 0);
+  if (d.type === 'audio_interface') return channelGain(d, entry);
   return 0;
 }
 
@@ -192,7 +132,8 @@ function stageGain(d: Device): number {
  * Уровень сигнала вдоль ветви. Контрольная точка — вход первого усилителя или
  * АС (дальше уровень уже не линейный), иначе — выход последнего устройства.
  */
-function analyzeAudioPath(path: string[], byId: Record<string, Device>) {
+function analyzeAudioPath(traced: TracedPath, byId: Record<string, Device>) {
+  const path = traced.devices;
   const src = byId[path[0]];
   let level = startLevel(src);
   let measureIdx = -1;
@@ -209,7 +150,7 @@ function analyzeAudioPath(path: string[], byId: Record<string, Device>) {
   for (let i = 1; i < end; i++) {
     const d = byId[path[i]];
     if (!GAIN_STAGES.includes(d.type)) continue;
-    level = level + stageGain(d);
+    level = level + stageGain(d, traced.entries[i]);
     lastStage = d;
     if (!clip && level > LINE_MAX_DBU) clip = { device: d, level };
   }
@@ -285,8 +226,10 @@ function analyzeVideoPath(path: string[], byId: Record<string, Device>) {
 export function runSimulation(devices: Device[], connections: Connection[]): SimulationResult {
   const byId: Record<string, Device> = {};
   for (const d of devices) byId[d.id] = d;
-  const graph = buildGraph(connections);
+  const edges = buildEdges(byId, connections);
   const incoming = (id: string) => connections.filter((c) => c.to.device === id);
+  const isAudioSource = (d: Device) =>
+    AUDIO_SOURCES.includes(d.type) || (d.type === 'di_box' && incoming(d.id).length === 0);
 
   const warnings: SimIssue[] = [];
   const errors: SimIssue[] = [];
@@ -299,20 +242,51 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     warnings.push(issue);
   };
 
-  // --- Аудиоцепочки: все ветви от каждого источника ---
-  const audioFlows: SignalFlow[] = [];
+  // Фантомное питание подаёт вход, к которому подключено устройство (микшер,
+  // аудиоинтерфейс, DSP), а не сам микрофон: проверяем каждый его XLR-кабель
+  const phantomMissing = new Set<string>();
   for (const d of devices) {
-    if (!AUDIO_SOURCES.includes(d.type)) continue;
-    for (const path of tracePaths(d.id, 'audio', byId, graph)) {
-      const r = analyzeAudioPath(path, byId);
+    if (!d.specs?.requires_phantom) continue;
+    for (const c of connections) {
+      if (c.from.device !== d.id || d.ports.find((p) => p.id === c.from.port)?.type !== 'xlr') continue;
+      const r = byId[c.to.device];
+      if (!r) continue;
+      const perPort = r.properties?.[`phantom:${c.to.port}`];
+      const deviceWide = r.properties?.phantom_power;
+      if (perPort === true || (perPort === undefined && deviceWide === true)) continue;
+      phantomMissing.add(d.id);
+      const canSupply = typeof perPort === 'boolean' || typeof deviceWide === 'boolean';
+      errors.push({
+        type: 'phantom_power',
+        device: d.id,
+        connection: c.id,
+        message: canSupply
+          ? `Для «${d.model}» нужно фантомное питание +48 В, но на «${r.model}» оно выключено — включите его на «${r.model}»`
+          : `Для «${d.model}» нужно фантомное питание +48 В, а «${r.model}» не может его подать — подключите через микшер, предусилитель или блок питания +48 В`,
+        severity: 'high',
+      });
+    }
+  }
+
+  // --- Аудиоцепочки: все ветви от каждого источника, по портам и каналам ---
+  const audioFlows: SignalFlow[] = [];
+  const blocked = new Map<string, string>();
+  for (const d of devices) {
+    if (!isAudioSource(d)) continue;
+    for (const traced of tracePaths(d.id, 'audio', byId, edges)) {
+      const r = analyzeAudioPath(traced, byId);
       r.issues.forEach(addFlowWarning);
+      if (traced.blockedAt && traced.note && !blocked.has(traced.blockedAt)) blocked.set(traced.blockedAt, traced.note);
+      const unpowered = phantomMissing.has(d.id);
       audioFlows.push({
         type: 'audio',
         source: d.id,
-        path,
+        path: traced.devices,
+        entry_ports: traced.entries,
         final_level_db: r.level,
         level_at: r.at,
-        status: r.issues.length ? 'warning' : 'ok',
+        status: unpowered ? 'error' : r.issues.length ? 'warning' : 'ok',
+        ...(unpowered ? { note: 'нет фантомного питания — микрофон не работает' } : traced.note ? { note: traced.note } : {}),
       });
     }
   }
@@ -321,33 +295,25 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
   const videoFlows: SignalFlow[] = [];
   for (const d of devices) {
     if (!VIDEO_SOURCES.includes(d.type)) continue;
-    for (const path of tracePaths(d.id, 'video', byId, graph)) {
-      const r = analyzeVideoPath(path, byId);
+    for (const traced of tracePaths(d.id, 'video', byId, edges)) {
+      const r = analyzeVideoPath(traced.devices, byId);
       r.issues.forEach(addFlowWarning);
+      if (traced.blockedAt && traced.note && !blocked.has(traced.blockedAt)) blocked.set(traced.blockedAt, traced.note);
       videoFlows.push({
         type: 'video',
         source: d.id,
-        path,
+        path: traced.devices,
+        entry_ports: traced.entries,
         resolution: r.resolution,
         status: r.issues.length ? 'warning' : 'ok',
+        ...(traced.note ? { note: traced.note } : {}),
       });
     }
   }
 
-  // Фантомное питание для устройств, которым оно требуется
-  for (const d of devices) {
-    if (d.specs?.requires_phantom && d.properties?.phantom_power === false) {
-      warnings.push({
-        type: 'phantom_power',
-        device: d.id,
-        message:
-          d.type === 'microphone'
-            ? 'Конденсаторному микрофону требуется фантомное питание (+48V)'
-            : 'Устройству требуется фантомное питание (+48V)',
-        severity: 'medium',
-      });
-    }
-  }
+  // Какие приёмники действительно получают сигнал от источника
+  const reached: Record<Domain, Set<string>> = { audio: new Set(), video: new Set() };
+  for (const f of [...audioFlows, ...videoFlows]) f.path.slice(1).forEach((id) => reached[f.type].add(id));
 
   // Несовместимость сигналов на соединении (актуально для загруженных файлов)
   for (const c of connections) {
@@ -492,16 +458,63 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     }
   }
 
-  // Приёмник сигнала без входного подключения
+  // Приёмник без кабеля на входе — и приёмник, до которого не доходит сигнал источника
+  const upstream = (id: string): Set<string> => {
+    const found = new Set<string>();
+    const queue = [id];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      for (const c of connections) {
+        // Вверх по течению: по кабелю против направления; связь двух
+        // двунаправленных портов (коммутатор ↔ коммутатор) — в обе стороны
+        const bothWays =
+          portDirection(byId[c.from.device], c.from.port) === 'bidirectional' &&
+          portDirection(byId[c.to.device], c.to.port) === 'bidirectional';
+        const prev = c.to.device === cur ? c.from.device : bothWays && c.from.device === cur ? c.to.device : null;
+        if (prev && prev !== id && !found.has(prev) && byId[prev]) {
+          found.add(prev);
+          queue.push(prev);
+        }
+      }
+    }
+    return found;
+  };
   for (const d of devices) {
-    if ([...AUDIO_SINKS, ...VIDEO_SINKS].includes(d.type) && incoming(d.id).length === 0) {
+    const domain: Domain | null = AUDIO_SINKS.includes(d.type) ? 'audio' : VIDEO_SINKS.includes(d.type) ? 'video' : null;
+    if (!domain) continue;
+    if (incoming(d.id).length === 0) {
       errors.push({
         type: 'no_input',
         device: d.id,
         message: `На вход «${d.model}» (${SINK_RU[d.type] || d.type}) не подан сигнал — подключите источник`,
         severity: 'high',
       });
+      continue;
     }
+    if (reached[domain].has(d.id)) continue;
+    const up = [...upstream(d.id)];
+    const blockNote = up.map((id) => blocked.get(id)).find(Boolean);
+    const hasSource = up.some((id) => (domain === 'audio' ? isAudioSource(byId[id]) : VIDEO_SOURCES.includes(byId[id].type)));
+    // Ближайшее по цепочке устройство, которое коммутирует сигнал не «на все выходы»
+    const router = up.map((id) => byId[id]).find((x) => routingMode(x) !== 'all' && x.ports.length > 0);
+    const ROUTER_HINT = {
+      select: 'проверьте выбранный вход на',
+      matrix: 'проверьте таблицу коммутации (вход>выход) на',
+      channel: 'проверьте, что вход и выход в одном канале (L/R, 1/2) на',
+    } as const;
+    const hint = blockNote
+      ? blockNote
+      : !hasSource
+        ? `в подключённой цепочке нет источника (${domain === 'audio' ? 'микрофона, радиосистемы' : 'камеры, плеера'})`
+        : router && routingMode(router) !== 'all'
+          ? `${ROUTER_HINT[routingMode(router) as keyof typeof ROUTER_HINT]} «${router.model}»`
+          : 'сигнал теряется по дороге — проверьте, что кабели идут в порты с этим сигналом (Ethernet-порт управления видео и звук не передаёт)';
+    errors.push({
+      type: 'no_signal',
+      device: d.id,
+      message: `На «${d.model}» не приходит ${domain === 'audio' ? 'звук' : 'видео'}: ${hint}`,
+      severity: 'high',
+    });
   }
 
   return {

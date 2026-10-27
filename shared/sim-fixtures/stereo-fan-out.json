@@ -22,7 +22,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": -54.5
       },
       "specs": {
@@ -261,15 +260,18 @@
         "gain": 20,
         "mode": "stereo",
         "min_impedance_ohms": 4
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
       "id": "spl1",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -285,16 +287,16 @@
       "properties": {
         "impedance_ohms": 8,
         "active": false,
-        "power_handling_watts": 400
+        "power_handling_watts": 600
       }
     },
     {
       "id": "spl2",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -310,7 +312,7 @@
       "properties": {
         "impedance_ohms": 8,
         "active": false,
-        "power_handling_watts": 400
+        "power_handling_watts": 600
       }
     },
     {
@@ -431,6 +433,12 @@
           "amp",
           "spl1"
         ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
         "final_level_db": -7.3,
         "level_at": "amp",
         "status": "ok"
@@ -444,6 +452,12 @@
           "amp",
           "spl2"
         ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
         "final_level_db": -7.3,
         "level_at": "amp",
         "status": "ok"
@@ -456,6 +470,12 @@
           "mix",
           "amp",
           "spr"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_r",
+          "speakon_in"
         ],
         "final_level_db": -7.3,
         "level_at": "amp",

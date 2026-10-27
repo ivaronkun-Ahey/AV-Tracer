@@ -30,6 +30,7 @@ import {
 } from './deviceGeometry';
 import { deviceIconPath, ICON_VIEWBOX } from './deviceIcons';
 import { CanvasRenderContext } from './canvasTheme';
+import { routingMode, selectedInput } from '../sim/signalPaths';
 
 interface DeviceNodeProps {
   device: Device;
@@ -127,6 +128,12 @@ const DeviceNode: React.FC<DeviceNodeProps> = ({ device, tag }) => {
     if (c) c.style.cursor = cursor;
   };
 
+  // У презентационного коммутатора выбранный вход выделен — видно, что идёт на выход
+  const selectedPortId =
+    routingMode(device) === 'select'
+      ? device.ports.filter((p) => p.direction === 'input')[selectedInput(device) - 1]?.id
+      : undefined;
+
   const renderSlot = (slot: PortSlot) => {
     const { port, side } = slot;
     const { x, y } = slotOffset(slot);
@@ -159,13 +166,14 @@ const DeviceNode: React.FC<DeviceNodeProps> = ({ device, tag }) => {
           {...handlers}
         />
         <Text
-          text={portLabel(port)}
+          text={port.id === selectedPortId ? `▶ ${portLabel(port)}` : portLabel(port)}
           x={side === 'left' ? 10 : NODE_W / 2 + 4}
           y={y - 5}
           width={labelWidth}
           align={side === 'left' ? 'left' : 'right'}
           fontSize={10}
-          fill={palette.portLabel}
+          fontStyle={port.id === selectedPortId ? 'bold' : 'normal'}
+          fill={port.id === selectedPortId ? palette.selection : palette.portLabel}
           ellipsis
           wrap="none"
           listening={false}

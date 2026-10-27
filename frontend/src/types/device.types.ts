@@ -65,6 +65,8 @@ export interface EquipmentTemplate {
   default_properties: PropMap;
   specs?: PropMap;
   routing?: RoutingMode;
+  /** Откуда и когда сверены данные с производителем; нет поля — данные не сверены. */
+  source?: { url: string; verified: string; notes?: string };
 }
 
 export interface Connection {
@@ -102,6 +104,10 @@ export interface SignalFlow {
   /** Аудио: устройство, где измерен уровень (вход усилителя/активной АС или конец тракта). */
   level_at?: string;
   resolution?: string;
+  /** Порт, через который сигнал вошёл в каждое устройство пути (у источника — null). */
+  entry_ports?: (string | null)[];
+  /** Пояснение: например, вход не выбран на коммутаторе. */
+  note?: string;
   status: 'ok' | 'warning' | 'error';
 }
 

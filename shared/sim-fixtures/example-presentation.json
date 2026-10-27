@@ -10,7 +10,7 @@
       "model": "SRG-300H",
       "full_name": "Sony SRG-300H PTZ Camera",
       "position": {
-        "x": 420,
+        "x": 40,
         "y": 80
       },
       "ports": [
@@ -42,8 +42,8 @@
       "model": "IN1608",
       "full_name": "Extron IN1608 Scaling Presentation Switcher",
       "position": {
-        "x": 420,
-        "y": 280
+        "x": 340,
+        "y": 80
       },
       "ports": [
         {
@@ -112,7 +112,11 @@
         "outputs": 2,
         "switching_type": "seamless",
         "max_resolution": "1920x1200",
-        "resolution_out": "1920x1080"
+        "resolution_out": "1920x1080",
+        "selected_input": 1
+      },
+      "specs": {
+        "routing": "select"
       }
     },
     {
@@ -123,8 +127,8 @@
       "model": "EB-L1755U",
       "full_name": "Epson EB-L1755U Laser Projector",
       "position": {
-        "x": 420,
-        "y": 500
+        "x": 640,
+        "y": 80
       },
       "ports": [
         {
@@ -191,6 +195,11 @@
           "ex_cam",
           "ex_sw",
           "ex_proj"
+        ],
+        "entry_ports": [
+          null,
+          "hdmi_in_1",
+          "hdmi_in_1"
         ],
         "resolution": "1920x1080",
         "status": "ok"

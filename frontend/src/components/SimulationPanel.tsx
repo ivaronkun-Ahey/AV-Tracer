@@ -32,12 +32,13 @@ const SimulationPanel: React.FC = () => {
     dispatch(issue.connection ? selectConnection(issue.connection) : selectDevice(issue.device));
 
   const flowCaption = (flow: SignalFlow) => {
+    const note = flow.note ? ` · ${flow.note}` : '';
     if (flow.type === 'video') {
-      return `Разрешение: ${flow.resolution}${flow.status === 'ok' ? '' : ' · есть замечания'}`;
+      return `Разрешение: ${flow.resolution}${flow.status === 'ok' ? '' : ' · есть замечания'}${note}`;
     }
     const db = flow.final_level_db ?? 0;
     const sign = db > 0 ? '+' : '';
-    return `Уровень на «${name(flow.level_at || flow.path[flow.path.length - 1])}»: ${sign}${db} дБu · ${levelVerdict(db)}`;
+    return `Уровень на «${name(flow.level_at || flow.path[flow.path.length - 1])}»: ${sign}${db} дБu · ${levelVerdict(db)}${note}`;
   };
 
   const header = !simulation
@@ -141,7 +142,9 @@ const SimulationPanel: React.FC = () => {
                     </Box>
                     <Typography
                       variant="caption"
-                      sx={{ color: flow.status === 'ok' ? 'text.secondary' : '#FF9800' }}
+                      sx={{
+                        color: flow.status === 'ok' ? (flow.note ? 'text.primary' : 'text.secondary') : flow.status === 'error' ? '#F44336' : '#FF9800',
+                      }}
                     >
                       {flowCaption(flow)}
                     </Typography>

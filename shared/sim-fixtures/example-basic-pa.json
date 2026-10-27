@@ -10,7 +10,7 @@
       "model": "SM58",
       "full_name": "Shure SM58 Dynamic Microphone",
       "position": {
-        "x": 120,
+        "x": 40,
         "y": 80
       },
       "ports": [
@@ -22,7 +22,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": -54.5
       },
       "specs": {
@@ -39,8 +38,8 @@
       "model": "SQ-5",
       "full_name": "Allen & Heath SQ-5 Digital Mixer",
       "position": {
-        "x": 120,
-        "y": 280
+        "x": 340,
+        "y": 80
       },
       "ports": [
         {
@@ -227,8 +226,8 @@
       "model": "PRX815W",
       "full_name": "JBL PRX815W Powered Speaker",
       "position": {
-        "x": 120,
-        "y": 500
+        "x": 640,
+        "y": 80
       },
       "ports": [
         {
@@ -289,6 +288,11 @@
           "ex_mic",
           "ex_mixer",
           "ex_speaker"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
         ],
         "final_level_db": -7.3,
         "level_at": "ex_speaker",

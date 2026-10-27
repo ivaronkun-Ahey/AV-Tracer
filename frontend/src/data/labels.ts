@@ -99,6 +99,8 @@ export const PROPERTY_LABELS: Record<string, string> = {
   scaling: 'Масштабирование',
   resolution_out: 'Выходное разрешение',
   max_resolution: 'Макс. разрешение входа',
+  selected_input: 'Выбранный вход (номер)',
+  routes: 'Коммутация матрицы (вход>выход, через запятую)',
   ports: 'Портов',
   poe: 'PoE (питание по сети)',
   managed: 'Управляемый',

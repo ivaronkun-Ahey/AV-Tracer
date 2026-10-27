@@ -22,7 +22,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": "loud",
         "pad": null
       },
@@ -262,15 +261,18 @@
         "gain": null,
         "mode": "stereo",
         "min_impedance_ohms": null
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
       "id": "spk",
       "type": "speaker",
       "category": "audio",
-      "manufacturer": "Yorkville",
-      "model": "YX15P",
-      "full_name": "Yorkville YX15P Passive Speaker",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
       "position": {
         "x": 0,
         "y": 0
@@ -425,6 +427,12 @@
           "amp",
           "spk"
         ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
         "final_level_db": -50,
         "level_at": "amp",
         "status": "warning"
@@ -435,6 +443,10 @@
         "path": [
           "cam",
           "proj"
+        ],
+        "entry_ports": [
+          null,
+          "hdmi_in_1"
         ],
         "resolution": "1920x1080",
         "status": "ok"

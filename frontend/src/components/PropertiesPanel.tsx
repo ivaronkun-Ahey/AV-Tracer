@@ -21,7 +21,7 @@ import {
   removeConnection,
   showToast,
 } from '../features/canvasSlice';
-import { Device, PropValue } from '../types/device.types';
+import { Connection, Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
 import { signalColor, categoryColor } from './deviceGeometry';
 import { deviceTags } from '../data/deviceTags';
@@ -95,6 +95,7 @@ const PropertiesPanel: React.FC = () => {
         Параметры
       </Typography>
       {renderProperties(device, onChange)}
+      {renderChannelGains(device, connections, onChange)}
 
       {/* Подключения */}
       <Divider sx={{ my: 2 }} />
@@ -178,9 +179,52 @@ const PropertiesPanel: React.FC = () => {
 };
 
 /** Универсальный рендер параметров: тип поля выбирается по типу значения. */
+const GAIN_STAGES = ['mixer', 'dsp', 'audio_interface'];
+
+/**
+ * Усиление по каналам: у каждого подключённого входа микшера/DSP/интерфейса
+ * своё значение (gain:<порт>); пока оно не задано, действует «Усиление входа».
+ */
+function renderChannelGains(
+  device: Device,
+  connections: Connection[],
+  onChange: (prop: string, value: PropValue) => void
+) {
+  if (!GAIN_STAGES.includes(device.type)) return null;
+  const connectedInputs = device.ports.filter(
+    (p) => p.direction === 'input' && connections.some((c) => c.to.device === device.id && c.to.port === p.id)
+  );
+  if (connectedInputs.length === 0) return null;
+  const fallback = typeof device.properties.input_gain === 'number' ? device.properties.input_gain : 0;
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Усиление по каналам (подключённые входы)
+      </Typography>
+      {connectedInputs.map((port) => {
+        const key = `gain:${port.id}`;
+        const own = device.properties[key];
+        return (
+          <NumberField
+            key={`${device.id}:${key}`}
+            label={`${portLabel(port)}, дБ`}
+            size="small"
+            fullWidth
+            value={typeof own === 'number' ? own : fallback}
+            helperText={typeof own === 'number' ? undefined : 'как «Усиление входа»'}
+            onCommit={(n) => onChange(key, n)}
+            sx={{ mb: 1.5 }}
+          />
+        );
+      })}
+    </Box>
+  );
+}
+
 function renderProperties(device: Device, onChange: (prop: string, value: PropValue) => void) {
   const props = device.properties || {};
-  const keys = Object.keys(props);
+  // Параметры каналов (gain:<порт>, phantom:<порт>) показываются отдельным блоком
+  const keys = Object.keys(props).filter((k) => !k.includes(':'));
   if (keys.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">

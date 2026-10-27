@@ -99,7 +99,11 @@
         "inputs": 4,
         "outputs": 1,
         "streaming": true,
-        "max_resolution": "1920x1080"
+        "max_resolution": "1920x1080",
+        "selected_input": 1
+      },
+      "specs": {
+        "routing": "select"
       }
     },
     {
@@ -204,7 +208,11 @@
       ],
       "properties": {
         "scaling": true,
-        "resolution_out": "1920x1080"
+        "resolution_out": "1920x1080",
+        "selected_input": 1
+      },
+      "specs": {
+        "routing": "select"
       }
     },
     {
@@ -382,7 +390,11 @@
         "inputs": 8,
         "outputs": 8,
         "switching_type": "matrix",
-        "max_resolution": "3840x2160"
+        "max_resolution": "3840x2160",
+        "routes": "1>1, 2>2, 3>3, 4>4, 5>5, 6>6, 7>7, 8>8"
+      },
+      "specs": {
+        "routing": "matrix"
       }
     },
     {
@@ -812,7 +824,7 @@
     }
   ],
   "expected": {
-    "valid": true,
+    "valid": false,
     "signal_flows": [
       {
         "type": "video",
@@ -821,6 +833,11 @@
           "cam4k",
           "atem",
           "proj"
+        ],
+        "entry_ports": [
+          null,
+          "hdmi_in_1",
+          "hdmi_in_1"
         ],
         "resolution": "3840x2160",
         "status": "warning"
@@ -833,6 +850,11 @@
           "scaler",
           "lg"
         ],
+        "entry_ports": [
+          null,
+          "hdmi_in_1",
+          "hdmi_in_1"
+        ],
         "resolution": "1920x1080",
         "status": "ok"
       },
@@ -844,19 +866,13 @@
           "matrix",
           "christie"
         ],
-        "resolution": "3840x2160",
-        "status": "warning"
-      },
-      {
-        "type": "video",
-        "source": "atv",
-        "path": [
-          "atv",
-          "matrix",
-          "barco"
+        "entry_ports": [
+          null,
+          "hdmi_in_1",
+          "hdmi_in_1"
         ],
         "resolution": "3840x2160",
-        "status": "ok"
+        "status": "warning"
       }
     ],
     "warnings": [
@@ -879,6 +895,19 @@
         "severity": "low"
       }
     ],
-    "errors": []
+    "errors": [
+      {
+        "type": "no_signal",
+        "device": "barco",
+        "message": "На «F90-4K13» не приходит видео: проверьте таблицу коммутации (вход>выход) на «MX2-8x8-HDMI20»",
+        "severity": "high"
+      },
+      {
+        "type": "no_signal",
+        "device": "tv",
+        "message": "На «QM85R» не приходит видео: сигнал теряется по дороге — проверьте, что кабели идут в порты с этим сигналом (Ethernet-порт управления видео и звук не передаёт)",
+        "severity": "high"
+      }
+    ]
   }
 }

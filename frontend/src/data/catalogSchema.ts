@@ -79,6 +79,13 @@ const templateSchema = z.object({
   default_properties: propMapSchema.default({}),
   specs: propMapSchema.optional(),
   routing: z.enum(ROUTING_MODES).optional(),
+  source: z
+    .object({
+      url: z.string().url(),
+      verified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'дата сверки в формате ГГГГ-ММ-ДД'),
+      notes: z.string().optional(),
+    })
+    .optional(),
 });
 
 const catalogSchema = z.object({
@@ -139,6 +146,7 @@ export function parseCatalog(raw: unknown): EquipmentCategory[] {
           default_properties: item.default_properties,
           ...(item.specs ? { specs: item.specs } : {}),
           ...(item.routing ? { routing: item.routing } : {}),
+          ...(item.source ? { source: item.source } : {}),
         };
         return template;
       }),

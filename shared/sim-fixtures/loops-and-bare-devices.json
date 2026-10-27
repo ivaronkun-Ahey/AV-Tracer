@@ -147,6 +147,12 @@
           "dsp",
           "spk"
         ],
+        "entry_ports": [
+          null,
+          "i",
+          "i",
+          "i"
+        ],
         "final_level_db": -9.3,
         "level_at": "spk",
         "status": "ok"

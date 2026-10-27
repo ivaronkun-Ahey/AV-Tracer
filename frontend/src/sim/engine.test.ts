@@ -121,12 +121,22 @@ describe('runSimulation', () => {
     expect(r.errors[0].device).toBe('spk');
   });
 
-  it('предупреждает о конденсаторном микрофоне без фантомного питания', () => {
-    const devices: Device[] = [
-      dev({ id: 'mic', type: 'microphone', properties: { phantom_power: false }, specs: { requires_phantom: true } }),
+  it('фантомное питание проверяется на входе, куда подключён конденсаторный микрофон', () => {
+    const xlrOut = { id: 'o', type: 'xlr' as const, direction: 'output' as const, signal_type: 'analog_audio' as const };
+    const xlrIn = { id: 'i', type: 'xlr' as const, direction: 'input' as const, signal_type: 'analog_audio' as const };
+    const mic = dev({ id: 'mic', type: 'microphone', ports: [xlrOut], specs: { requires_phantom: true } });
+    const conn: Connection[] = [
+      { id: 'c', from: { device: 'mic', port: 'o' }, to: { device: 'mix', port: 'i' }, cable_type: 'xlr', cable_length: 1 },
     ];
-    const r = runSimulation(devices, []);
-    expect(r.warnings.some((w) => w.type === 'phantom_power')).toBe(true);
+    const off = runSimulation([mic, dev({ id: 'mix', type: 'mixer', ports: [xlrIn], properties: { phantom_power: false } })], conn);
+    expect(off.errors.find((e) => e.type === 'phantom_power')?.connection).toBe('c');
+    const perChannel = runSimulation(
+      [mic, dev({ id: 'mix', type: 'mixer', ports: [xlrIn], properties: { phantom_power: false, 'phantom:i': true } })],
+      conn
+    );
+    expect(perChannel.errors.some((e) => e.type === 'phantom_power')).toBe(false);
+    // Неподключённый микрофон — не ошибка
+    expect(runSimulation([mic], []).errors).toEqual([]);
   });
 
   it('радиосистема является источником аудиоцепочки', () => {

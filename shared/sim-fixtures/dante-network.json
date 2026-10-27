@@ -320,7 +320,8 @@
         "gain": 0,
         "qsys": true,
         "processing": "dante",
-        "channels": 8
+        "channels": 8,
+        "phantom_power": false
       }
     },
     {
@@ -365,6 +366,9 @@
         "gain": 20,
         "mode": "stereo",
         "min_impedance_ohms": 4
+      },
+      "specs": {
+        "routing": "channel"
       }
     },
     {
@@ -766,6 +770,13 @@
           "amp",
           "spk"
         ],
+        "entry_ports": [
+          null,
+          "eth_1",
+          "dante_in",
+          "xlr_in_l",
+          "speakon_in"
+        ],
         "final_level_db": 4,
         "level_at": "amp",
         "status": "ok"
@@ -779,6 +790,13 @@
           "sw",
           "dec",
           "tv"
+        ],
+        "entry_ports": [
+          null,
+          "hdmi_in",
+          "eth_6",
+          "network_in",
+          "hdmi_in_1"
         ],
         "resolution": "3840x2160",
         "status": "ok"

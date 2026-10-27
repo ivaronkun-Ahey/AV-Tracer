@@ -31,7 +31,7 @@ describe('маркировка кабелей', () => {
 describe('спецификация и кабельный журнал', () => {
   it('одинаковые модели — одна строка с количеством и обозначениями', () => {
     const bom = buildBom(concert().devices);
-    const yx = bom.find((r) => r.model === 'YX15P')!;
+    const yx = bom.find((r) => r.model === 'EVF-1122S')!;
     expect(yx.qty).toBe(2);
     expect(yx.tags).toEqual(['SPK-01', 'SPK-02']);
     expect(bom.reduce((a, r) => a + r.qty, 0)).toBe(5);

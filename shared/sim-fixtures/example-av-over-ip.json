@@ -10,8 +10,8 @@
       "model": "AW-UE150",
       "full_name": "Panasonic AW-UE150 4K PTZ Camera",
       "position": {
-        "x": 720,
-        "y": 60
+        "x": 40,
+        "y": 80
       },
       "ports": [
         {
@@ -48,8 +48,8 @@
       "model": "DM-NVX-360 (Enc)",
       "full_name": "Crestron DM-NVX-360 Encoder",
       "position": {
-        "x": 720,
-        "y": 240
+        "x": 340,
+        "y": 80
       },
       "ports": [
         {
@@ -80,8 +80,8 @@
       "model": "DM-NVX-360 (Dec)",
       "full_name": "Crestron DM-NVX-360 Decoder",
       "position": {
-        "x": 720,
-        "y": 420
+        "x": 640,
+        "y": 80
       },
       "ports": [
         {
@@ -111,8 +111,8 @@
       "model": "QM85R",
       "full_name": "Samsung QM85R 85\" 4K Display",
       "position": {
-        "x": 720,
-        "y": 600
+        "x": 940,
+        "y": 80
       },
       "ports": [
         {
@@ -193,6 +193,12 @@
           "ip_enc",
           "ip_dec",
           "ip_disp"
+        ],
+        "entry_ports": [
+          null,
+          "hdmi_in",
+          "network_in",
+          "hdmi_in_1"
         ],
         "resolution": "3840x2160",
         "status": "ok"

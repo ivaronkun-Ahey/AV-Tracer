@@ -1,6 +1,6 @@
 {
   "name": "levels",
-  "description": "Перегрузка горячего конденсатора, слабый сигнал при нулевом усилении входа, микрофон напрямую в активную АС, пэд и фантом",
+  "description": "Перегрузка горячего конденсатора, слабый сигнал при нулевом усилении входа, микрофон напрямую в активную АС, пэд и фантом, выключенный на интерфейсе",
   "devices": [
     {
       "id": "nt1",
@@ -28,7 +28,6 @@
         }
       ],
       "properties": {
-        "phantom_power": true,
         "sensitivity": -29
       },
       "specs": {
@@ -138,7 +137,8 @@
         "channels": 12,
         "input_gain": 60,
         "master_gain": 0,
-        "effects": true
+        "effects": true,
+        "phantom_power": true
       }
     },
     {
@@ -192,7 +192,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": -51.4
       },
       "specs": {
@@ -439,7 +438,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": -56
       },
       "specs": {
@@ -492,7 +490,6 @@
         }
       ],
       "properties": {
-        "phantom_power": false,
         "sensitivity": -32.8,
         "pattern": "cardioid",
         "pad": -10
@@ -542,7 +539,7 @@
         "input_gain": 45,
         "sample_rate": 48,
         "bit_depth": 24,
-        "phantom_power": true
+        "phantom_power": false
       }
     },
     {
@@ -703,7 +700,8 @@
         "gain": -3,
         "qsys": true,
         "processing": "dante",
-        "channels": 8
+        "channels": 8,
+        "phantom_power": false
       }
     },
     {
@@ -846,7 +844,7 @@
     }
   ],
   "expected": {
-    "valid": true,
+    "valid": false,
     "signal_flows": [
       {
         "type": "audio",
@@ -855,6 +853,11 @@
           "nt1",
           "hot",
           "spk1"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
         ],
         "final_level_db": 33.2,
         "level_at": "spk1",
@@ -868,6 +871,11 @@
           "cold",
           "spk2"
         ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
+        ],
         "final_level_db": -49.2,
         "level_at": "spk2",
         "status": "warning"
@@ -878,6 +886,10 @@
         "path": [
           "sm57",
           "spk3"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in"
         ],
         "final_level_db": -53.8,
         "level_at": "spk3",
@@ -890,9 +902,14 @@
           "c414",
           "iface"
         ],
+        "entry_ports": [
+          null,
+          "xlr_in_1"
+        ],
         "final_level_db": 4.4,
         "level_at": "iface",
-        "status": "ok"
+        "status": "error",
+        "note": "нет фантомного питания — микрофон не работает"
       },
       {
         "type": "audio",
@@ -901,6 +918,11 @@
           "rx",
           "dsp",
           "sub"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
         ],
         "final_level_db": -13,
         "level_at": "sub",
@@ -931,14 +953,16 @@
         "device": "dsp",
         "message": "Слабый сигнал: -13 дБu на «PRX818XLFW» (норма -10…+20 дБu) — увеличьте усиление «Core 110f»",
         "severity": "medium"
-      },
+      }
+    ],
+    "errors": [
       {
         "type": "phantom_power",
         "device": "c414",
-        "message": "Конденсаторному микрофону требуется фантомное питание (+48V)",
-        "severity": "medium"
+        "connection": "c6",
+        "message": "Для «C414 XLII» нужно фантомное питание +48 В, но на «Scarlett 2i2» оно выключено — включите его на «Scarlett 2i2»",
+        "severity": "high"
       }
-    ],
-    "errors": []
+    ]
   }
 }

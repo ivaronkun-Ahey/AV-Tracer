@@ -235,11 +235,5 @@ export function signalColor(signalType: string): string {
   return SIGNAL_COLORS[signalType] || '#0066CC';
 }
 
-// Сигналы, которые физически передаются по сети/IP (один кабель cat6).
-const IP_SIGNALS = new Set(['network', 'digital_audio']);
-
-/** Можно ли соединить два порта по типу сигнала. */
-export function signalsCompatible(a: string, b: string): boolean {
-  if (a === b) return true;
-  return IP_SIGNALS.has(a) && IP_SIGNALS.has(b);
-}
+/** Можно ли соединить два порта по типу сигнала (то же правило, что в движке). */
+export { signalsCompatible } from '../sim/signalPaths';
