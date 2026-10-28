@@ -16,6 +16,7 @@ function loadPersisted() {
       return {
         devices: parsed.devices,
         connections: parsed.connections,
+        rooms: parsed.rooms,
         // Автосейв старого формата обновлён — сообщаем, что изменилось
         ...(parsed.notes.length
           ? { toast: { message: `Схема обновлена: ${parsed.notes.join('; ')}`, severity: 'info' as const } }
@@ -51,13 +52,19 @@ export const store = configureStore({
   preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...persisted } },
 });
 
-let lastSaved: { devices: unknown; connections: unknown; snapToGrid: boolean; showCableLabels: boolean } | null = null;
+let lastSaved: {
+  devices: unknown;
+  connections: unknown;
+  rooms: unknown;
+  snapToGrid: boolean;
+  showCableLabels: boolean;
+} | null = null;
 
 function saveNow() {
-  const { devices, connections, snapToGrid, showCableLabels } = store.getState().canvas;
-  lastSaved = { devices, connections, snapToGrid, showCableLabels };
+  const { devices, connections, rooms, snapToGrid, showCableLabels } = store.getState().canvas;
+  lastSaved = { devices, connections, rooms, snapToGrid, showCableLabels };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject(devices, connections)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject({ devices, connections, rooms })));
     localStorage.setItem(PREFS_KEY, JSON.stringify({ snapToGrid, showCableLabels }));
     setSaveStatus({ state: 'saved', at: Date.now() });
   } catch {
@@ -73,11 +80,12 @@ if (persisted) saveNow();
 // изменилась сама схема или настройки вида, а не выделение, зум и т. п.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 store.subscribe(() => {
-  const { devices, connections, snapToGrid, showCableLabels } = store.getState().canvas;
+  const { devices, connections, rooms, snapToGrid, showCableLabels } = store.getState().canvas;
   const changed =
     !lastSaved ||
     lastSaved.devices !== devices ||
     lastSaved.connections !== connections ||
+    lastSaved.rooms !== rooms ||
     lastSaved.snapToGrid !== snapToGrid ||
     lastSaved.showCableLabels !== showCableLabels;
   if (!changed || saveTimer) return;

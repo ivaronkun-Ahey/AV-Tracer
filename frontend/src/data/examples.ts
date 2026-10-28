@@ -1,4 +1,4 @@
-import { Device, Connection, CableType } from '../types/device.types';
+import { Device, Connection, CableType, Room } from '../types/device.types';
 import { createDevice, findEquipment } from './equipment';
 
 /** Создаёт экземпляр устройства из библиотечной карточки по её _id. */
@@ -26,7 +26,7 @@ export interface ExampleProject {
   id: string;
   name: string;
   description: string;
-  build: () => { devices: Device[]; connections: Connection[] };
+  build: () => { devices: Device[]; connections: Connection[]; rooms?: Room[] };
 }
 
 export const EXAMPLE_PROJECTS: ExampleProject[] = [
@@ -86,18 +86,29 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
   {
     id: 'concert',
     name: 'Концертный звук (усилитель + пассивные АС)',
-    description: 'Микрофон → микшер → усилитель → две параллельные пассивные колонки',
+    description: 'Сцена: микрофон, усилитель, две пассивные колонки; пульт FOH в зале — кабели по 40 м',
     build: () => {
+      const rooms: Room[] = [
+        { id: 'c_stage', name: 'Сцена', color: '#5B8DEF' },
+        { id: 'c_foh', name: 'Пульт FOH', color: '#E0A030' },
+      ];
       const mic = instantiate('shure-sm58', 'c_mic', 40, 80);
-      const mix = instantiate('allen-heath-sq5', 'c_mix', 340, 80);
       const amp = instantiate('crown-xls2502', 'c_amp', 640, 80);
       const sp1 = instantiate('ev-evf1122', 'c_sp1', 940, 80);
       const sp2 = instantiate('ev-evf1122', 'c_sp2', 940, 180);
+      const mix = instantiate('allen-heath-sq5', 'c_mix', 340, 420);
+      for (const d of [mic, amp, sp1, sp2]) d.room = 'c_stage';
+      mix.room = 'c_foh';
+      const toFoh = connect(['c_mic', 'xlr_out'], ['c_mix', 'xlr_in_1'], 'xlr');
+      const fromFoh = connect(['c_mix', 'xlr_out_l'], ['c_amp', 'xlr_in_l'], 'xlr');
+      toFoh.cable_length = 40;
+      fromFoh.cable_length = 40;
       return {
+        rooms,
         devices: [mic, mix, amp, sp1, sp2],
         connections: [
-          connect(['c_mic', 'xlr_out'], ['c_mix', 'xlr_in_1'], 'xlr'),
-          connect(['c_mix', 'xlr_out_l'], ['c_amp', 'xlr_in_l'], 'xlr'),
+          toFoh,
+          fromFoh,
           connect(['c_amp', 'speakon_out_l'], ['c_sp1', 'speakon_in'], 'speakon'),
           connect(['c_amp', 'speakon_out_l'], ['c_sp2', 'speakon_in'], 'speakon'),
         ],

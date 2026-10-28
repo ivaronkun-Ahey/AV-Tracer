@@ -79,7 +79,12 @@ describe('R5: целостность файла проекта', () => {
   });
 
   it('при сохранении указывается версия формата', () => {
-    expect(serializeProject([], [])).toEqual({ schemaVersion: SCHEMA_VERSION, devices: [], connections: [] });
+    expect(serializeProject({ devices: [], connections: [], rooms: [] })).toEqual({
+      schemaVersion: SCHEMA_VERSION,
+      rooms: [],
+      devices: [],
+      connections: [],
+    });
   });
 });
 
@@ -117,5 +122,42 @@ describe('миграция старых проектов (версия 1 → 2)'
   it('устройствам без обозначения выдаются обозначения', () => {
     const r = parseProjectDoc({ devices: [mic(), mixer()], connections: [] });
     expect(r.ok && r.devices.map((d) => d.tag)).toEqual(['MIC-01', 'MIX-01']);
+  });
+});
+
+describe('помещения в файле проекта (формат 3)', () => {
+  const room = { id: 'r1', name: 'Аппаратная', color: '#5B8DEF' };
+
+  it('сохраняются и открываются обратно вместе с принадлежностью устройств', () => {
+    const m = { ...mixer(), room: 'r1' };
+    const saved = JSON.parse(JSON.stringify(serializeProject({ devices: [mic(), m], connections: [], rooms: [room] })));
+    const r = parseProjectDoc(saved);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.rooms).toEqual([room]);
+    expect(r.devices.find((d) => d.id === 'mix')?.room).toBe('r1');
+    expect(r.devices.find((d) => d.id === 'mic')?.room).toBeUndefined();
+  });
+
+  it('файл версии 2 без помещений открывается с пустым списком помещений', () => {
+    const r = parseProjectDoc({ schemaVersion: 2, devices: [mic()], connections: [] });
+    expect(r.ok && r.rooms).toEqual([]);
+  });
+
+  it('повторяющиеся идентификаторы помещений отклоняются', () => {
+    const r = parseProjectDoc({ devices: [], connections: [], rooms: [room, { ...room, name: 'Зал' }] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain('помещения');
+  });
+
+  it('ссылка на несуществующее помещение снимается с сообщением', () => {
+    const r = parseProjectDoc({ devices: [{ ...mixer(), room: 'ghost' }], connections: [], rooms: [room] });
+    expect(r.ok && r.devices[0].room).toBeUndefined();
+    expect(r.ok && r.notes.join(' ')).toContain('несуществующее помещение');
+  });
+
+  it('пустое название и неверный цвет помещения отклоняются', () => {
+    expect(parseProjectDoc({ devices: [], connections: [], rooms: [{ ...room, name: '' }] }).ok).toBe(false);
+    expect(parseProjectDoc({ devices: [], connections: [], rooms: [{ ...room, color: 'red' }] }).ok).toBe(false);
   });
 });

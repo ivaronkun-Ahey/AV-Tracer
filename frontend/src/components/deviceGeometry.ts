@@ -187,24 +187,46 @@ export function labelPoint(points: Pt[], minLength = 60): Pt {
   return best ? { x: (best.a.x + best.b.x) / 2, y: best.a.y } : midpoint(points);
 }
 
-/** Габариты схемы (для «вписать в экран» и экспорта). */
-export function diagramBounds(
-  devices: Device[],
-  connections: Connection[] = []
-): { x: number; y: number; width: number; height: number } | null {
-  if (devices.length === 0) return null;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const d of devices) {
-    const { width, height } = nodeSize(d, connections);
-    minX = Math.min(minX, d.position.x);
-    minY = Math.min(minY, d.position.y);
-    maxX = Math.max(maxX, d.position.x + width);
-    maxY = Math.max(maxY, d.position.y + height);
-  }
+/** Отступ рамки помещения от его устройств; сверху — место для подписи. Те же отступы у автораскладки. */
+export const ROOM_PAD = GRID * 2;
+export const ROOM_PAD_TOP = GRID * 3;
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Прямоугольник устройства; у устройства в помещении — вместе с отступами рамки. */
+function deviceRect(d: Device, connections: Connection[], withRoomPad: boolean): Rect {
+  const { width, height } = nodeSize(d, connections);
+  if (!withRoomPad || !d.room) return { x: d.position.x, y: d.position.y, width, height };
+  return {
+    x: d.position.x - ROOM_PAD,
+    y: d.position.y - ROOM_PAD_TOP,
+    width: width + ROOM_PAD * 2,
+    height: height + ROOM_PAD_TOP + ROOM_PAD,
+  };
+}
+
+function union(rects: Rect[]): Rect | null {
+  if (rects.length === 0) return null;
+  const minX = Math.min(...rects.map((r) => r.x));
+  const minY = Math.min(...rects.map((r) => r.y));
+  const maxX = Math.max(...rects.map((r) => r.x + r.width));
+  const maxY = Math.max(...rects.map((r) => r.y + r.height));
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Рамка помещения: охватывает его устройства с отступами (null — в помещении нет устройств). */
+export function roomBounds(roomId: string, devices: Device[], connections: Connection[] = []): Rect | null {
+  return union(devices.filter((d) => d.room === roomId).map((d) => deviceRect(d, connections, true)));
+}
+
+/** Габариты схемы вместе с рамками помещений (для «вписать в экран» и экспорта). */
+export function diagramBounds(devices: Device[], connections: Connection[] = []): Rect | null {
+  return union(devices.map((d) => deviceRect(d, connections, true)));
 }
 
 /**

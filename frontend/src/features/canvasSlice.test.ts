@@ -6,6 +6,13 @@ import reducer, {
   completeConnection,
   connect as connectPorts,
   nudgeDevice,
+  addRoom,
+  removeRoom,
+  setDeviceRoom,
+  setRoomFilter,
+  selectDevice,
+  beginRoomDrag,
+  moveDevicesTo,
   beginDeviceDrag,
   moveDevice,
   updateDeviceProperty,
@@ -226,5 +233,51 @@ describe('R7: обозначения устройств постоянные', (
     expect(state.past).toHaveLength(pastBefore + 1);
     state = reducer(state, undo());
     expect(state.devices[0].position).toEqual({ x: 0, y: 0 });
+  });
+
+  it('помещения: принадлежность, удаление помещения оставляет устройства, отмена возвращает', () => {
+    let state = withDevices('a', 'b');
+    state = reducer(state, addRoom({ id: 'r1', name: 'Зал', color: '#5B8DEF' }));
+    state = reducer(state, setDeviceRoom({ id: 'a', room: 'r1' }));
+    expect(state.devices[0].room).toBe('r1');
+    // Несуществующее помещение не назначается
+    state = reducer(state, setDeviceRoom({ id: 'b', room: 'ghost' }));
+    expect(state.devices[1].room).toBeUndefined();
+    state = reducer(state, removeRoom('r1'));
+    expect(state.rooms).toEqual([]);
+    expect(state.devices).toHaveLength(2);
+    expect(state.devices[0].room).toBeUndefined();
+    state = reducer(state, undo());
+    expect(state.rooms.map((r) => r.name)).toEqual(['Зал']);
+    expect(state.devices[0].room).toBe('r1');
+  });
+
+  it('фильтр по помещению: новое устройство попадает в него, выбор скрытого устройства снимает фильтр', () => {
+    let state = withDevices('a');
+    state = reducer(state, addRoom({ id: 'r1', name: 'Зал', color: '#5B8DEF' }));
+    state = reducer(state, setRoomFilter('r1'));
+    expect(state.roomFilter).toBe('r1');
+    state = reducer(state, addDevice(makeDevice('b')));
+    expect(state.devices.find((d) => d.id === 'b')?.room).toBe('r1');
+    state = reducer(state, selectDevice('a'));
+    expect(state.roomFilter).toBeNull();
+    // Фильтр по несуществующему помещению не включается
+    state = reducer(state, setRoomFilter('ghost'));
+    expect(state.roomFilter).toBeNull();
+  });
+
+  it('перетаскивание рамки помещения — один шаг отмены для всех его устройств', () => {
+    let state = withDevices('a', 'b');
+    state = reducer(state, addRoom({ id: 'r1', name: 'Зал', color: '#5B8DEF' }));
+    state = reducer(state, setDeviceRoom({ id: 'a', room: 'r1' }));
+    state = reducer(state, setDeviceRoom({ id: 'b', room: 'r1' }));
+    const pastBefore = state.past.length;
+    state = reducer(state, beginRoomDrag('r1'));
+    state = reducer(state, moveDevicesTo({ a: { x: 100, y: 0 }, b: { x: 100, y: 0 } }));
+    state = reducer(state, moveDevicesTo({ a: { x: 200, y: 40 }, b: { x: 200, y: 40 } }));
+    expect(state.past).toHaveLength(pastBefore + 1);
+    expect(state.devices.map((d) => d.position)).toEqual([{ x: 200, y: 40 }, { x: 200, y: 40 }]);
+    state = reducer(state, undo());
+    expect(state.devices.map((d) => d.position)).toEqual([{ x: 0, y: 0 }, { x: 0, y: 0 }]);
   });
 });

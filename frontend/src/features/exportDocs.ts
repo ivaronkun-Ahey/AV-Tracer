@@ -1,8 +1,11 @@
-import { Connection, Device } from '../types/device.types';
+import { Connection, Device, ProjectDoc, Room } from '../types/device.types';
 import { deviceTypeLabel, portLabel, SIGNAL_LABELS, CATEGORY_LABELS } from '../data/labels';
 import { deviceTags } from '../data/deviceTags';
+import { roomNameOf } from '../data/rooms';
 
 export interface BomRow {
+  /** Помещение (пустая строка — вне помещений или в проекте нет помещений). */
+  room: string;
   tags: string[];
   category: string;
   type: string;
@@ -14,6 +17,8 @@ export interface BomRow {
 
 export interface CableRow {
   label: string;
+  fromRoom: string;
+  toRoom: string;
   cable: string;
   length: number;
   signal: string;
@@ -31,12 +36,20 @@ export interface CableTotal {
 
 const CATEGORY_ORDER = ['audio', 'video', 'network', 'control'];
 
-/** Спецификация: одинаковые модели объединяются в одну строку с количеством. */
-export function buildBom(devices: Device[]): BomRow[] {
+/**
+ * Спецификация: одинаковые модели объединяются в одну строку с количеством;
+ * если в проекте есть помещения — отдельно по каждому помещению (в порядке их списка).
+ */
+export function buildBom(devices: Device[], rooms: Room[] = []): BomRow[] {
   const tags = deviceTags(devices);
-  const groups = new Map<string, { categoryKey: string; row: BomRow }>();
+  const groups = new Map<string, { categoryKey: string; roomOrder: number; row: BomRow }>();
+  const roomOrder = (id: string | undefined) => {
+    const i = rooms.findIndex((r) => r.id === id);
+    return i === -1 ? rooms.length : i;
+  };
   for (const d of devices) {
-    const key = `${d.manufacturer}\u0000${d.model}`;
+    const room = roomNameOf(rooms, d.room);
+    const key = `${room}\u0000${d.manufacturer}\u0000${d.model}`;
     const group = groups.get(key);
     if (group) {
       group.row.qty += 1;
@@ -44,7 +57,9 @@ export function buildBom(devices: Device[]): BomRow[] {
     } else {
       groups.set(key, {
         categoryKey: d.category,
+        roomOrder: roomOrder(d.room),
         row: {
+          room,
           tags: [tags[d.id]],
           category: CATEGORY_LABELS[d.category] ?? d.category,
           type: deviceTypeLabel(d.type),
@@ -59,6 +74,7 @@ export function buildBom(devices: Device[]): BomRow[] {
   return [...groups.values()]
     .sort(
       (a, b) =>
+        a.roomOrder - b.roomOrder ||
         CATEGORY_ORDER.indexOf(a.categoryKey) - CATEGORY_ORDER.indexOf(b.categoryKey) ||
         a.row.type.localeCompare(b.row.type, 'ru') ||
         a.row.manufacturer.localeCompare(b.row.manufacturer) ||
@@ -67,8 +83,8 @@ export function buildBom(devices: Device[]): BomRow[] {
     .map((g) => g.row);
 }
 
-/** Кабельный журнал: каждый кабель с маркировкой, длиной и концами. */
-export function buildCableSchedule(devices: Device[], connections: Connection[]): CableRow[] {
+/** Кабельный журнал: каждый кабель с маркировкой, длиной, концами и помещениями концов. */
+export function buildCableSchedule(devices: Device[], connections: Connection[], rooms: Room[] = []): CableRow[] {
   const tags = deviceTags(devices);
   const byId = Object.fromEntries(devices.map((d) => [d.id, d]));
   const endName = (id: string) => (byId[id] ? `${tags[id]} ${byId[id].model}` : id);
@@ -81,6 +97,8 @@ export function buildCableSchedule(devices: Device[], connections: Connection[])
       const signal = byId[c.from.device]?.ports.find((p) => p.id === c.from.port)?.signal_type;
       return {
         label: c.label ?? '',
+        fromRoom: roomNameOf(rooms, byId[c.from.device]?.room),
+        toRoom: roomNameOf(rooms, byId[c.to.device]?.room),
         cable: c.cable_type.toUpperCase(),
         length: c.cable_length,
         signal: signal ? SIGNAL_LABELS[signal] : '',
@@ -123,19 +141,63 @@ export function toCsv(rows: (string | number)[][]): string {
   return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n') + '\r\n';
 }
 
-export function bomCsv(devices: Device[]): string {
-  const rows = buildBom(devices);
+export function bomCsv(devices: Device[], rooms: Room[] = []): string {
+  const rows = buildBom(devices, rooms);
+  const withRooms = rooms.length > 0;
   return toCsv([
-    ['№', 'Обозначения', 'Категория', 'Тип', 'Производитель', 'Модель', 'Наименование', 'Кол-во'],
-    ...rows.map((r, i) => [i + 1, r.tags.join(', '), r.category, r.type, r.manufacturer, r.model, r.fullName, r.qty]),
+    [
+      '№',
+      ...(withRooms ? ['Помещение'] : []),
+      'Обозначения',
+      'Категория',
+      'Тип',
+      'Производитель',
+      'Модель',
+      'Наименование',
+      'Кол-во',
+    ],
+    ...rows.map((r, i) => [
+      i + 1,
+      ...(withRooms ? [r.room] : []),
+      r.tags.join(', '),
+      r.category,
+      r.type,
+      r.manufacturer,
+      r.model,
+      r.fullName,
+      r.qty,
+    ]),
   ]);
 }
 
-export function cableScheduleCsv(devices: Device[], connections: Connection[]): string {
-  const rows = buildCableSchedule(devices, connections);
+export function cableScheduleCsv(devices: Device[], connections: Connection[], rooms: Room[] = []): string {
+  const rows = buildCableSchedule(devices, connections, rooms);
+  const withRooms = rooms.length > 0;
   return toCsv([
-    ['Метка', 'Тип кабеля', 'Длина, м', 'Сигнал', 'Откуда', 'Порт', 'Куда', 'Порт'],
-    ...rows.map((r) => [r.label, r.cable, r.length, r.signal, r.from, r.fromPort, r.to, r.toPort]),
+    [
+      'Метка',
+      'Тип кабеля',
+      'Длина, м',
+      'Сигнал',
+      ...(withRooms ? ['Помещение (откуда)'] : []),
+      'Откуда',
+      'Порт',
+      ...(withRooms ? ['Помещение (куда)'] : []),
+      'Куда',
+      'Порт',
+    ],
+    ...rows.map((r) => [
+      r.label,
+      r.cable,
+      r.length,
+      r.signal,
+      ...(withRooms ? [r.fromRoom] : []),
+      r.from,
+      r.fromPort,
+      ...(withRooms ? [r.toRoom] : []),
+      r.to,
+      r.toPort,
+    ]),
     [],
     ['Итого', 'Тип кабеля', 'Длина, м', 'Кол-во'],
     ...cableTotals(rows).map((t) => ['', t.cable, t.length, t.count]),
@@ -170,9 +232,11 @@ const esc = (s: string | number) =>
  * Документация для печати или сохранения в PDF (через диалог печати браузера):
  * лист со схемой и штампом, затем спецификация и кабельный журнал.
  */
-export function documentationHtml(imageUrl: string, devices: Device[], connections: Connection[], date = new Date()) {
-  const bom = buildBom(devices);
-  const cables = buildCableSchedule(devices, connections);
+export function documentationHtml(imageUrl: string, { devices, connections, rooms }: ProjectDoc, date = new Date()) {
+  const bom = buildBom(devices, rooms);
+  const cables = buildCableSchedule(devices, connections, rooms);
+  const withRooms = rooms.length > 0;
+  const roomCol = <T,>(value: T) => (withRooms ? [value] : []);
   const totals = cableTotals(cables);
   const day = date.toLocaleDateString('ru-RU');
   const table = (head: string[], body: (string | number)[][]) =>
@@ -217,13 +281,24 @@ export function documentationHtml(imageUrl: string, devices: Device[], connectio
 <section class="tables">
   <h2>Спецификация оборудования</h2>
   ${table(
-    ['№', 'Обозначения', 'Тип', 'Производитель', 'Модель', 'Наименование', 'Кол-во'],
-    bom.map((r, i) => [i + 1, r.tags.join(', '), r.type, r.manufacturer, r.model, r.fullName, r.qty])
+    ['№', ...roomCol('Помещение'), 'Обозначения', 'Тип', 'Производитель', 'Модель', 'Наименование', 'Кол-во'],
+    bom.map((r, i) => [i + 1, ...roomCol(r.room), r.tags.join(', '), r.type, r.manufacturer, r.model, r.fullName, r.qty])
   )}
   <h2>Кабельный журнал</h2>
   ${table(
-    ['Метка', 'Кабель', 'Длина, м', 'Сигнал', 'Откуда', 'Порт', 'Куда', 'Порт'],
-    cables.map((r) => [r.label, r.cable, r.length, r.signal, r.from, r.fromPort, r.to, r.toPort])
+    ['Метка', 'Кабель', 'Длина, м', 'Сигнал', ...roomCol('Откуда (пом.)'), 'Откуда', 'Порт', ...roomCol('Куда (пом.)'), 'Куда', 'Порт'],
+    cables.map((r) => [
+      r.label,
+      r.cable,
+      r.length,
+      r.signal,
+      ...roomCol(r.fromRoom),
+      r.from,
+      r.fromPort,
+      ...roomCol(r.toRoom),
+      r.to,
+      r.toPort,
+    ])
   )}
   <h2>Итого кабеля</h2>
   <div class="totals">${table(

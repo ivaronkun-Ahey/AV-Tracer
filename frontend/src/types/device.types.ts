@@ -38,10 +38,20 @@ export interface Port {
   label?: string;
 }
 
+/** Помещение (зона) проекта: на холсте — рамка вокруг своих устройств. */
+export interface Room {
+  id: string;
+  name: string;
+  /** Цвет рамки, #rrggbb. */
+  color: string;
+}
+
 export interface Device {
   id: string;
   /** Позиционное обозначение (MIC-01): постоянное, не меняется при удалении других устройств. */
   tag?: string;
+  /** Помещение, в котором стоит устройство (id из списка помещений проекта). */
+  room?: string;
   type: string;
   category: DeviceCategory;
   manufacturer: string;
@@ -137,4 +147,11 @@ export interface SimulationResult {
   signal_flows: SignalFlow[];
   warnings: SimIssue[];
   errors: SimIssue[];
+}
+
+/** Содержимое проекта: то, что сохраняется в файл и автосейв и попадает в историю отмены. */
+export interface ProjectDoc {
+  devices: Device[];
+  connections: Connection[];
+  rooms: Room[];
 }

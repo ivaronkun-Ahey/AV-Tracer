@@ -514,11 +514,19 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     const max = cableMaxLength(c.cable_type);
     const length = num(c.cable_length, 0);
     if (length > max) {
+      // HDMI или USB между помещениями — типичная ошибка: для таких трасс есть удлинители
+      const fromRoom = byId[c.from.device]?.room;
+      const toRoom = byId[c.to.device]?.room;
+      const betweenRooms = !!fromRoom && !!toRoom && fromRoom !== toRoom;
+      const advice =
+        betweenRooms && (c.cable_type === 'hdmi' || c.cable_type === 'usb')
+          ? ' — между помещениями используйте HDBaseT-удлинитель или AV-over-IP'
+          : ' — возможны потери сигнала';
       warnings.push({
         type: 'cable_length',
         device: c.from.device,
         connection: c.id,
-        message: `Кабель ${String(c.cable_type).toUpperCase()} ${length} м превышает рекомендуемые ${max} м — возможны потери сигнала`,
+        message: `Кабель ${String(c.cable_type).toUpperCase()} ${length} м превышает рекомендуемые ${max} м${advice}`,
         severity: 'low',
       });
     }

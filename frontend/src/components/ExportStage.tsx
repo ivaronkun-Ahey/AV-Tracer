@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Stage, Layer, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
-import { Connection, Device } from '../types/device.types';
+import { Connection, Device, Room } from '../types/device.types';
 import DeviceNode from './DeviceNode';
+import RoomFrame from './RoomFrame';
 import ConnectionLine from './ConnectionLine';
 import { CanvasRenderContext, LIGHT_PALETTE } from './canvasTheme';
 import { diagramBounds } from './deviceGeometry';
@@ -11,6 +12,7 @@ import { deviceTags } from '../data/deviceTags';
 interface ExportStageProps {
   devices: Device[];
   connections: Connection[];
+  rooms: Room[];
   showCableLabels: boolean;
   onRendered: (dataUrl: string) => void;
 }
@@ -23,7 +25,7 @@ const FOOTER = 28;
  * выделений и подсказок, обрезанная по габаритам схемы. Отрисовывается один раз
  * и возвращает PNG в onRendered.
  */
-const ExportStage: React.FC<ExportStageProps> = ({ devices, connections, showCableLabels, onRendered }) => {
+const ExportStage: React.FC<ExportStageProps> = ({ devices, connections, rooms, showCableLabels, onRendered }) => {
   const stageRef = useRef<Konva.Stage>(null);
   const bounds = diagramBounds(devices, connections) ?? { x: 0, y: 0, width: 400, height: 200 };
   // Запас снизу — для кабелей, которые обходят устройства
@@ -61,6 +63,9 @@ const ExportStage: React.FC<ExportStageProps> = ({ devices, connections, showCab
           </Layer>
           {/* Схема сдвигается так, чтобы её левый верхний угол оказался у отступа */}
           <Layer x={PAD - bounds.x} y={PAD - bounds.y}>
+            {rooms.map((r) => (
+              <RoomFrame key={r.id} room={r} devices={devices} connections={connections} />
+            ))}
             {connections.map((c) => (
               <ConnectionLine key={c.id} connection={c} devices={devices} />
             ))}

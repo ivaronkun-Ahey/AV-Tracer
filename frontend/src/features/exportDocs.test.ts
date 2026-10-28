@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildBom, buildCableSchedule, cableTotals, toCsv, bomCsv, documentationHtml } from './exportDocs';
+import { buildBom, buildCableSchedule, cableTotals, toCsv, bomCsv, cableScheduleCsv, documentationHtml } from './exportDocs';
 import { EXAMPLE_PROJECTS } from '../data/examples';
 import { withCableLabels, nextCableLabel, cablePrefix } from '../data/cableLabels';
 
 const concert = () => {
   const p = EXAMPLE_PROJECTS.find((e) => e.id === 'concert')!.build();
-  return { devices: p.devices, connections: withCableLabels(p.devices, p.connections) };
+  return { devices: p.devices, connections: withCableLabels(p.devices, p.connections), rooms: p.rooms ?? [] };
 };
 
 describe('маркировка кабелей', () => {
@@ -43,7 +43,7 @@ describe('спецификация и кабельный журнал', () => {
     expect(rows[0]).toMatchObject({ label: 'A-001', cable: 'XLR', from: 'MIC-01 SM58', fromPort: 'XLR OUT', to: 'MIX-01 SQ-5', toPort: 'XLR IN 1' });
     expect(cableTotals(rows)).toEqual([
       { cable: 'SPEAKON', count: 2, length: 20 },
-      { cable: 'XLR', count: 2, length: 20 },
+      { cable: 'XLR', count: 2, length: 80 },
     ]);
   });
 
@@ -54,7 +54,7 @@ describe('спецификация и кабельный журнал', () => {
 
   it('документация экранирует названия и содержит все разделы', () => {
     const { devices, connections } = concert();
-    const html = documentationHtml('data:image/png;base64,AAA', devices, connections);
+    const html = documentationHtml('data:image/png;base64,AAA', { devices, connections, rooms: [] });
     expect(html).toContain('Allen &amp; Heath');
     expect(html).toContain('Спецификация оборудования');
     expect(html).toContain('Кабельный журнал');
@@ -78,5 +78,23 @@ describe('R8: CSV не превращает текст в формулы', () =>
     const { devices } = concert();
     devices[0] = { ...devices[0], model: '=1+1' };
     expect(bomCsv(devices)).toContain(";'=1+1;");
+  });
+});
+
+describe('помещения в спецификации и кабельном журнале', () => {
+  it('спецификация разбита по помещениям, кабельный журнал знает помещения концов', () => {
+    const { devices, connections, rooms } = concert();
+    const bom = buildBom(devices, rooms);
+    expect(bom.map((r) => r.room)).toEqual(['Сцена', 'Сцена', 'Сцена', 'Пульт FOH']);
+    const cable = buildCableSchedule(devices, connections, rooms).find((r) => r.label === 'A-001')!;
+    expect([cable.fromRoom, cable.toRoom]).toEqual(['Сцена', 'Пульт FOH']);
+    expect(cableScheduleCsv(devices, connections, rooms).split('\r\n')[0]).toContain('Помещение (откуда)');
+    expect(bomCsv(devices, rooms).split('\r\n')[0]).toContain('Помещение');
+  });
+
+  it('без помещений колонок помещений нет', () => {
+    const { devices, connections } = concert();
+    expect(cableScheduleCsv(devices, connections).split('\r\n')[0]).not.toContain('Помещение');
+    expect(bomCsv(devices).split('\r\n')[0]).not.toContain('Помещение');
   });
 });

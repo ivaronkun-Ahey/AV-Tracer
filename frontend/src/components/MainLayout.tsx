@@ -123,6 +123,7 @@ const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
+  const rooms = useAppSelector((s) => s.canvas.rooms);
   const canUndo = useAppSelector((s) => s.canvas.past.length > 0);
   const canRedo = useAppSelector((s) => s.canvas.future.length > 0);
   const toast = useAppSelector((s) => s.canvas.toast);
@@ -205,11 +206,11 @@ const MainLayout: React.FC = () => {
       return;
     }
     if (kind === 'bom') {
-      downloadFile(`av-tracer-bom-${dateStamp()}.csv`, bomCsv(devices));
+      downloadFile(`av-tracer-bom-${dateStamp()}.csv`, bomCsv(devices, rooms));
       return;
     }
     if (kind === 'cables') {
-      downloadFile(`av-tracer-cables-${dateStamp()}.csv`, cableScheduleCsv(devices, connections));
+      downloadFile(`av-tracer-cables-${dateStamp()}.csv`, cableScheduleCsv(devices, connections, rooms));
       return;
     }
     // Окно для печати открываем сразу по клику, иначе браузер заблокирует всплывающее окно
@@ -232,7 +233,7 @@ const MainLayout: React.FC = () => {
     } else if (job.win) {
       const win = job.win;
       win.document.open();
-      win.document.write(documentationHtml(dataUrl, devices, connections));
+      win.document.write(documentationHtml(dataUrl, { devices, connections, rooms }));
       win.document.close();
       // Печать вызывает само приложение: встроенные скрипты в документе запрещены
       // политикой безопасности (CSP), а диалог печати открывается после загрузки схемы
@@ -251,7 +252,7 @@ const MainLayout: React.FC = () => {
   };
 
   const handleSave = () => {
-    const project = { ...serializeProject(devices, connections), timestamp: new Date().toISOString() };
+    const project = { ...serializeProject({ devices, connections, rooms }), timestamp: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -284,7 +285,7 @@ const MainLayout: React.FC = () => {
         dispatch(showToast({ message: `Не удалось открыть файл: ${parsed.error}`, severity: 'error' }));
         return;
       }
-      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections }));
+      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections, rooms: parsed.rooms }));
       const remarks = [
         ...parsed.notes,
         ...(parsed.droppedConnections > 0
@@ -580,6 +581,7 @@ const MainLayout: React.FC = () => {
         <ExportStage
           devices={devices}
           connections={connections}
+          rooms={rooms}
           showCableLabels={showCableLabels}
           onRendered={finishExport}
         />

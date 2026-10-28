@@ -12,9 +12,6 @@ import {
   IconButton,
   Tooltip,
   ButtonBase,
-  List,
-  ListItemButton,
-  ListItemText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
@@ -25,7 +22,6 @@ import {
   setDeviceTag,
   removeDevice,
   removeConnection,
-  selectDevice,
   selectConnection,
   deselectAll,
   connect,
@@ -37,12 +33,15 @@ import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LAB
 import { signalColor, categoryColor } from './deviceGeometry';
 import { deviceTags } from '../data/deviceTags';
 import ConnectionInspector from './ConnectionInspector';
+import { DeviceRoomField, RoomPanel, RoomsAndDevices } from './RoomPanels';
 import NumberField from './NumberField';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
   const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
   const selectedConnectionId = useAppSelector((s) => s.canvas.selectedConnectionId);
+  const selectedRoomId = useAppSelector((s) => s.canvas.selectedRoomId);
+  const rooms = useAppSelector((s) => s.canvas.rooms);
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
 
@@ -54,7 +53,19 @@ const PropertiesPanel: React.FC = () => {
     if (selectedConnectionId) {
       return <ConnectionInspector />;
     }
-    return <DeviceList devices={devices} onSelect={(id) => dispatch(selectDevice(id))} />;
+    const room = rooms.find((r) => r.id === selectedRoomId);
+    if (room) return <RoomPanel key={room.id} room={room} />;
+    if (devices.length === 0 && rooms.length === 0) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
+          <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Здесь появятся параметры устройства или кабеля, выбранного на холсте
+          </Typography>
+        </Box>
+      );
+    }
+    return <RoomsAndDevices devices={devices} />;
   }
 
   const deviceName = (id: string) => {
@@ -109,6 +120,7 @@ const PropertiesPanel: React.FC = () => {
         isTaken={(t) => devices.some((d) => d.id !== device.id && d.tag === t)}
         onCommit={(t) => dispatch(setDeviceTag({ id: device.id, tag: t }))}
       />
+      <DeviceRoomField key={`room:${device.id}`} device={device} />
       {renderProperties(device, onChange)}
       {renderChannelGains(device, connections, onChange)}
 
@@ -196,45 +208,6 @@ const PropertiesPanel: React.FC = () => {
       >
         Удалить устройство
       </Button>
-    </Box>
-  );
-};
-
-/** Список устройств схемы, когда ничего не выбрано: выбор без холста (с клавиатуры). */
-const DeviceList: React.FC<{ devices: Device[]; onSelect: (id: string) => void }> = ({ devices, onSelect }) => {
-  if (devices.length === 0) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
-        <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Здесь появятся параметры устройства или кабеля, выбранного на холсте
-        </Typography>
-      </Box>
-    );
-  }
-  const sorted = [...devices].sort((a, b) => (a.tag ?? '').localeCompare(b.tag ?? '', 'ru', { numeric: true }));
-  return (
-    <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-        Устройства на схеме ({devices.length})
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-        Выберите устройство здесь или на холсте
-      </Typography>
-      <List dense disablePadding aria-label="Устройства на схеме">
-        {sorted.map((d) => (
-          <ListItemButton key={d.id} onClick={() => onSelect(d.id)} sx={{ borderRadius: 1 }}>
-            <Box
-              sx={{ width: 4, alignSelf: 'stretch', mr: 1.5, borderRadius: 1, bgcolor: categoryColor(d.category), flexShrink: 0 }}
-            />
-            <ListItemText
-              primary={`${d.tag ?? ''} · ${d.model}`}
-              secondary={deviceTypeLabel(d.type)}
-              primaryTypographyProps={{ noWrap: true, variant: 'body2' }}
-            />
-          </ListItemButton>
-        ))}
-      </List>
     </Box>
   );
 };

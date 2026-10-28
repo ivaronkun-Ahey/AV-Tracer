@@ -6,6 +6,8 @@ import {
   SIGNAL_TYPES,
   Connection,
   Device,
+  ProjectDoc,
+  Room,
 } from '../types/device.types';
 import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
 import { withTemplateDefaults } from './equipment';
@@ -24,6 +26,7 @@ export const PROJECT_LIMITS = {
   devices: 2000,
   connections: 10000,
   portsPerDevice: 512,
+  rooms: 200,
 };
 
 const text = (max: number) => z.string().max(max, `строка длиннее ${max} символов`);
@@ -39,6 +42,7 @@ const portSchema = z.object({
 const deviceSchema = z.object({
   id: text(200),
   tag: text(32).optional(),
+  room: text(100).optional(),
   type: text(100),
   category: z.enum(DEVICE_CATEGORIES),
   manufacturer: text(200),
@@ -63,8 +67,15 @@ const connectionSchema = z.object({
   label: text(32).optional(),
 });
 
+const roomSchema = z.object({
+  id: text(100),
+  name: text(64).min(1, 'пустое название помещения'),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'цвет помещения в формате #rrggbb'),
+});
+
 const projectDocSchema = z.object({
   schemaVersion: z.number().int().min(1).optional(),
+  rooms: z.array(roomSchema).max(PROJECT_LIMITS.rooms, `больше ${PROJECT_LIMITS.rooms} помещений`).default([]),
   devices: z.array(deviceSchema).max(PROJECT_LIMITS.devices, `больше ${PROJECT_LIMITS.devices} устройств`),
   connections: z.array(connectionSchema).max(PROJECT_LIMITS.connections, `больше ${PROJECT_LIMITS.connections} соединений`),
 });
@@ -74,6 +85,7 @@ export type ParsedProject =
       ok: true;
       devices: Device[];
       connections: Connection[];
+      rooms: Room[];
       droppedConnections: number;
       /** Что изменено при обновлении старого формата. */
       notes: string[];
@@ -89,8 +101,8 @@ function firstDuplicate(values: string[]): string | undefined {
   return undefined;
 }
 
-/** Уникальность идентификаторов: устройств, соединений, портов внутри устройства, обозначений. */
-function identityError(devices: Device[], connections: Connection[]): string | null {
+/** Уникальность идентификаторов: устройств, соединений, портов внутри устройства, обозначений, помещений. */
+function identityError(devices: Device[], connections: Connection[], rooms: Room[]): string | null {
   const dupDevice = firstDuplicate(devices.map((d) => d.id));
   if (dupDevice) return `повторяется идентификатор устройства «${dupDevice}»`;
   const dupConnection = firstDuplicate(connections.map((c) => c.id));
@@ -101,6 +113,8 @@ function identityError(devices: Device[], connections: Connection[]): string | n
   }
   const dupTag = firstDuplicate(devices.flatMap((d) => (d.tag ? [d.tag] : [])));
   if (dupTag) return `повторяется обозначение устройства «${dupTag}»`;
+  const dupRoom = firstDuplicate(rooms.map((r) => r.id));
+  if (dupRoom) return `повторяется идентификатор помещения «${dupRoom}»`;
   return null;
 }
 
@@ -111,11 +125,23 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
   if (version > SCHEMA_VERSION) {
     return { ok: false, error: `файл создан более новой версией AV-Tracer (формат ${version}, поддерживается до ${SCHEMA_VERSION})` };
   }
-  const identity = identityError(parsed.data.devices, parsed.data.connections);
+  const rooms = parsed.data.rooms;
+  const identity = identityError(parsed.data.devices, parsed.data.connections, rooms);
   if (identity) return { ok: false, error: identity };
 
   const migrated = migrateProject(version, parsed.data.devices, parsed.data.connections);
-  const devices = withDeviceTags(migrated.devices.map(withTemplateDefaults));
+  // Ссылка на несуществующее помещение снимается: устройство остаётся вне помещений
+  const roomIds = new Set(rooms.map((r) => r.id));
+  let unlinked = 0;
+  const placed = migrated.devices.map((d) => {
+    if (d.room === undefined || roomIds.has(d.room)) return d;
+    unlinked += 1;
+    const rest = { ...d };
+    delete rest.room;
+    return rest;
+  });
+  const notes = unlinked > 0 ? [...migrated.notes, `устройств со ссылкой на несуществующее помещение: ${unlinked} — помещение снято`] : migrated.notes;
+  const devices = withDeviceTags(placed.map(withTemplateDefaults));
   // Соединения, ссылающиеся на несуществующие устройства или порты, отбрасываем
   const hasPort = (deviceId: string, portId: string) =>
     devices.some((d) => d.id === deviceId && d.ports.some((p) => p.id === portId));
@@ -124,12 +150,13 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
     ok: true,
     devices,
     connections: withCableLabels(devices, valid),
+    rooms,
     droppedConnections: migrated.connections.length - valid.length,
-    notes: migrated.notes,
+    notes,
   };
 }
 
 /** Документ для сохранения в файл и автосейв — всегда с версией формата. */
-export function serializeProject(devices: Device[], connections: Connection[]) {
-  return { schemaVersion: SCHEMA_VERSION, devices, connections };
+export function serializeProject({ devices, connections, rooms }: ProjectDoc) {
+  return { schemaVersion: SCHEMA_VERSION, rooms, devices, connections };
 }

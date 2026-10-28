@@ -379,3 +379,15 @@ describe('«Исправить»: исправление действитель�
     expect(types(runSimulation(after.devices, after.connections).errors)).not.toContain('input_busy');
   });
 });
+
+describe('Помещения', () => {
+  it('длинный HDMI между помещениями — совет поставить HDBaseT; внутри помещения — обычное предупреждение', () => {
+    const devices = [{ ...dev('generic-laptop', 'pc'), room: 'hall' }, { ...dev('lg-75up8000', 'tv'), room: 'lobby' }];
+    const link = { ...cable('pc', 'hdmi_out', 'tv', 'hdmi_in_1', 'hdmi'), cable_length: 25 };
+    const between = runSimulation(devices, [link]).warnings.find((w) => w.type === 'cable_length')!;
+    expect(between.message).toContain('HDBaseT');
+    const same = runSimulation(devices.map((d) => ({ ...d, room: 'hall' })), [link]).warnings.find((w) => w.type === 'cable_length')!;
+    expect(same.message).not.toContain('HDBaseT');
+  });
+});
+

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { Box, TextField } from '@mui/material';
 import { Stage, Layer, Path } from 'react-konva';
 import type Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -14,6 +14,7 @@ import {
   setPan,
   setViewportSize,
   nudgeDevice,
+  setRoomFilter,
   resetView,
   requestFit,
   showToast,
@@ -23,6 +24,8 @@ import {
 import DeviceNode from './DeviceNode';
 import ConnectionLine from './ConnectionLine';
 import EmptyState from './EmptyState';
+import RoomFrame from './RoomFrame';
+import OffRoomStub from './OffRoomStub';
 import ZoomControls from './ZoomControls';
 import { createDevice, findEquipment, newDeviceId } from '../data/equipment';
 import { deviceTags } from '../data/deviceTags';
@@ -63,6 +66,8 @@ const CanvasWorkspace: React.FC = () => {
 
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
+  const rooms = useAppSelector((s) => s.canvas.rooms);
+  const roomFilter = useAppSelector((s) => s.canvas.roomFilter);
   const zoom = useAppSelector((s) => s.canvas.zoom);
   const pan = useAppSelector((s) => s.canvas.pan);
   const connectionInProgress = useAppSelector((s) => s.canvas.connectionInProgress);
@@ -73,6 +78,13 @@ const CanvasWorkspace: React.FC = () => {
   const fitRequest = useAppSelector((s) => s.canvas.fitRequest);
 
   const tags = useMemo(() => deviceTags(devices), [devices]);
+  // Фильтр по помещению: видны его устройства; кабели наружу — обрывом с адресом
+  const visibleDevices = useMemo(
+    () => (roomFilter ? devices.filter((d) => d.room === roomFilter) : devices),
+    [devices, roomFilter]
+  );
+  const visibleIds = useMemo(() => new Set(visibleDevices.map((d) => d.id)), [visibleDevices]);
+  const filterRoom = rooms.find((r) => r.id === roomFilter);
   const renderContext = useMemo(
     () => ({ palette: DARK_PALETTE, interactive: true, showCableLabels }),
     [showCableLabels]
@@ -96,9 +108,9 @@ const CanvasWorkspace: React.FC = () => {
     return () => observer.disconnect();
   }, [dispatch]);
 
-  // «Вписать в экран»: масштаб и панорама так, чтобы была видна вся схема
-  const devicesRef = useRef(devices);
-  devicesRef.current = devices;
+  // «Вписать в экран»: масштаб и панорама так, чтобы была видна вся схема (или помещение)
+  const devicesRef = useRef(visibleDevices);
+  devicesRef.current = visibleDevices;
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
   useEffect(() => {
@@ -283,15 +295,35 @@ const CanvasWorkspace: React.FC = () => {
       >
         <CanvasRenderContext.Provider value={renderContext}>
           <Layer>
-            {connections.map((c) => (
-              <ConnectionLine key={c.id} connection={c} devices={devices} />
-            ))}
+            {rooms
+              .filter((r) => !roomFilter || r.id === roomFilter)
+              .map((r) => (
+                <RoomFrame key={r.id} room={r} devices={devices} connections={connections} />
+              ))}
+
+            {connections.map((c) => {
+              const fromVisible = visibleIds.has(c.from.device);
+              const toVisible = visibleIds.has(c.to.device);
+              if (fromVisible && toVisible) return <ConnectionLine key={c.id} connection={c} devices={devices} />;
+              if (!fromVisible && !toVisible) return null;
+              return (
+                <OffRoomStub
+                  key={c.id}
+                  connection={c}
+                  visibleEnd={fromVisible ? 'from' : 'to'}
+                  devices={devices}
+                  connections={connections}
+                  rooms={rooms}
+                  tags={tags}
+                />
+              );
+            })}
 
             {rubberPath && (
               <Path data={rubberPath} stroke={rubberColor} strokeWidth={2.5} dash={[8, 6]} listening={false} />
             )}
 
-            {devices.map((d) => (
+            {visibleDevices.map((d) => (
               <DeviceNode key={d.id} device={d} tag={tags[d.id]} />
             ))}
           </Layer>
@@ -299,6 +331,49 @@ const CanvasWorkspace: React.FC = () => {
       </Stage>
 
       {devices.length === 0 && <EmptyState />}
+
+      {rooms.length > 0 && (
+        <Box sx={{ position: 'absolute', top: 12, left: 12, bgcolor: '#161b22', borderRadius: 1 }}>
+          <TextField
+            select
+            size="small"
+            label="Помещение"
+            value={roomFilter ?? ''}
+            onChange={(e) => {
+              dispatch(setRoomFilter(e.target.value || null));
+              dispatch(requestFit());
+            }}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 180 }}
+          >
+            <option value="">Все помещения</option>
+            {rooms.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </TextField>
+        </Box>
+      )}
+
+      {filterRoom && visibleDevices.length === 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            color: 'text.secondary',
+            textAlign: 'center',
+            px: 3,
+          }}
+        >
+          В помещении «{filterRoom.name}» пока нет устройств — добавьте их из библиотеки, они попадут сюда
+        </Box>
+      )}
 
       {connectionInProgress && (
         <div
