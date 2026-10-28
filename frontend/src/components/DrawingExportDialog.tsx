@@ -19,15 +19,36 @@ import { ProjectMeta } from '../types/device.types';
 import { dateStamp, downloadFile } from '../features/exportDocs';
 import type { DrawingKind } from '../drawing/drawingSet';
 import type { SheetFormat } from '../drawing/sheet';
+import { safeFileName } from '../drawing/translit';
 
 // Список листов дублирует drawingSet.ts, чтобы модуль чертежей (pdf-lib, ELK)
-// загружался только при выпуске PDF, а не при открытии диалога
+// загружался только при выпуске чертежей, а не при открытии диалога
 const KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'structural', title: 'Схема структурная' },
   { kind: 'functional', title: 'Схема функциональная' },
   { kind: 'connections', title: 'Схема соединений' },
   { kind: 'cables', title: 'Кабельный журнал' },
   { kind: 'spec', title: 'Спецификация оборудования (ГОСТ 21.110)' },
+];
+
+type Output = 'pdf' | 'svg' | 'dxf';
+
+const OUTPUTS: Array<{ value: Output; label: string; hint: string }> = [
+  {
+    value: 'pdf',
+    label: 'PDF',
+    hint: 'Комплект в одном файле — для печати и согласования.',
+  },
+  {
+    value: 'svg',
+    label: 'SVG',
+    hint: 'Векторный лист для правки в Inkscape, Illustrator, Visio; несколько листов — ZIP-архив.',
+  },
+  {
+    value: 'dxf',
+    label: 'DXF',
+    hint: 'DXF R12 для AutoCAD, nanoCAD, LibreCAD: все листы в одном файле, линии по слоям AV_THICK (0,6 мм), AV_THIN (0,25 мм), текст — AV_TEXT.',
+  },
 ];
 
 const FIELDS: Array<{ key: keyof ProjectMeta; label: string; wide?: boolean }> = [
@@ -42,29 +63,7 @@ const FIELDS: Array<{ key: keyof ProjectMeta; label: string; wide?: boolean }> =
   { key: 'chiefEngineer', label: 'ГИП' },
 ];
 
-const TRANSLIT: Record<string, string> = {
-  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm',
-  н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'shch',
-  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
-};
-
-/**
- * Имя файла — латиницей: браузеры (по крайней мере Chromium без окна) не всегда
- * принимают кириллицу в имени скачиваемого файла и подставляют «download».
- */
-const safeName = (s: string) =>
-  [...s]
-    .map((ch) => {
-      const lower = ch.toLowerCase();
-      if (!(lower in TRANSLIT)) return ch;
-      const t = TRANSLIT[lower];
-      return ch === lower ? t : t.toUpperCase();
-    })
-    .join('')
-    .replace(/[^A-Za-z0-9._-]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-/** Выпуск комплекта чертежей в PDF: данные штампа, состав листов, формат. */
+/** Выпуск комплекта чертежей (PDF, SVG, DXF): данные штампа, состав листов, формат. */
 const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const dispatch = useAppDispatch();
   const devices = useAppSelector((s) => s.canvas.devices);
@@ -74,6 +73,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
   const [form, setForm] = useState<ProjectMeta>(meta);
   const [kinds, setKinds] = useState<DrawingKind[]>(KINDS.map((k) => k.kind));
   const [format, setFormat] = useState<SheetFormat | 'auto'>('auto');
+  const [output, setOutput] = useState<Output>('pdf');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -93,22 +93,42 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
     setError('');
     // Данные штампа сохраняются в проекте — в следующий раз заполнять не нужно
     dispatch(setProjectMeta(form));
+    const label = OUTPUTS.find((o) => o.value === output)!.label;
     try {
-      const [{ buildDrawingPdf }, { fetchDrawingFonts }] = await Promise.all([import('../drawing/drawingSet'), import('../drawing/pdf')]);
+      const [set, { fetchDrawingFonts }] = await Promise.all([import('../drawing/drawingSet'), import('../drawing/textkit')]);
       const fonts = await fetchDrawingFonts();
-      const result = await buildDrawingPdf({ devices, connections, rooms, meta: form }, { kinds, format }, fonts);
-      const name = `${safeName(form.code || 'av-tracer') || 'av-tracer'}-chertezhi-${dateStamp()}.pdf`;
-      downloadFile(name, new Blob([new Uint8Array(result.bytes)], { type: 'application/pdf' }));
+      const doc = { devices, connections, rooms, meta: form };
+      const base = `${safeFileName(form.code || 'av-tracer') || 'av-tracer'}-chertezhi-${dateStamp()}`;
+      let file: { name: string; type: string };
+      let result: { bytes: Uint8Array; sheets: number; notes: string[] };
+      if (output === 'svg') {
+        const svg = await set.buildDrawingSvg(doc, { kinds, format }, fonts);
+        result = svg;
+        file = svg.zip ? { name: `${base}-svg.zip`, type: 'application/zip' } : { name: `${base}.svg`, type: 'image/svg+xml' };
+      } else if (output === 'dxf') {
+        result = await set.buildDrawingDxf(doc, { kinds, format }, fonts);
+        file = { name: `${base}.dxf`, type: 'image/vnd.dxf' };
+      } else {
+        result = await set.buildDrawingPdf(doc, { kinds, format }, fonts);
+        file = { name: `${base}.pdf`, type: 'application/pdf' };
+      }
+      downloadFile(file.name, new Blob([new Uint8Array(result.bytes)], { type: file.type }));
       dispatch(
         showToast(
           result.notes.length
-            ? { message: `PDF сформирован (листов: ${result.sheets}); ${result.notes.join('; ')}`, severity: 'warning' }
-            : { message: `PDF сформирован, листов: ${result.sheets}`, severity: 'success' }
+            ? {
+                message: `${label} сформирован (листов: ${result.sheets}); ${result.notes.join('; ')}`,
+                severity: 'warning',
+              }
+            : {
+                message: `${label} сформирован, листов: ${result.sheets}`,
+                severity: 'success',
+              }
         )
       );
       onClose();
     } catch (e) {
-      setError(`Не удалось сформировать PDF: ${(e as Error).message}`);
+      setError(`Не удалось сформировать ${label}: ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
@@ -116,12 +136,19 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
 
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Чертежи (PDF, ГОСТ СПДС)</DialogTitle>
+      <DialogTitle>Чертежи (ГОСТ СПДС)</DialogTitle>
       <DialogContent dividers>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           Основная надпись (форма 3 по ГОСТ Р 21.101)
         </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5, mb: 2 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+            gap: 1.5,
+            mb: 2,
+          }}
+        >
           {FIELDS.map((f) => (
             <TextField
               key={f.key}
@@ -146,24 +173,50 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
             />
           ))}
         </Box>
-        <TextField
-          select
-          size="small"
-          label="Формат листов схем"
-          value={format}
-          onChange={(e) => setFormat(e.target.value as SheetFormat | 'auto')}
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
-          helperText="«Авто» — наименьший формат, на котором текст не мельче 2,5 мм. Таблицы — на А3."
-          sx={{ minWidth: 240 }}
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            alignItems: 'flex-start',
+          }}
         >
-          <option value="auto">Авто</option>
-          {(['A4', 'A3', 'A2', 'A1'] as SheetFormat[]).map((f) => (
-            <option key={f} value={f}>
-              {f.replace('A', 'А')}
-            </option>
-          ))}
-        </TextField>
+          <TextField
+            select
+            size="small"
+            label="Файл"
+            value={output}
+            onChange={(e) => setOutput(e.target.value as Output)}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            helperText={OUTPUTS.find((o) => o.value === output)!.hint}
+            sx={{ flex: '1 1 240px' }}
+          >
+            {OUTPUTS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </TextField>
+          <TextField
+            select
+            size="small"
+            label="Формат листов схем"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as SheetFormat | 'auto')}
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            helperText="«Авто» — наименьший формат, на котором текст не мельче 2,5 мм. Таблицы — на А3."
+            sx={{ flex: '1 1 240px' }}
+          >
+            <option value="auto">Авто</option>
+            {(['A4', 'A3', 'A2', 'A1'] as SheetFormat[]).map((f) => (
+              <option key={f} value={f}>
+                {f.replace('A', 'А')}
+              </option>
+            ))}
+          </TextField>
+        </Box>
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {error}
@@ -180,7 +233,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
           disabled={busy || kinds.length === 0 || devices.length === 0}
           startIcon={busy ? <CircularProgress size={16} /> : undefined}
         >
-          Сформировать PDF
+          Сформировать {OUTPUTS.find((o) => o.value === output)!.label}
         </Button>
       </DialogActions>
     </Dialog>

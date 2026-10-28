@@ -3,11 +3,13 @@ import { blockScheme, connectionScheme, functionalLinks, structuralLinks } from 
 import { layoutBlocks, MIN_SHEET_TEXT, placeOnSheet } from './layout';
 import { cableColumns, cableRows, SPEC_COLUMNS, specRows, tablePages } from './tables';
 import { frame, titleBlock } from './titleBlock';
-import { DrawingFonts, renderPdf } from './pdf';
-import { Prim, SheetFormat, sheetSize } from './sheet';
+import { renderPdf } from './pdf';
+import { DrawingFonts, createTextKit } from './textkit';
+import { Prim, Sheet, SheetFormat, TextMeasure, sheetSize } from './sheet';
+import { translit } from './translit';
 
 /**
- * Комплект чертежей в PDF: схемы (структурная, функциональная, соединений),
+ * Комплект чертежей (PDF, SVG, DXF): схемы (структурная, функциональная, соединений),
  * кабельный журнал и спецификация. Каждый лист — с рамкой и основной надписью
  * по ГОСТ Р 21.101 (форма 3); число листов указывается на первом листе.
  */
@@ -45,66 +47,147 @@ interface Page {
 const shortDate = (d: Date) =>
   `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(2)}`;
 
-export async function buildDrawingPdf(doc: ProjectDoc, opts: DrawingOptions, fonts: DrawingFonts): Promise<DrawingResult> {
+/**
+ * Подготовка комплекта: раскладка блоков (ELK, асинхронно), затем — функция,
+ * которая по метрикам шрифта собирает листы. Одни и те же листы выводятся в
+ * PDF, SVG и DXF.
+ */
+export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
   if (doc.devices.length === 0) throw new Error('схема пуста — нечего выпускать');
   const kinds = DRAWING_KINDS.filter((k) => opts.kinds.includes(k.kind));
   if (kinds.length === 0) throw new Error('не выбран ни один лист');
   const meta = doc.meta ?? {};
   const notes: string[] = [];
 
-  // Раскладка блоков (ELK) — асинхронная, до вывода
   const structLinks = structuralLinks(doc.devices, doc.connections);
   const funcLinks = functionalLinks(doc.devices, doc.connections);
   const structPos = opts.kinds.includes('structural') ? await layoutBlocks(doc, structLinks) : {};
   const funcPos = opts.kinds.includes('functional') ? await layoutBlocks(doc, funcLinks) : {};
-  let total = 0;
 
-  const bytes = await renderPdf(
-    (measure) => {
-      const pages: Page[] = [];
-      const scheme = (title: string, content: ReturnType<typeof connectionScheme>) => {
-        const placed = placeOnSheet(content, opts.format);
-        if (placed.minTextMm < MIN_SHEET_TEXT - 0.05) {
-          notes.push(`«${title}»: на формате ${placed.format} мелкий текст (${placed.minTextMm.toFixed(1)} мм) — выберите формат крупнее или «авто»`);
-        }
-        pages.push({ format: placed.format, title, items: placed.items });
-      };
-      const table = (title: string, tablePagesList: ReturnType<typeof tablePages>) =>
-        tablePagesList.forEach((p, i) => pages.push({ format: p.format, title: i === 0 ? title : `${title} (продолжение)`, items: p.items }));
-
-      for (const { kind, title } of kinds) {
-        if (kind === 'structural') scheme(title, blockScheme(doc, structPos, structLinks));
-        if (kind === 'functional') scheme(title, blockScheme(doc, funcPos, funcLinks, { legend: true }));
-        if (kind === 'connections') scheme(title, connectionScheme(doc));
-        if (kind === 'cables') table(title, tablePages(cableColumns(doc.rooms.length > 0), cableRows(doc), measure));
-        if (kind === 'spec') table(title, tablePages(SPEC_COLUMNS, specRows(doc), measure));
+  const build = (measure: TextMeasure): Sheet[] => {
+    notes.length = 0;
+    const pages: Page[] = [];
+    const scheme = (title: string, content: ReturnType<typeof connectionScheme>) => {
+      const placed = placeOnSheet(content, opts.format);
+      if (placed.minTextMm < MIN_SHEET_TEXT - 0.05) {
+        notes.push(
+          `«${title}»: на формате ${placed.format} мелкий текст (${placed.minTextMm.toFixed(1)} мм) — выберите формат крупнее или «авто»`
+        );
       }
-      total = pages.length;
-      const date = shortDate(opts.date ?? new Date());
-      return pages.map((p, i) => {
-        const { width, height } = sheetSize(p.format);
-        return {
+      pages.push({ format: placed.format, title, items: placed.items });
+    };
+    const table = (title: string, list: ReturnType<typeof tablePages>) =>
+      list.forEach((p, i) =>
+        pages.push({
           format: p.format,
-          width,
-          height,
-          title: p.title,
-          items: [
-            ...frame(width, height),
-            ...p.items,
-            ...titleBlock(width, height, {
+          title: i === 0 ? title : `${title} (продолжение)`,
+          items: p.items,
+        })
+      );
+
+    for (const { kind, title } of kinds) {
+      if (kind === 'structural') scheme(title, blockScheme(doc, structPos, structLinks));
+      if (kind === 'functional') scheme(title, blockScheme(doc, funcPos, funcLinks, { legend: true }));
+      if (kind === 'connections') scheme(title, connectionScheme(doc));
+      if (kind === 'cables') table(title, tablePages(cableColumns(doc.rooms.length > 0), cableRows(doc), measure));
+      if (kind === 'spec') table(title, tablePages(SPEC_COLUMNS, specRows(doc), measure));
+    }
+    const date = shortDate(opts.date ?? new Date());
+    return pages.map((p, i) => {
+      const { width, height } = sheetSize(p.format);
+      return {
+        format: p.format,
+        width,
+        height,
+        title: p.title,
+        items: [
+          ...frame(width, height),
+          ...p.items,
+          ...titleBlock(
+            width,
+            height,
+            {
               meta,
               sheetTitle: p.title,
               sheet: i + 1,
               ...(i === 0 ? { sheets: pages.length } : {}),
               format: p.format,
               date,
-            }, measure),
-          ],
-        };
-      });
+            },
+            measure
+          ),
+        ],
+      };
+    });
+  };
+
+  return {
+    build,
+    notes,
+    title: [meta.code, meta.object || 'AV-Tracer'].filter(Boolean).join(' — '),
+    author: meta.organization,
+  };
+}
+
+export async function buildDrawingPdf(doc: ProjectDoc, opts: DrawingOptions, fonts: DrawingFonts): Promise<DrawingResult> {
+  const set = await prepareDrawingSet(doc, opts);
+  let sheets = 0;
+  const bytes = await renderPdf(
+    (measure) => {
+      const list = set.build(measure);
+      sheets = list.length;
+      return list;
     },
     fonts,
-    { title: [meta.code, meta.object || 'AV-Tracer'].filter(Boolean).join(' — '), author: meta.organization }
+    { title: set.title, author: set.author }
   );
-  return { bytes, sheets: total, notes };
+  return { bytes, sheets, notes: [...set.notes] };
+}
+
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9]+/gi, '-')
+    .replace(/^-+|-+$/g, '');
+
+/**
+ * SVG: один файл на лист; несколько листов — ZIP-архив (имена файлов —
+ * «01-skhema-strukturnaya.svg» и т. д.).
+ */
+export async function buildDrawingSvg(
+  doc: ProjectDoc,
+  opts: DrawingOptions,
+  fonts: DrawingFonts
+): Promise<DrawingResult & { zip: boolean }> {
+  const set = await prepareDrawingSet(doc, opts);
+  const kit = await createTextKit(fonts);
+  const { sheetToSvg } = await import('./svg');
+  const list = set.build(kit.measure);
+  const files = list.map((sheet, i) => ({
+    name: `${String(i + 1).padStart(2, '0')}-${translit(slug(sheet.title))}.svg`,
+    text: sheetToSvg(sheet, kit, `${set.title} — ${sheet.title}`),
+  }));
+  if (files.length === 1)
+    return {
+      bytes: new TextEncoder().encode(files[0].text),
+      sheets: 1,
+      notes: [...set.notes],
+      zip: false,
+    };
+  const { zipSync, strToU8 } = await import('fflate');
+  const bytes = zipSync(Object.fromEntries(files.map((f) => [f.name, strToU8(f.text)])));
+  return { bytes, sheets: files.length, notes: [...set.notes], zip: true };
+}
+
+/** DXF R12: все листы в одном файле, рядом в пространстве модели. */
+export async function buildDrawingDxf(doc: ProjectDoc, opts: DrawingOptions, fonts: DrawingFonts): Promise<DrawingResult> {
+  const set = await prepareDrawingSet(doc, opts);
+  const kit = await createTextKit(fonts);
+  const { sheetsToDxf, encodeDxf } = await import('./dxf');
+  const list = set.build(kit.measure);
+  return {
+    bytes: encodeDxf(sheetsToDxf(list, kit)),
+    sheets: list.length,
+    notes: [...set.notes],
+  };
 }

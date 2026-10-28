@@ -21,8 +21,8 @@ test('чертежи по ГОСТ СПДС: штамп сохраняется �
   await page.getByText('Концертный звук').click();
 
   await page.getByRole('button', { name: 'Экспорт' }).click();
-  await page.getByText('Чертежи (PDF, ГОСТ СПДС)…').click();
-  const dialog = page.getByRole('dialog', { name: 'Чертежи (PDF, ГОСТ СПДС)' });
+  await page.getByText('Чертежи (ГОСТ СПДС)…').click();
+  const dialog = page.getByRole('dialog', { name: 'Чертежи (ГОСТ СПДС)' });
   await dialog.getByLabel('Обозначение (шифр)').fill('2026-07-СС');
   await dialog.getByLabel('Наименование объекта').fill('Концертная площадка');
   await dialog.getByLabel('Разработал').fill('Иванов');
@@ -42,5 +42,51 @@ test('чертежи по ГОСТ СПДС: штамп сохраняется �
   // Данные штампа сохранились в проекте
   const meta = await page.evaluate(() => JSON.parse(localStorage.getItem('av-tracer:autosave') || '{}').meta);
   expect(meta).toMatchObject({ code: '2026-07-СС', developer: 'Иванов', stage: 'Р' });
+  expect(errors).toEqual([]);
+});
+
+test('чертежи в DXF и SVG: те же листы, файлы для САПР и векторных редакторов', async ({ page }) => {
+  const errors = collectErrors(page);
+  page.on('dialog', (d) => d.accept());
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: 'Примеры' }).click();
+  await page.getByText('Концертный звук').click();
+
+  const open = async () => {
+    await page.getByRole('button', { name: 'Экспорт' }).click();
+    await page.getByText('Чертежи (ГОСТ СПДС)…').click();
+    const dialog = page.getByRole('dialog', { name: 'Чертежи (ГОСТ СПДС)' });
+    await dialog.getByLabel('Обозначение (шифр)').fill('2026-07-СС');
+    return dialog;
+  };
+
+  let dialog = await open();
+  await dialog.getByLabel('Файл').selectOption('dxf');
+  const [dxf] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30_000 }),
+    dialog.getByRole('button', { name: 'Сформировать DXF' }).click(),
+  ]);
+  expect(dxf.suggestedFilename()).toMatch(/^2026-07-SS-chertezhi-\d{4}-\d{2}-\d{2}\.dxf$/);
+  const text = new TextDecoder('windows-1251').decode(readFileSync((await dxf.path())!));
+  expect(text.startsWith('0\r\nSECTION\r\n2\r\nHEADER')).toBe(true);
+  expect(text).toContain('AC1009');
+  expect(text).toContain('Схема структурная');
+  await expect(page.getByText(/DXF сформирован, листов: 5/)).toBeVisible();
+
+  dialog = await open();
+  await dialog.getByLabel('Файл').selectOption('svg');
+  for (const title of ['Схема функциональная', 'Схема соединений', 'Кабельный журнал', 'Спецификация оборудования (ГОСТ 21.110)']) {
+    await dialog.getByLabel(title).uncheck();
+  }
+  const [svg] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30_000 }),
+    dialog.getByRole('button', { name: 'Сформировать SVG' }).click(),
+  ]);
+  expect(svg.suggestedFilename()).toMatch(/\.svg$/);
+  const markup = readFileSync((await svg.path())!, 'utf8');
+  expect(markup).toContain('width="420mm"');
+  expect(markup).toContain('Схема структурная');
   expect(errors).toEqual([]);
 });
