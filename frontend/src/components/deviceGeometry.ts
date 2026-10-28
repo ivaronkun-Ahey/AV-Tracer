@@ -77,6 +77,16 @@ export function portAnchor(device: Device, portId: string, connections: Connecti
   return { x: device.position.x + o.x, y: device.position.y + o.y, side: slot.side };
 }
 
+/**
+ * Сдвиг вертикального участка кабеля, чтобы кабели не сливались: зависит от
+ * строк обоих портов — расходятся и кабели с одного выхода, и кабели,
+ * сходящиеся к одному устройству.
+ */
+export function laneOffset(c: Connection, from: Device, to: Device, connections: Connection[]): number {
+  const row = (d: Device, portId: string) => portSlots(d, connections).find((s) => s.port.id === portId)?.row ?? 0;
+  return (((row(from, c.from.port) + row(to, c.to.port)) % 7) - 3) * 8;
+}
+
 export function snapToGrid(value: number): number {
   return Math.round(value / GRID) * GRID;
 }

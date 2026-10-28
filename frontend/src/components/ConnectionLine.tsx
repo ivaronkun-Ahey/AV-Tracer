@@ -4,21 +4,12 @@ import type { KonvaEventObject } from 'konva/lib/Node';
 import { Connection, Device } from '../types/device.types';
 import { useAppDispatch, useAppSelector } from '../store';
 import { selectConnection } from '../features/canvasSlice';
-import { portAnchor, portSlots, nodeSize, routeCable, roundedPath, labelPoint, signalColor } from './deviceGeometry';
+import { portAnchor, nodeSize, routeCable, roundedPath, labelPoint, signalColor, laneOffset } from './deviceGeometry';
 import { CanvasRenderContext } from './canvasTheme';
 
 interface ConnectionLineProps {
   connection: Connection;
   devices: Device[];
-}
-
-/**
- * Сдвиг вертикального участка, чтобы кабели не сливались: зависит от строк обоих
- * портов — расходятся и кабели с одного выхода, и кабели, сходящиеся к одному устройству.
- */
-function laneOffset(c: Connection, from: Device, to: Device, connections: Connection[]): number {
-  const row = (d: Device, portId: string) => portSlots(d, connections).find((s) => s.port.id === portId)?.row ?? 0;
-  return (((row(from, c.from.port) + row(to, c.to.port)) % 7) - 3) * 8;
 }
 
 const ConnectionLine: React.FC<ConnectionLineProps> = ({ connection, devices }) => {

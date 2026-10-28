@@ -7,6 +7,7 @@ import {
   Connection,
   Device,
   ProjectDoc,
+  ProjectMeta,
   Room,
 } from '../types/device.types';
 import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
@@ -73,8 +74,22 @@ const roomSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'цвет помещения в формате #rrggbb'),
 });
 
+const metaField = text(200).optional();
+const metaSchema = z.object({
+  code: metaField,
+  object: metaField,
+  building: metaField,
+  stage: text(10).optional(),
+  organization: metaField,
+  developer: metaField,
+  checker: metaField,
+  normControl: metaField,
+  chiefEngineer: metaField,
+});
+
 const projectDocSchema = z.object({
   schemaVersion: z.number().int().min(1).optional(),
+  meta: metaSchema.optional(),
   rooms: z.array(roomSchema).max(PROJECT_LIMITS.rooms, `больше ${PROJECT_LIMITS.rooms} помещений`).default([]),
   devices: z.array(deviceSchema).max(PROJECT_LIMITS.devices, `больше ${PROJECT_LIMITS.devices} устройств`),
   connections: z.array(connectionSchema).max(PROJECT_LIMITS.connections, `больше ${PROJECT_LIMITS.connections} соединений`),
@@ -86,6 +101,7 @@ export type ParsedProject =
       devices: Device[];
       connections: Connection[];
       rooms: Room[];
+      meta: ProjectMeta;
       droppedConnections: number;
       /** Что изменено при обновлении старого формата. */
       notes: string[];
@@ -151,12 +167,13 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
     devices,
     connections: withCableLabels(devices, valid),
     rooms,
+    meta: parsed.data.meta ?? {},
     droppedConnections: migrated.connections.length - valid.length,
     notes,
   };
 }
 
 /** Документ для сохранения в файл и автосейв — всегда с версией формата. */
-export function serializeProject({ devices, connections, rooms }: ProjectDoc) {
-  return { schemaVersion: SCHEMA_VERSION, rooms, devices, connections };
+export function serializeProject({ devices, connections, rooms, meta }: ProjectDoc) {
+  return { schemaVersion: SCHEMA_VERSION, ...(meta && Object.keys(meta).length ? { meta } : {}), rooms, devices, connections };
 }

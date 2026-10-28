@@ -19,7 +19,11 @@ const ceilGrid = (v: number) => Math.ceil(v / GRID) * GRID;
  * помещений — отдельной полосой без рамки. Внутри полосы порядок по вертикали
  * сохраняется, наложения сдвигаются вниз. Рамки разных помещений не пересекаются.
  */
-export function arrangeRooms(devices: Device[], connections: Connection[], flat: Positions): Positions {
+export function arrangeRooms(
+  devices: Device[],
+  flat: Positions,
+  sizeOf: (d: Device) => { width: number; height: number }
+): Positions {
   if (!devices.some((d) => d.room)) return flat;
   const bands = new Map<string, Device[]>();
   for (const d of devices) bands.set(d.room ?? '', [...(bands.get(d.room ?? '') ?? []), d]);
@@ -34,7 +38,7 @@ export function arrangeRooms(devices: Device[], connections: Connection[], flat:
     const minY = Math.min(...members.map((d) => flat[d.id].y));
     const placed: Array<{ x: number; y: number; w: number; h: number }> = [];
     for (const d of [...members].sort((a, b) => flat[a.id].y - flat[b.id].y || flat[a.id].x - flat[b.id].x)) {
-      const { width, height } = nodeSize(d, connections);
+      const { width, height } = sizeOf(d);
       const x = flat[d.id].x;
       let y = top + padTop + flat[d.id].y - minY;
       // Сдвигаем вниз, пока устройство накладывается на уже поставленные в этой полосе
@@ -116,7 +120,7 @@ export async function computeAutoLayout(devices: Device[], connections: Connecti
     // Привязка к сетке сохраняет выравнивание портов, найденное ELK (шаг строк = шагу сетки)
     positions[child.id] = { x: snapToGrid((child.x ?? 0) + GRID * 2), y: snapToGrid((child.y ?? 0) + GRID * 2) };
   }
-  const arranged = arrangeRooms(devices, connections, positions);
+  const arranged = arrangeRooms(devices, positions, (d) => nodeSize(d, connections));
   // Полосы помещений начинаются от нуля — сдвигаем к тому же отступу, что и без помещений
   const shiftY = devices.some((d) => d.room) ? GRID * 2 : 0;
   return Object.fromEntries(Object.entries(arranged).map(([id, p]) => [id, { x: p.x, y: p.y + shiftY }]));

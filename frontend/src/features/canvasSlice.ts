@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
-import { Device, Connection, SimulationResult, CableType, PropValue, ProjectDoc, Room } from '../types/device.types';
+import { Device, Connection, SimulationResult, CableType, PropValue, ProjectDoc, ProjectMeta, Room } from '../types/device.types';
 import { connectionProblem, PortRef } from './connectionRules';
 import { nextDeviceTag, withDeviceTags } from '../data/deviceTags';
 import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
@@ -10,6 +10,8 @@ interface CanvasState {
   devices: Device[];
   connections: Connection[];
   rooms: Room[];
+  /** Данные штампа чертежей. */
+  meta: ProjectMeta;
   selectedDeviceId: string | null;
   selectedConnectionId: string | null;
   selectedRoomId: string | null;
@@ -46,6 +48,7 @@ export const initialCanvasState: CanvasState = {
   devices: [],
   connections: [],
   rooms: [],
+  meta: {},
   selectedDeviceId: null,
   selectedConnectionId: null,
   selectedRoomId: null,
@@ -87,8 +90,8 @@ function pushHistory(state: CanvasState, opts: HistoryOptions = {}) {
 }
 
 function snapshot(state: CanvasState): CanvasDoc {
-  const { devices, connections, rooms } = current(state);
-  return JSON.parse(JSON.stringify({ devices, connections, rooms }));
+  const { devices, connections, rooms, meta } = current(state);
+  return JSON.parse(JSON.stringify({ devices, connections, rooms, meta }));
 }
 
 /** Вернуть документ из истории; выделение и фильтр по несуществующему помещению сбрасываются. */
@@ -96,6 +99,7 @@ function restore(state: CanvasState, doc: CanvasDoc) {
   state.devices = doc.devices;
   state.connections = doc.connections;
   state.rooms = doc.rooms ?? [];
+  state.meta = doc.meta ?? {};
   state.selectedDeviceId = null;
   state.selectedConnectionId = null;
   state.selectedRoomId = null;
@@ -212,6 +216,16 @@ const canvasSlice = createSlice({
       for (const d of state.devices) if (d.room === action.payload) delete d.room;
       if (state.selectedRoomId === action.payload) state.selectedRoomId = null;
       if (state.roomFilter === action.payload) state.roomFilter = null;
+    },
+
+    /** Поля штампа чертежей; пустое значение удаляет поле. */
+    setProjectMeta: (state, action: PayloadAction<Partial<ProjectMeta>>) => {
+      pushHistory(state, { key: 'meta', keepSimulation: true });
+      for (const [key, value] of Object.entries(action.payload) as Array<[keyof ProjectMeta, string | undefined]>) {
+        const text = value?.trim();
+        if (text) state.meta[key] = text.slice(0, 200);
+        else delete state.meta[key];
+      }
     },
 
     setDeviceRoom: (state, action: PayloadAction<{ id: string; room: string | null }>) => {
@@ -362,6 +376,7 @@ const canvasSlice = createSlice({
       state.devices = [];
       state.connections = [];
       state.rooms = [];
+      state.meta = {};
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.selectedRoomId = null;
@@ -371,12 +386,13 @@ const canvasSlice = createSlice({
 
     loadProject: (
       state,
-      action: PayloadAction<{ devices: Device[]; connections: Connection[]; rooms?: Room[] }>
+      action: PayloadAction<{ devices: Device[]; connections: Connection[]; rooms?: Room[]; meta?: ProjectMeta }>
     ) => {
       pushHistory(state);
       state.devices = withDeviceTags(action.payload.devices);
       state.connections = withCableLabels(action.payload.devices, action.payload.connections);
       state.rooms = action.payload.rooms ?? [];
+      state.meta = action.payload.meta ?? {};
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
       state.selectedRoomId = null;
@@ -463,6 +479,7 @@ export const {
   updateRoom,
   removeRoom,
   setDeviceRoom,
+  setProjectMeta,
   selectRoom,
   setRoomFilter,
   updateDeviceProperty,

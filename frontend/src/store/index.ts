@@ -17,6 +17,7 @@ function loadPersisted() {
         devices: parsed.devices,
         connections: parsed.connections,
         rooms: parsed.rooms,
+        meta: parsed.meta,
         // Автосейв старого формата обновлён — сообщаем, что изменилось
         ...(parsed.notes.length
           ? { toast: { message: `Схема обновлена: ${parsed.notes.join('; ')}`, severity: 'info' as const } }
@@ -56,15 +57,16 @@ let lastSaved: {
   devices: unknown;
   connections: unknown;
   rooms: unknown;
+  meta: unknown;
   snapToGrid: boolean;
   showCableLabels: boolean;
 } | null = null;
 
 function saveNow() {
-  const { devices, connections, rooms, snapToGrid, showCableLabels } = store.getState().canvas;
-  lastSaved = { devices, connections, rooms, snapToGrid, showCableLabels };
+  const { devices, connections, rooms, meta, snapToGrid, showCableLabels } = store.getState().canvas;
+  lastSaved = { devices, connections, rooms, meta, snapToGrid, showCableLabels };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject({ devices, connections, rooms })));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject({ devices, connections, rooms, meta })));
     localStorage.setItem(PREFS_KEY, JSON.stringify({ snapToGrid, showCableLabels }));
     setSaveStatus({ state: 'saved', at: Date.now() });
   } catch {
@@ -80,12 +82,13 @@ if (persisted) saveNow();
 // изменилась сама схема или настройки вида, а не выделение, зум и т. п.
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 store.subscribe(() => {
-  const { devices, connections, rooms, snapToGrid, showCableLabels } = store.getState().canvas;
+  const { devices, connections, rooms, meta, snapToGrid, showCableLabels } = store.getState().canvas;
   const changed =
     !lastSaved ||
     lastSaved.devices !== devices ||
     lastSaved.connections !== connections ||
     lastSaved.rooms !== rooms ||
+    lastSaved.meta !== meta ||
     lastSaved.snapToGrid !== snapToGrid ||
     lastSaved.showCableLabels !== showCableLabels;
   if (!changed || saveTimer) return;

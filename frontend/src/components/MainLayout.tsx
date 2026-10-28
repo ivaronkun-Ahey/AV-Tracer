@@ -37,6 +37,8 @@ import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import TuneIcon from '@mui/icons-material/Tune';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExportStage from './ExportStage';
+import DrawingExportDialog from './DrawingExportDialog';
+import ArchitectureIcon from '@mui/icons-material/Architecture';
 import AutosaveIndicator from './AutosaveIndicator';
 import EquipmentLibrary from './EquipmentLibrary';
 import CanvasWorkspace from './CanvasWorkspace';
@@ -124,6 +126,7 @@ const MainLayout: React.FC = () => {
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
   const rooms = useAppSelector((s) => s.canvas.rooms);
+  const meta = useAppSelector((s) => s.canvas.meta);
   const canUndo = useAppSelector((s) => s.canvas.past.length > 0);
   const canRedo = useAppSelector((s) => s.canvas.future.length > 0);
   const toast = useAppSelector((s) => s.canvas.toast);
@@ -133,6 +136,7 @@ const MainLayout: React.FC = () => {
   const showCableLabels = useAppSelector((s) => s.canvas.showCableLabels);
   const [menu, setMenu] = useState<{ name: MenuName; anchor: HTMLElement } | null>(null);
   const [layoutRunning, setLayoutRunning] = useState(false);
+  const [drawingsOpen, setDrawingsOpen] = useState(false);
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
 
   // Если хватает ширины, панель стоит сбоку от холста и сворачивается (библиотека —
@@ -252,7 +256,7 @@ const MainLayout: React.FC = () => {
   };
 
   const handleSave = () => {
-    const project = { ...serializeProject({ devices, connections, rooms }), timestamp: new Date().toISOString() };
+    const project = { ...serializeProject({ devices, connections, rooms, meta }), timestamp: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -285,7 +289,7 @@ const MainLayout: React.FC = () => {
         dispatch(showToast({ message: `Не удалось открыть файл: ${parsed.error}`, severity: 'error' }));
         return;
       }
-      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections, rooms: parsed.rooms }));
+      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections, rooms: parsed.rooms, meta: parsed.meta }));
       const remarks = [
         ...parsed.notes,
         ...(parsed.droppedConnections > 0
@@ -550,6 +554,22 @@ const MainLayout: React.FC = () => {
       </Menu>
 
       <Menu anchorEl={menu?.anchor} open={menu?.name === 'export'} onClose={closeMenu}>
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            if (devices.length === 0) {
+              dispatch(showToast({ message: 'Схема пуста — экспортировать нечего', severity: 'info' }));
+              return;
+            }
+            setDrawingsOpen(true);
+          }}
+        >
+          <ListItemIcon>
+            <ArchitectureIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Чертежи (PDF, ГОСТ СПДС)…" secondary="схемы, кабельный журнал, спецификация, штамп" />
+        </MenuItem>
+        <Divider />
         <MenuItem onClick={() => startExport('png')}>
           <ListItemIcon>
             <ImageIcon fontSize="small" />
@@ -576,6 +596,8 @@ const MainLayout: React.FC = () => {
           <ListItemText primary="Кабельный журнал (CSV)" />
         </MenuItem>
       </Menu>
+
+      <DrawingExportDialog open={drawingsOpen} onClose={() => setDrawingsOpen(false)} />
 
       {exportJob && (
         <ExportStage

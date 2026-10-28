@@ -149,9 +149,28 @@ export interface SimulationResult {
   errors: SimIssue[];
 }
 
+/** Данные для основной надписи чертежей (штампа) — хранятся в проекте. */
+export interface ProjectMeta {
+  /** Обозначение документа (шифр), например «2026-01-СС». */
+  code?: string;
+  /** Наименование объекта (предприятия, комплекса). */
+  object?: string;
+  /** Наименование здания или сооружения. */
+  building?: string;
+  /** Стадия: П — проектная документация, Р — рабочая. */
+  stage?: string;
+  /** Организация-разработчик. */
+  organization?: string;
+  developer?: string;
+  checker?: string;
+  normControl?: string;
+  chiefEngineer?: string;
+}
+
 /** Содержимое проекта: то, что сохраняется в файл и автосейв и попадает в историю отмены. */
 export interface ProjectDoc {
   devices: Device[];
   connections: Connection[];
   rooms: Room[];
+  meta?: ProjectMeta;
 }

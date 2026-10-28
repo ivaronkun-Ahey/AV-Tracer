@@ -204,21 +204,26 @@ export function cableScheduleCsv(devices: Device[], connections: Connection[], r
   ]);
 }
 
+/** Скачивание по ссылке: ссылка добавляется в документ, иначе браузер может не взять имя файла. */
+function clickDownload(href: string, name: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = name;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 export function downloadFile(name: string, content: Blob | string, type = 'text/csv;charset=utf-8') {
   const blob = typeof content === 'string' ? new Blob([content], { type }) : content;
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
+  clickDownload(url, name);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadDataUrl(name: string, dataUrl: string) {
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = name;
-  a.click();
+  clickDownload(dataUrl, name);
 }
 
 export function dateStamp(date = new Date()): string {
