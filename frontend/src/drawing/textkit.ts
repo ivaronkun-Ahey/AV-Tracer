@@ -82,3 +82,21 @@ export async function createTextKit(fonts: DrawingFonts, doc?: PDFDocument): Pro
 /** Ширина уже подогнанного текста, мм. */
 export const textWidth = (kit: TextKit, text: string, sizeMm: number, bold?: boolean) =>
   kit.fontOf(bold).widthOfTextAtSize(text, emPt(sizeMm)) / PT_PER_MM;
+
+/**
+ * Подгонка для вывода шрифтом шире PT Sans Narrow (DXF, VSDX): строка та же,
+ * что в PDF, но кегль уменьшается, пока она занимает больше доли share ширины графы.
+ */
+export function fitForSubstitute(
+  kit: TextKit,
+  text: string,
+  sizeMm: number,
+  maxWidthMm: number | undefined,
+  bold: boolean | undefined,
+  share: number
+) {
+  const fitted = kit.fit(text, sizeMm, maxWidthMm, bold);
+  if (!maxWidthMm || !fitted.text) return fitted;
+  const width = textWidth(kit, fitted.text, fitted.size, bold);
+  return width > maxWidthMm * share ? { text: fitted.text, size: (fitted.size * maxWidthMm * share) / width } : fitted;
+}

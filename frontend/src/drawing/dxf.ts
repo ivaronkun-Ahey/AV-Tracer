@@ -1,5 +1,5 @@
 import { LineStyle, Prim, Pt, Sheet } from './sheet';
-import { TextKit } from './textkit';
+import { TextKit, fitForSubstitute } from './textkit';
 import { arrowHead } from './pdf';
 
 /**
@@ -13,8 +13,12 @@ import { arrowHead } from './pdf';
  */
 
 const GAP_BETWEEN_SHEETS = 40;
-/** PT Sans Narrow уже Arial: коэффициент ширины стиля текста. */
-const WIDTH_FACTOR = 0.82;
+/**
+ * Стиль текста — Arial, сжатый до ширины PT Sans Narrow (по замеру PT Sans Narrow
+ * в 0,73–0,79 ширины Arial). Строка, близкая к ширине графы, уменьшается до 97 % её.
+ */
+const WIDTH_FACTOR = 0.75;
+const FIT = 0.97;
 
 const LTYPE: Record<Exclude<LineStyle, 'solid'>, string> = {
   dashed: 'DASHED',
@@ -220,7 +224,7 @@ function entity(w: Writer, p: Prim, at: (p: Pt) => Pt, kit: TextKit) {
     w.pair(40, p.r);
     return;
   }
-  const fitted = kit.fit(p.text, p.size, p.maxWidth, p.bold);
+  const fitted = fitForSubstitute(kit, p.text, p.size, p.maxWidth, p.bold, FIT);
   if (!fitted.text) return;
   const q = at(p);
   const justify = p.align === 'center' ? 1 : p.align === 'right' ? 2 : 0;

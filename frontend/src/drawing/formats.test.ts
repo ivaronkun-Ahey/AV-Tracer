@@ -8,7 +8,8 @@ import { Sheet, rectPath } from './sheet';
 import { TextKit, createTextKit } from './textkit';
 import { dxfText, encodeDxf, sheetsToDxf } from './dxf';
 import { sheetToSvg } from './svg';
-import { buildDrawingDxf, buildDrawingSvg } from './drawingSet';
+import { sheetsToVsdx } from './vsdx';
+import { buildDrawingDxf, buildDrawingSvg, buildDrawingVsdx } from './drawingSet';
 import { testFonts } from './testFonts';
 
 const concert = (): ProjectDoc => {
@@ -179,5 +180,62 @@ describe('SVG', () => {
       '03-spetsifikatsiya-oborudovaniya-izdeliy-i-materialov.svg',
     ]);
     expect(strFromU8(files['02-kabelnyy-zhurnal.svg'])).toContain('Кабельный журнал');
+  });
+});
+
+describe('VSDX', () => {
+  it('пакет OPC: типы содержимого, связи, страница на лист в натуральную величину', () => {
+    const files = unzipSync(
+      sheetsToVsdx([sheet('Первый'), { ...sheet('Второй'), format: 'A3', width: 420, height: 297 }], kit, { title: 'Шифр & объект' })
+    );
+    expect(Object.keys(files).sort()).toEqual([
+      '[Content_Types].xml',
+      '_rels/.rels',
+      'docProps/app.xml',
+      'docProps/core.xml',
+      'visio/_rels/document.xml.rels',
+      'visio/document.xml',
+      'visio/pages/_rels/pages.xml.rels',
+      'visio/pages/page1.xml',
+      'visio/pages/page2.xml',
+      'visio/pages/pages.xml',
+    ]);
+    const text = (name: string) => strFromU8(files[name]);
+    expect(text('[Content_Types].xml')).toContain("PartName='/visio/pages/page2.xml' ContentType='application/vnd.ms-visio.page+xml'");
+    expect(text('_rels/.rels')).toContain(
+      "Type='http://schemas.microsoft.com/visio/2010/relationships/document' Target='visio/document.xml'"
+    );
+    expect(text('docProps/core.xml')).toContain('<dc:title>Шифр &amp; объект</dc:title>');
+    const pages = text('visio/pages/pages.xml');
+    expect(pages.match(/<Page /g)).toHaveLength(2);
+    expect(pages).toContain("Name='2. Второй'");
+    // Внутренние единицы Visio — дюймы: 420 мм = 16,535433 дюйма
+    expect(pages).toContain("<Cell N='PageWidth' V='16.535433' U='MM'/>");
+    expect(text('visio/pages/_rels/pages.xml.rels')).toContain(
+      "Id='rId2' Type='http://schemas.microsoft.com/visio/2010/relationships/page' Target='page2.xml'"
+    );
+  });
+
+  it('фигуры: контуры, стрелка, окружность, текст с выравниванием и поворотом', () => {
+    const page = strFromU8(unzipSync(sheetsToVsdx([sheet('Лист')], kit, { title: 'Т' }))['visio/pages/page1.xml']);
+    // 6 примитивов + наконечник стрелки
+    expect(page.match(/<Shape /g)).toHaveLength(7);
+    expect(page.match(/<\/Shape>/g)).toHaveLength(7);
+    expect(page).toContain("<Cell N='LinePattern' V='4'/>"); // штрихпунктир
+    expect(page).toContain("<Cell N='LinePattern' V='2'/>"); // штриховая
+    expect(page).toContain("<Row T='Ellipse' IX='1'>");
+    expect(page).toContain('<Text>Пульт &amp; «FOH» -&gt; &lt;AMP&gt;</Text>');
+    expect(page).toContain("<Cell N='HorzAlign' V='1'/>");
+    expect(page).toContain(`<Cell N='Angle' V='${String(Math.round((Math.PI / 2) * 1e6) / 1e6)}' U='DEG'/>`);
+    expect(page).toContain("<Cell N='Font' V='Arial Narrow'/>");
+    expect(page).not.toMatch(/&(?!amp;|lt;|gt;|quot;|apos;)/);
+  });
+
+  it('комплект: страниц столько же, сколько листов', async () => {
+    const result = await buildDrawingVsdx(concert(), { kinds: ['structural', 'connections', 'spec'], format: 'auto' }, testFonts());
+    expect(result.sheets).toBe(3);
+    const files = unzipSync(result.bytes);
+    expect(strFromU8(files['visio/pages/pages.xml']).match(/<Page /g)).toHaveLength(3);
+    expect(strFromU8(files['visio/pages/page1.xml'])).toContain('<Text>Схема структурная</Text>');
   });
 });

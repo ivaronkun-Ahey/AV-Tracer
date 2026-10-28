@@ -9,7 +9,7 @@ import { Prim, Sheet, SheetFormat, TextMeasure, sheetSize } from './sheet';
 import { translit } from './translit';
 
 /**
- * Комплект чертежей (PDF, SVG, DXF): схемы (структурная, функциональная, соединений),
+ * Комплект чертежей (PDF, SVG, DXF, VSDX): схемы (структурная, функциональная, соединений),
  * кабельный журнал и спецификация. Каждый лист — с рамкой и основной надписью
  * по ГОСТ Р 21.101 (форма 3); число листов указывается на первом листе.
  */
@@ -50,7 +50,7 @@ const shortDate = (d: Date) =>
 /**
  * Подготовка комплекта: раскладка блоков (ELK, асинхронно), затем — функция,
  * которая по метрикам шрифта собирает листы. Одни и те же листы выводятся в
- * PDF, SVG и DXF.
+ * PDF, SVG, DXF и VSDX.
  */
 export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
   if (doc.devices.length === 0) throw new Error('схема пуста — нечего выпускать');
@@ -190,4 +190,13 @@ export async function buildDrawingDxf(doc: ProjectDoc, opts: DrawingOptions, fon
     sheets: list.length,
     notes: [...set.notes],
   };
+}
+
+/** VSDX (Visio): страница на лист, в натуральную величину. */
+export async function buildDrawingVsdx(doc: ProjectDoc, opts: DrawingOptions, fonts: DrawingFonts): Promise<DrawingResult> {
+  const set = await prepareDrawingSet(doc, opts);
+  const kit = await createTextKit(fonts);
+  const { sheetsToVsdx } = await import('./vsdx');
+  const list = set.build(kit.measure);
+  return { bytes: sheetsToVsdx(list, kit, { title: set.title, author: set.author }), sheets: list.length, notes: [...set.notes] };
 }

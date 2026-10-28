@@ -591,7 +591,7 @@ const MainLayout: React.FC = () => {
           <ListItemIcon>
             <ArchitectureIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Чертежи (ГОСТ СПДС)…" secondary="PDF, SVG, DXF: схемы, кабельный журнал, спецификация" />
+          <ListItemText primary="Чертежи (ГОСТ СПДС)…" secondary="PDF, SVG, DXF, VSDX: схемы, кабельный журнал, спецификация" />
         </MenuItem>
         <Divider />
         <MenuItem onClick={() => startExport('png')}>

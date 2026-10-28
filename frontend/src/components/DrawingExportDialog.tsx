@@ -31,7 +31,7 @@ const KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'spec', title: 'Спецификация оборудования (ГОСТ 21.110)' },
 ];
 
-type Output = 'pdf' | 'svg' | 'dxf';
+type Output = 'pdf' | 'svg' | 'dxf' | 'vsdx';
 
 const OUTPUTS: Array<{ value: Output; label: string; hint: string }> = [
   {
@@ -49,6 +49,11 @@ const OUTPUTS: Array<{ value: Output; label: string; hint: string }> = [
     label: 'DXF',
     hint: 'DXF R12 для AutoCAD, nanoCAD, LibreCAD: все листы в одном файле, линии по слоям AV_THICK (0,6 мм), AV_THIN (0,25 мм), текст — AV_TEXT.',
   },
+  {
+    value: 'vsdx',
+    label: 'VSDX',
+    hint: 'Документ Visio (открывается и в LibreOffice Draw): лист — страница в натуральную величину, шрифт Arial Narrow.',
+  },
 ];
 
 const FIELDS: Array<{ key: keyof ProjectMeta; label: string; wide?: boolean }> = [
@@ -63,7 +68,7 @@ const FIELDS: Array<{ key: keyof ProjectMeta; label: string; wide?: boolean }> =
   { key: 'chiefEngineer', label: 'ГИП' },
 ];
 
-/** Выпуск комплекта чертежей (PDF, SVG, DXF): данные штампа, состав листов, формат. */
+/** Выпуск комплекта чертежей (PDF, SVG, DXF, VSDX): данные штампа, состав листов, формат. */
 const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const dispatch = useAppDispatch();
   const devices = useAppSelector((s) => s.canvas.devices);
@@ -108,6 +113,9 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
       } else if (output === 'dxf') {
         result = await set.buildDrawingDxf(doc, { kinds, format }, fonts);
         file = { name: `${base}.dxf`, type: 'image/vnd.dxf' };
+      } else if (output === 'vsdx') {
+        result = await set.buildDrawingVsdx(doc, { kinds, format }, fonts);
+        file = { name: `${base}.vsdx`, type: 'application/vnd.ms-visio.drawing' };
       } else {
         result = await set.buildDrawingPdf(doc, { kinds, format }, fonts);
         file = { name: `${base}.pdf`, type: 'application/pdf' };

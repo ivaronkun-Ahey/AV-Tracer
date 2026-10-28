@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { PDFDocument } from 'pdf-lib';
+import { unzipSync, strFromU8 } from 'fflate';
 
 function collectErrors(page: Page) {
   const errors: string[] = [];
@@ -45,7 +46,7 @@ test('чертежи по ГОСТ СПДС: штамп сохраняется �
   expect(errors).toEqual([]);
 });
 
-test('чертежи в DXF и SVG: те же листы, файлы для САПР и векторных редакторов', async ({ page }) => {
+test('чертежи в DXF, SVG и VSDX: те же листы, файлы для САПР, векторных редакторов и Visio', async ({ page }) => {
   const errors = collectErrors(page);
   page.on('dialog', (d) => d.accept());
   await page.goto('/');
@@ -88,5 +89,17 @@ test('чертежи в DXF и SVG: те же листы, файлы для СА
   const markup = readFileSync((await svg.path())!, 'utf8');
   expect(markup).toContain('width="420mm"');
   expect(markup).toContain('Схема структурная');
+
+  dialog = await open();
+  await dialog.getByLabel('Файл').selectOption('vsdx');
+  const [vsdx] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30_000 }),
+    dialog.getByRole('button', { name: 'Сформировать VSDX' }).click(),
+  ]);
+  expect(vsdx.suggestedFilename()).toMatch(/\.vsdx$/);
+  const files = unzipSync(readFileSync((await vsdx.path())!));
+  // Выбор листов запоминается между открытиями диалога: осталась только структурная схема
+  expect(strFromU8(files['visio/pages/pages.xml']).match(/<Page /g)).toHaveLength(1);
+  expect(strFromU8(files['visio/pages/page1.xml'])).toContain('<Text>Схема структурная</Text>');
   expect(errors).toEqual([]);
 });
