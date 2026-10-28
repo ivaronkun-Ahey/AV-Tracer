@@ -2,6 +2,7 @@ import { ProjectDoc } from '../types/device.types';
 import { blockScheme, connectionScheme, functionalLinks, structuralLinks } from './schemes';
 import { layoutBlocks, MIN_SHEET_TEXT, placeOnSheet } from './layout';
 import { cableColumns, cableRows, SPEC_COLUMNS, specRows, tablePages } from './tables';
+import { rackPages } from './rackSheet';
 import { frame, titleBlock } from './titleBlock';
 import { renderPdf } from './pdf';
 import { DrawingFonts, createTextKit } from './textkit';
@@ -14,12 +15,13 @@ import { translit } from './translit';
  * по ГОСТ Р 21.101 (форма 3); число листов указывается на первом листе.
  */
 
-export type DrawingKind = 'structural' | 'functional' | 'connections' | 'cables' | 'spec';
+export type DrawingKind = 'structural' | 'functional' | 'connections' | 'racks' | 'cables' | 'spec';
 
 export const DRAWING_KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'structural', title: 'Схема структурная' },
   { kind: 'functional', title: 'Схема функциональная' },
   { kind: 'connections', title: 'Схема соединений' },
+  { kind: 'racks', title: 'Схема расположения оборудования в шкафах' },
   { kind: 'cables', title: 'Кабельный журнал' },
   { kind: 'spec', title: 'Спецификация оборудования, изделий и материалов' },
 ];
@@ -54,8 +56,11 @@ const shortDate = (d: Date) =>
  */
 export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
   if (doc.devices.length === 0) throw new Error('схема пуста — нечего выпускать');
-  const kinds = DRAWING_KINDS.filter((k) => opts.kinds.includes(k.kind));
-  if (kinds.length === 0) throw new Error('не выбран ни один лист');
+  // Схема расположения — только если в проекте есть шкафы
+  const kinds = DRAWING_KINDS.filter((k) => opts.kinds.includes(k.kind) && (k.kind !== 'racks' || (doc.racks?.length ?? 0) > 0));
+  if (kinds.length === 0) {
+    throw new Error(opts.kinds.includes('racks') ? 'в проекте нет шкафов — схему расположения строить не из чего' : 'не выбран ни один лист');
+  }
   const meta = doc.meta ?? {};
   const notes: string[] = [];
 
@@ -89,6 +94,11 @@ export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
       if (kind === 'structural') scheme(title, blockScheme(doc, structPos, structLinks));
       if (kind === 'functional') scheme(title, blockScheme(doc, funcPos, funcLinks, { legend: true }));
       if (kind === 'connections') scheme(title, connectionScheme(doc));
+      if (kind === 'racks') {
+        const racks = rackPages(doc, opts.format);
+        notes.push(...racks.notes);
+        racks.pages.forEach((p, i) => pages.push({ format: p.format, title: i === 0 ? title : `${title} (продолжение)`, items: p.items }));
+      }
       if (kind === 'cables') table(title, tablePages(cableColumns(doc.rooms.length > 0), cableRows(doc), measure));
       if (kind === 'spec') table(title, tablePages(SPEC_COLUMNS, specRows(doc), measure));
     }

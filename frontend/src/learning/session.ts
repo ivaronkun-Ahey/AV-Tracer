@@ -10,10 +10,10 @@ import { evaluateLesson } from './checks';
 const STASH_KEY = 'av-tracer:before-lesson';
 
 function stash(state: RootState) {
-  const { devices, connections, rooms, meta } = state.canvas;
+  const { devices, connections, rooms, racks, meta } = state.canvas;
   if (devices.length === 0) return;
   try {
-    localStorage.setItem(STASH_KEY, JSON.stringify(serializeProject({ devices, connections, rooms, meta })));
+    localStorage.setItem(STASH_KEY, JSON.stringify(serializeProject({ devices, connections, rooms, racks, meta })));
   } catch {
     /* нет места — схема всё равно доступна через Ctrl+Z */
   }
@@ -51,7 +51,7 @@ export function exitLessonSession(dispatch: AppDispatch) {
   dispatch(exitLesson());
   const saved = takeStash();
   if (saved) {
-    dispatch(loadProject({ devices: saved.devices, connections: saved.connections, rooms: saved.rooms, meta: saved.meta }));
+    dispatch(loadProject({ devices: saved.devices, connections: saved.connections, rooms: saved.rooms, racks: saved.racks, meta: saved.meta }));
     dispatch(requestFit());
     dispatch(showToast({ message: 'Ваша схема возвращена', severity: 'info' }));
   }

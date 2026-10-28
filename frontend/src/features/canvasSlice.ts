@@ -1,8 +1,9 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
-import { Device, Connection, SimulationResult, CableType, PropValue, ProjectDoc, ProjectMeta, Room } from '../types/device.types';
+import { Device, Connection, SimulationResult, CableType, PropValue, ProjectDoc, ProjectMeta, Rack, Room } from '../types/device.types';
 import { connectionProblem, PortRef } from './connectionRules';
 import { nextDeviceTag, withDeviceTags } from '../data/deviceTags';
 import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
+import { MAX_RACK_UNITS, freePlace, placeProblem, rackUnits } from '../data/racks';
 
 type CanvasDoc = ProjectDoc;
 
@@ -10,6 +11,8 @@ interface CanvasState {
   devices: Device[];
   connections: Connection[];
   rooms: Room[];
+  /** Шкафы 19″. */
+  racks: Rack[];
   /** Данные штампа чертежей. */
   meta: ProjectMeta;
   selectedDeviceId: string | null;
@@ -48,6 +51,7 @@ export const initialCanvasState: CanvasState = {
   devices: [],
   connections: [],
   rooms: [],
+  racks: [],
   meta: {},
   selectedDeviceId: null,
   selectedConnectionId: null,
@@ -90,8 +94,8 @@ function pushHistory(state: CanvasState, opts: HistoryOptions = {}) {
 }
 
 function snapshot(state: CanvasState): CanvasDoc {
-  const { devices, connections, rooms, meta } = current(state);
-  return JSON.parse(JSON.stringify({ devices, connections, rooms, meta }));
+  const { devices, connections, rooms, racks, meta } = current(state);
+  return JSON.parse(JSON.stringify({ devices, connections, rooms, racks, meta }));
 }
 
 /** Вернуть документ из истории; выделение и фильтр по несуществующему помещению сбрасываются. */
@@ -99,6 +103,7 @@ function restore(state: CanvasState, doc: CanvasDoc) {
   state.devices = doc.devices;
   state.connections = doc.connections;
   state.rooms = doc.rooms ?? [];
+  state.racks = doc.racks ?? [];
   state.meta = doc.meta ?? {};
   state.selectedDeviceId = null;
   state.selectedConnectionId = null;
@@ -140,7 +145,10 @@ const canvasSlice = createSlice({
       const tag = action.payload.tag && !taken ? action.payload.tag : nextDeviceTag(state.devices, action.payload.type);
       // При фильтре по помещению новое устройство попадает в это помещение — иначе оно сразу скрылось бы
       const room = action.payload.room ?? state.roomFilter ?? undefined;
-      state.devices.push({ ...action.payload, tag, ...(room ? { room } : {}) });
+      const device: Device = { ...action.payload, tag, ...(room ? { room } : {}) };
+      // Место в шкафу не копируется: новое устройство ставят в шкаф отдельно
+      delete device.rack;
+      state.devices.push(device);
       state.selectedDeviceId = action.payload.id;
       state.selectedConnectionId = null;
       state.selectedRoomId = null;
@@ -236,6 +244,82 @@ const canvasSlice = createSlice({
       pushHistory(state, { keepSimulation: true });
       if (room === null) delete device.room;
       else device.room = room;
+      // Шкаф стоит в другом помещении — устройство из него вынимается
+      const rack = state.racks.find((r) => r.id === device.rack?.rack);
+      if (rack?.room && rack.room !== room) {
+        delete device.rack;
+        state.toast = { message: `${device.tag ?? device.model} вынут из шкафа «${rack.name}»: шкаф в другом помещении`, severity: 'info' };
+      }
+    },
+
+    addRack: (state, action: PayloadAction<Rack>) => {
+      const rack = action.payload;
+      const name = rack.name.trim();
+      if (!name || name.length > 64 || state.racks.some((r) => r.id === rack.id)) return;
+      if (!Number.isInteger(rack.units) || rack.units < 1 || rack.units > MAX_RACK_UNITS) return;
+      if (rack.room && !state.rooms.some((r) => r.id === rack.room)) return;
+      pushHistory(state, { keepSimulation: true });
+      state.racks.push({ ...rack, name });
+    },
+
+    updateRack: (state, action: PayloadAction<{ id: string; name?: string; units?: number; room?: string | null }>) => {
+      const rack = state.racks.find((r) => r.id === action.payload.id);
+      if (!rack) return;
+      const { name, units, room } = action.payload;
+      if (name !== undefined && (!name.trim() || name.trim().length > 64)) return;
+      if (units !== undefined) {
+        if (!Number.isInteger(units) || units < 1 || units > MAX_RACK_UNITS) return;
+        const top = Math.max(0, ...state.devices.filter((d) => d.rack?.rack === rack.id).map((d) => d.rack!.u + (rackUnits(d) ?? 1) - 1));
+        if (units < top) {
+          state.toast = { message: `В шкафу «${rack.name}» занят юнит ${top} — сначала освободите верхние юниты`, severity: 'warning' };
+          return;
+        }
+      }
+      if (room && !state.rooms.some((r) => r.id === room)) return;
+      pushHistory(state, { key: `rack:${rack.id}`, keepSimulation: true });
+      if (name !== undefined) rack.name = name.trim();
+      if (units !== undefined) rack.units = units;
+      if (room === null) delete rack.room;
+      else if (room) {
+        rack.room = room;
+        // Оборудование шкафа переезжает вместе с ним
+        for (const d of state.devices) if (d.rack?.rack === rack.id) d.room = room;
+      }
+    },
+
+    /** Удаление шкафа: устройства остаются на схеме, но вне шкафов. */
+    removeRack: (state, action: PayloadAction<string>) => {
+      if (!state.racks.some((r) => r.id === action.payload)) return;
+      pushHistory(state, { keepSimulation: true });
+      state.racks = state.racks.filter((r) => r.id !== action.payload);
+      for (const d of state.devices) if (d.rack?.rack === action.payload) delete d.rack;
+    },
+
+    /** Поставить устройство в шкаф: на юнит u или в самое верхнее свободное место. */
+    placeInRack: (state, action: PayloadAction<{ deviceId: string; rack: string; u?: number }>) => {
+      const device = state.devices.find((d) => d.id === action.payload.deviceId);
+      const rack = state.racks.find((r) => r.id === action.payload.rack);
+      if (!device || !rack) return;
+      const u = action.payload.u ?? freePlace(state.devices, rack, device);
+      const problem = u === null ? `в шкафу «${rack.name}» нет места под ${device.tag ?? device.model}` : placeProblem(state.devices, rack, device, u);
+      if (problem || u === null) {
+        state.toast = { message: problem ?? '', severity: 'warning' };
+        return;
+      }
+      if (device.rack?.rack === rack.id && device.rack.u === u) return;
+      pushHistory(state, { keepSimulation: true });
+      device.rack = { rack: rack.id, u };
+      if (rack.room) device.room = rack.room;
+      state.selectedDeviceId = device.id;
+      state.selectedConnectionId = null;
+      state.selectedRoomId = null;
+    },
+
+    removeFromRack: (state, action: PayloadAction<string>) => {
+      const device = state.devices.find((d) => d.id === action.payload);
+      if (!device?.rack) return;
+      pushHistory(state, { keepSimulation: true });
+      delete device.rack;
     },
 
     selectRoom: (state, action: PayloadAction<string>) => {
@@ -376,6 +460,7 @@ const canvasSlice = createSlice({
       state.devices = [];
       state.connections = [];
       state.rooms = [];
+      state.racks = [];
       state.meta = {};
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
@@ -386,12 +471,13 @@ const canvasSlice = createSlice({
 
     loadProject: (
       state,
-      action: PayloadAction<{ devices: Device[]; connections: Connection[]; rooms?: Room[]; meta?: ProjectMeta }>
+      action: PayloadAction<{ devices: Device[]; connections: Connection[]; rooms?: Room[]; racks?: Rack[]; meta?: ProjectMeta }>
     ) => {
       pushHistory(state);
       state.devices = withDeviceTags(action.payload.devices);
       state.connections = withCableLabels(action.payload.devices, action.payload.connections);
       state.rooms = action.payload.rooms ?? [];
+      state.racks = action.payload.racks ?? [];
       state.meta = action.payload.meta ?? {};
       state.selectedDeviceId = null;
       state.selectedConnectionId = null;
@@ -479,6 +565,11 @@ export const {
   updateRoom,
   removeRoom,
   setDeviceRoom,
+  addRack,
+  updateRack,
+  removeRack,
+  placeInRack,
+  removeFromRack,
   setProjectMeta,
   selectRoom,
   setRoomFilter,

@@ -46,12 +46,30 @@ export interface Room {
   color: string;
 }
 
+/** Шкаф или открытая стойка 19″. */
+export interface Rack {
+  id: string;
+  name: string;
+  /** Высота в юнитах (U). */
+  units: number;
+  /** Помещение, в котором стоит шкаф. */
+  room?: string;
+}
+
+/** Место устройства в шкафу: нижний занятый юнит (юниты нумеруются снизу, с 1). */
+export interface RackPlace {
+  rack: string;
+  u: number;
+}
+
 export interface Device {
   id: string;
   /** Позиционное обозначение (MIC-01): постоянное, не меняется при удалении других устройств. */
   tag?: string;
   /** Помещение, в котором стоит устройство (id из списка помещений проекта). */
   room?: string;
+  /** Место в шкафу 19″ (для устройств с высотой specs.rack_units). */
+  rack?: RackPlace;
   type: string;
   category: DeviceCategory;
   manufacturer: string;
@@ -172,5 +190,7 @@ export interface ProjectDoc {
   devices: Device[];
   connections: Connection[];
   rooms: Room[];
+  /** Шкафы 19″; в старых проектах и учебных схемах их нет. */
+  racks?: Rack[];
   meta?: ProjectMeta;
 }

@@ -1,4 +1,5 @@
-import { Connection, Device, ProjectDoc, Room } from '../types/device.types';
+import { Connection, Device, ProjectDoc, Rack, Room } from '../types/device.types';
+import { rackBom, rackTitle } from '../data/racks';
 import { deviceTypeLabel, portLabel, SIGNAL_LABELS, CATEGORY_LABELS } from '../data/labels';
 import { deviceTags } from '../data/deviceTags';
 import { roomNameOf } from '../data/rooms';
@@ -141,7 +142,7 @@ export function toCsv(rows: (string | number)[][]): string {
   return '﻿' + rows.map((r) => r.map(cell).join(';')).join('\r\n') + '\r\n';
 }
 
-export function bomCsv(devices: Device[], rooms: Room[] = []): string {
+export function bomCsv(devices: Device[], rooms: Room[] = [], racks: Rack[] = []): string {
   const rows = buildBom(devices, rooms);
   const withRooms = rooms.length > 0;
   return toCsv([
@@ -165,6 +166,17 @@ export function bomCsv(devices: Device[], rooms: Room[] = []): string {
       r.manufacturer,
       r.model,
       r.fullName,
+      r.qty,
+    ]),
+    ...rackBom(racks).map((r, i) => [
+      rows.length + i + 1,
+      ...(withRooms ? [''] : []),
+      r.names.join(', '),
+      'Шкафы',
+      'Шкаф 19″',
+      '',
+      `${r.units}U`,
+      rackTitle(r.units),
       r.qty,
     ]),
   ]);

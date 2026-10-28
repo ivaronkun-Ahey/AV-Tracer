@@ -1,4 +1,5 @@
 import { ProjectDoc } from '../types/device.types';
+import { rackBom, rackTitle } from '../data/racks';
 import { buildBom, buildCableSchedule, cableTotals } from '../features/exportDocs';
 import { CABLE_DESCRIPTION } from '../data/cables';
 import { CableType } from '../types/device.types';
@@ -143,7 +144,7 @@ export const SPEC_COLUMNS: Column[] = [
   { title: 'Примечание', width: 40 },
 ];
 
-export function specRows({ devices, connections, rooms }: ProjectDoc): TableRow[] {
+export function specRows({ devices, connections, rooms, racks = [] }: ProjectDoc): TableRow[] {
   const rows: TableRow[] = [];
   const empty = (name: string): TableRow => ({ cells: ['', name, '', '', '', '', '', '', ''], section: true });
   let room: string | null = null;
@@ -166,6 +167,12 @@ export function specRows({ devices, connections, rooms }: ProjectDoc): TableRow[
         generic ? 'типовое, подобрать модель' : '',
       ],
     });
+  }
+  if (racks.length > 0) {
+    rows.push(empty('Шкафы'));
+    for (const r of rackBom(racks)) {
+      rows.push({ cells: ['', rackTitle(r.units), `${r.units}U`, '', '', 'шт.', String(r.qty), '', r.names.join(', ')] });
+    }
   }
   const cables = cableTotals(buildCableSchedule(devices, connections, rooms));
   if (cables.length > 0) {

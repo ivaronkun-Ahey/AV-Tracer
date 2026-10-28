@@ -1,5 +1,5 @@
 {
-  "$comment": "Библиотека оборудования AV-Tracer. Порты задаются идентификаторами: тип разъёма, направление и сигнал определяются по префиксу (xlr_in, hdmi_out, dante_out, eth…), запись \"xlr_in*16\" — 16 портов xlr_in_1…xlr_in_16, \"hdmi_in*2@5\" — hdmi_in_5 и hdmi_in_6. Категория устройства по умолчанию — категория раздела. Файл проверяется схемой (src/data/catalogSchema.ts) при загрузке и в тестах. Поле routing — как сигнал проходит через устройство (all, channel, select, matrix); source — откуда и когда сверены данные с производителем (у карточек без source данные не сверены).",
+  "$comment": "Библиотека оборудования AV-Tracer. Порты задаются идентификаторами: тип разъёма, направление и сигнал определяются по префиксу (xlr_in, hdmi_out, dante_out, eth…), запись \"xlr_in*16\" — 16 портов xlr_in_1…xlr_in_16, \"hdmi_in*2@5\" — hdmi_in_5 и hdmi_in_6. Категория устройства по умолчанию — категория раздела. Файл проверяется схемой (src/data/catalogSchema.ts) при загрузке и в тестах. Поле routing — как сигнал проходит через устройство (all, channel, select, matrix); source — откуда и когда сверены данные с производителем (у карточек без source данные не сверены); specs.rack_units — высота в юнитах 19″ стойки (ориентировочно, как и остальные несверенные данные).",
   "categories": [
     {
       "category": "audio",
@@ -191,6 +191,9 @@
                 "mode": "stereo",
                 "min_impedance_ohms": 4
               },
+              "specs": {
+                "rack_units": 2
+              },
               "routing": "channel"
             },
             {
@@ -204,6 +207,9 @@
                 "power_watts": 500,
                 "gain": 20,
                 "min_impedance_ohms": 4
+              },
+              "specs": {
+                "rack_units": 2
               },
               "routing": "channel"
             },
@@ -219,6 +225,9 @@
                 "gain": 23,
                 "min_impedance_ohms": 2,
                 "mode": "4-channel"
+              },
+              "specs": {
+                "rack_units": 2
               },
               "routing": "channel"
             }
@@ -360,6 +369,9 @@
                 "channels": 1,
                 "diversity": true,
                 "battery_hours": 11
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -374,6 +386,9 @@
                 "channels": 2,
                 "diversity": true,
                 "dante": true
+              },
+              "specs": {
+                "rack_units": 1
               }
             }
           ]
@@ -406,6 +421,9 @@
               "default_properties": {
                 "active": true,
                 "pad": 0
+              },
+              "specs": {
+                "rack_units": 1
               },
               "routing": "channel"
             },
@@ -594,6 +612,9 @@
                 "resolution_out": "1920x1080",
                 "selected_input": 1
               },
+              "specs": {
+                "rack_units": 1
+              },
               "routing": "select"
             },
             {
@@ -639,6 +660,9 @@
                 "resolution_out": "1920x1080",
                 "selected_input": 1
               },
+              "specs": {
+                "rack_units": 1
+              },
               "routing": "select"
             },
             {
@@ -654,6 +678,9 @@
                 "switching_type": "matrix",
                 "max_resolution": "3840x2160",
                 "routes": "1>1, 2>2, 3>3, 4>4, 5>5, 6>6, 7>7, 8>8"
+              },
+              "specs": {
+                "rack_units": 1
               },
               "routing": "matrix"
             }
@@ -794,6 +821,9 @@
                 "max_resolution": "3840x2160",
                 "bitrate_mbps": 950,
                 "latency_ms": 1
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -807,6 +837,9 @@
                 "codec": "Pixel Perfect",
                 "max_resolution": "3840x2160",
                 "latency_ms": 1
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -820,6 +853,9 @@
                 "codec": "PURE3",
                 "max_resolution": "3840x2160",
                 "latency_ms": 1
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -833,6 +869,9 @@
                 "codec": "PURE3",
                 "max_resolution": "3840x2160",
                 "latency_ms": 1
+              },
+              "specs": {
+                "rack_units": 1
               }
             }
           ]
@@ -851,6 +890,9 @@
                 "format": "ProRes",
                 "storage_gb": 512,
                 "loop_out": true
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -908,6 +950,9 @@
                 "poe": false,
                 "managed": true,
                 "vlan": true
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -921,6 +966,9 @@
                 "ports": 24,
                 "poe": true,
                 "managed": true
+              },
+              "specs": {
+                "rack_units": 1
               }
             }
           ]
@@ -960,6 +1008,9 @@
                 "processing": "dante",
                 "channels": 8,
                 "phantom_power": false
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -977,6 +1028,9 @@
                 "dante": true,
                 "processing": "aec",
                 "phantom_power": false
+              },
+              "specs": {
+                "rack_units": 1
               }
             }
           ]
@@ -995,6 +1049,9 @@
               "default_properties": {
                 "control": true,
                 "programming": "simpl"
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -1008,6 +1065,9 @@
               "default_properties": {
                 "control": true,
                 "programming": "global_scripter"
+              },
+              "specs": {
+                "rack_units": 1
               }
             },
             {
@@ -1021,6 +1081,9 @@
               "default_properties": {
                 "control": true,
                 "programming": "netlinx"
+              },
+              "specs": {
+                "rack_units": 1
               }
             }
           ]

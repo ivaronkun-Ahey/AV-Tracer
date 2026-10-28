@@ -82,6 +82,7 @@ describe('R5: целостность файла проекта', () => {
     expect(serializeProject({ devices: [], connections: [], rooms: [] })).toEqual({
       schemaVersion: SCHEMA_VERSION,
       rooms: [],
+      racks: [],
       devices: [],
       connections: [],
     });

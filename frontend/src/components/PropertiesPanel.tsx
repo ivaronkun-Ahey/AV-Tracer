@@ -34,6 +34,7 @@ import { signalColor, categoryColor } from './deviceGeometry';
 import { deviceTags } from '../data/deviceTags';
 import ConnectionInspector from './ConnectionInspector';
 import { DeviceRoomField, RoomPanel, RoomsAndDevices } from './RoomPanels';
+import { DeviceRackField } from './RackView';
 import NumberField from './NumberField';
 
 const PropertiesPanel: React.FC = () => {
@@ -115,12 +116,13 @@ const PropertiesPanel: React.FC = () => {
         Параметры
       </Typography>
       <TagField
-        key={device.id}
+        key={`tag:${device.id}`}
         value={tag}
         isTaken={(t) => devices.some((d) => d.id !== device.id && d.tag === t)}
         onCommit={(t) => dispatch(setDeviceTag({ id: device.id, tag: t }))}
       />
       <DeviceRoomField key={`room:${device.id}`} device={device} />
+      <DeviceRackField key={`rack:${device.id}`} device={device} />
       {renderProperties(device, onChange)}
       {renderChannelGains(device, connections, onChange)}
 
@@ -173,7 +175,7 @@ const PropertiesPanel: React.FC = () => {
         })}
       </Stack>
 
-      <ConnectForm key={device.id} device={device} />
+      <ConnectForm key={`connect:${device.id}`} device={device} />
 
       {/* Порты */}
       <Divider sx={{ my: 2 }} />

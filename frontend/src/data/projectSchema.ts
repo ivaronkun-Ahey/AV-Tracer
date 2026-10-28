@@ -8,6 +8,7 @@ import {
   Device,
   ProjectDoc,
   ProjectMeta,
+  Rack,
   Room,
 } from '../types/device.types';
 import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
@@ -15,6 +16,7 @@ import { withTemplateDefaults } from './equipment';
 import { withCableLabels } from './cableLabels';
 import { withDeviceTags } from './deviceTags';
 import { migrateProject, SCHEMA_VERSION } from './migrations';
+import { MAX_RACK_UNITS, validateRackPlaces } from './racks';
 
 /**
  * Схема файла проекта. Проверяет и открытые пользователем файлы, и автосейв:
@@ -28,6 +30,7 @@ export const PROJECT_LIMITS = {
   connections: 10000,
   portsPerDevice: 512,
   rooms: 200,
+  racks: 200,
 };
 
 const text = (max: number) => z.string().max(max, `строка длиннее ${max} символов`);
@@ -44,6 +47,7 @@ const deviceSchema = z.object({
   id: text(200),
   tag: text(32).optional(),
   room: text(100).optional(),
+  rack: z.object({ rack: text(100), u: z.number().int().min(1) }).optional(),
   type: text(100),
   category: z.enum(DEVICE_CATEGORIES),
   manufacturer: text(200),
@@ -74,6 +78,13 @@ const roomSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'цвет помещения в формате #rrggbb'),
 });
 
+const rackSchema = z.object({
+  id: text(100),
+  name: text(64).min(1, 'пустое название шкафа'),
+  units: z.number().int().min(1).max(MAX_RACK_UNITS, `шкаф выше ${MAX_RACK_UNITS}U`),
+  room: text(100).optional(),
+});
+
 const metaField = text(200).optional();
 const metaSchema = z.object({
   code: metaField,
@@ -91,6 +102,7 @@ const projectDocSchema = z.object({
   schemaVersion: z.number().int().min(1).optional(),
   meta: metaSchema.optional(),
   rooms: z.array(roomSchema).max(PROJECT_LIMITS.rooms, `больше ${PROJECT_LIMITS.rooms} помещений`).default([]),
+  racks: z.array(rackSchema).max(PROJECT_LIMITS.racks, `больше ${PROJECT_LIMITS.racks} шкафов`).default([]),
   devices: z.array(deviceSchema).max(PROJECT_LIMITS.devices, `больше ${PROJECT_LIMITS.devices} устройств`),
   connections: z.array(connectionSchema).max(PROJECT_LIMITS.connections, `больше ${PROJECT_LIMITS.connections} соединений`),
 });
@@ -101,6 +113,7 @@ export type ParsedProject =
       devices: Device[];
       connections: Connection[];
       rooms: Room[];
+      racks: Rack[];
       meta: ProjectMeta;
       droppedConnections: number;
       /** Что изменено при обновлении старого формата. */
@@ -118,7 +131,7 @@ function firstDuplicate(values: string[]): string | undefined {
 }
 
 /** Уникальность идентификаторов: устройств, соединений, портов внутри устройства, обозначений, помещений. */
-function identityError(devices: Device[], connections: Connection[], rooms: Room[]): string | null {
+function identityError(devices: Device[], connections: Connection[], rooms: Room[], racks: Rack[]): string | null {
   const dupDevice = firstDuplicate(devices.map((d) => d.id));
   if (dupDevice) return `повторяется идентификатор устройства «${dupDevice}»`;
   const dupConnection = firstDuplicate(connections.map((c) => c.id));
@@ -131,6 +144,8 @@ function identityError(devices: Device[], connections: Connection[], rooms: Room
   if (dupTag) return `повторяется обозначение устройства «${dupTag}»`;
   const dupRoom = firstDuplicate(rooms.map((r) => r.id));
   if (dupRoom) return `повторяется идентификатор помещения «${dupRoom}»`;
+  const dupRack = firstDuplicate(racks.map((r) => r.id));
+  if (dupRack) return `повторяется идентификатор шкафа «${dupRack}»`;
   return null;
 }
 
@@ -142,7 +157,7 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
     return { ok: false, error: `файл создан более новой версией AV-Tracer (формат ${version}, поддерживается до ${SCHEMA_VERSION})` };
   }
   const rooms = parsed.data.rooms;
-  const identity = identityError(parsed.data.devices, parsed.data.connections, rooms);
+  const identity = identityError(parsed.data.devices, parsed.data.connections, rooms, parsed.data.racks);
   if (identity) return { ok: false, error: identity };
 
   const migrated = migrateProject(version, parsed.data.devices, parsed.data.connections);
@@ -157,7 +172,17 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
     return rest;
   });
   const notes = unlinked > 0 ? [...migrated.notes, `устройств со ссылкой на несуществующее помещение: ${unlinked} — помещение снято`] : migrated.notes;
-  const devices = withDeviceTags(placed.map(withTemplateDefaults));
+  // Шкаф в несуществующем помещении — без помещения
+  const racks = parsed.data.racks.map((r) => {
+    if (r.room === undefined || roomIds.has(r.room)) return r;
+    const rest = { ...r };
+    delete rest.room;
+    return rest;
+  });
+  // Высота в юнитах — из каталога (withTemplateDefaults), поэтому места проверяются после неё
+  const racked = validateRackPlaces(placed.map(withTemplateDefaults), racks);
+  if (racked.removed > 0) notes.push(`устройств с недопустимым местом в шкафу: ${racked.removed} — место снято`);
+  const devices = withDeviceTags(racked.devices);
   // Соединения, ссылающиеся на несуществующие устройства или порты, отбрасываем
   const hasPort = (deviceId: string, portId: string) =>
     devices.some((d) => d.id === deviceId && d.ports.some((p) => p.id === portId));
@@ -167,6 +192,7 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
     devices,
     connections: withCableLabels(devices, valid),
     rooms,
+    racks,
     meta: parsed.data.meta ?? {},
     droppedConnections: migrated.connections.length - valid.length,
     notes,
@@ -174,6 +200,13 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
 }
 
 /** Документ для сохранения в файл и автосейв — всегда с версией формата. */
-export function serializeProject({ devices, connections, rooms, meta }: ProjectDoc) {
-  return { schemaVersion: SCHEMA_VERSION, ...(meta && Object.keys(meta).length ? { meta } : {}), rooms, devices, connections };
+export function serializeProject({ devices, connections, rooms, racks, meta }: ProjectDoc) {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    ...(meta && Object.keys(meta).length ? { meta } : {}),
+    rooms,
+    racks: racks ?? [],
+    devices,
+    connections,
+  };
 }

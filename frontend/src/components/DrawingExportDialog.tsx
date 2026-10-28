@@ -27,6 +27,7 @@ const KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'structural', title: 'Схема структурная' },
   { kind: 'functional', title: 'Схема функциональная' },
   { kind: 'connections', title: 'Схема соединений' },
+  { kind: 'racks', title: 'Схема расположения оборудования в шкафах' },
   { kind: 'cables', title: 'Кабельный журнал' },
   { kind: 'spec', title: 'Спецификация оборудования (ГОСТ 21.110)' },
 ];
@@ -74,6 +75,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
   const rooms = useAppSelector((s) => s.canvas.rooms);
+  const racks = useAppSelector((s) => s.canvas.racks);
   const meta = useAppSelector((s) => s.canvas.meta);
   const [form, setForm] = useState<ProjectMeta>(meta);
   const [kinds, setKinds] = useState<DrawingKind[]>(KINDS.map((k) => k.kind));
@@ -102,7 +104,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
     try {
       const [set, { fetchDrawingFonts }] = await Promise.all([import('../drawing/drawingSet'), import('../drawing/textkit')]);
       const fonts = await fetchDrawingFonts();
-      const doc = { devices, connections, rooms, meta: form };
+      const doc = { devices, connections, rooms, racks, meta: form };
       const base = `${safeFileName(form.code || 'av-tracer') || 'av-tracer'}-chertezhi-${dateStamp()}`;
       let file: { name: string; type: string };
       let result: { bytes: Uint8Array; sheets: number; notes: string[] };
@@ -173,7 +175,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
           Листы
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', mb: 1 }}>
-          {KINDS.map((k) => (
+          {KINDS.filter((k) => k.kind !== 'racks' || racks.length > 0).map((k) => (
             <FormControlLabel
               key={k.kind}
               control={<Checkbox size="small" checked={kinds.includes(k.kind)} onChange={() => toggle(k.kind)} />}
@@ -238,7 +240,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
         <Button
           variant="contained"
           onClick={generate}
-          disabled={busy || kinds.length === 0 || devices.length === 0}
+          disabled={busy || kinds.every((k) => k === 'racks' && racks.length === 0) || devices.length === 0}
           startIcon={busy ? <CircularProgress size={16} /> : undefined}
         >
           Сформировать {OUTPUTS.find((o) => o.value === output)!.label}

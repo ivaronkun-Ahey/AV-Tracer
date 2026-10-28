@@ -16,6 +16,8 @@ import {
   ListItemIcon,
   ListItemText,
   useMediaQuery,
+  Tabs,
+  Tab,
   useTheme,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -40,6 +42,7 @@ import ExportStage from './ExportStage';
 import DrawingExportDialog from './DrawingExportDialog';
 import LessonsDialog from './LessonsDialog';
 import LessonEditorDialog from './LessonEditorDialog';
+import RackView from './RackView';
 import type { Lesson } from '../learning/lessonSchema';
 import LessonPanel from './LessonPanel';
 import SchoolIcon from '@mui/icons-material/School';
@@ -131,6 +134,7 @@ const MainLayout: React.FC = () => {
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
   const rooms = useAppSelector((s) => s.canvas.rooms);
+  const racks = useAppSelector((s) => s.canvas.racks);
   const meta = useAppSelector((s) => s.canvas.meta);
   const canUndo = useAppSelector((s) => s.canvas.past.length > 0);
   const canRedo = useAppSelector((s) => s.canvas.future.length > 0);
@@ -143,6 +147,7 @@ const MainLayout: React.FC = () => {
   const [layoutRunning, setLayoutRunning] = useState(false);
   const [drawingsOpen, setDrawingsOpen] = useState(false);
   const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [view, setView] = useState<'scheme' | 'racks'>('scheme');
   const [lessonEditor, setLessonEditor] = useState<{ open: boolean; lesson?: Lesson }>({ open: false });
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
 
@@ -218,7 +223,7 @@ const MainLayout: React.FC = () => {
       return;
     }
     if (kind === 'bom') {
-      downloadFile(`av-tracer-bom-${dateStamp()}.csv`, bomCsv(devices, rooms));
+      downloadFile(`av-tracer-bom-${dateStamp()}.csv`, bomCsv(devices, rooms, racks));
       return;
     }
     if (kind === 'cables') {
@@ -264,7 +269,7 @@ const MainLayout: React.FC = () => {
   };
 
   const handleSave = () => {
-    const project = { ...serializeProject({ devices, connections, rooms, meta }), timestamp: new Date().toISOString() };
+    const project = { ...serializeProject({ devices, connections, rooms, racks, meta }), timestamp: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -297,7 +302,9 @@ const MainLayout: React.FC = () => {
         dispatch(showToast({ message: `Не удалось открыть файл: ${parsed.error}`, severity: 'error' }));
         return;
       }
-      dispatch(loadProject({ devices: parsed.devices, connections: parsed.connections, rooms: parsed.rooms, meta: parsed.meta }));
+      dispatch(
+        loadProject({ devices: parsed.devices, connections: parsed.connections, rooms: parsed.rooms, racks: parsed.racks, meta: parsed.meta })
+      );
       const remarks = [
         ...parsed.notes,
         ...(parsed.droppedConnections > 0
@@ -451,9 +458,26 @@ const MainLayout: React.FC = () => {
           <EquipmentLibrary onAdded={() => !dockable.library && setOverlay(null)} />
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative' }}>
-          <CanvasWorkspace />
-          <LessonPanel onOpenList={() => setLessonsOpen(true)} />
+        <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Tabs
+            value={view}
+            onChange={(_, v) => setView(v)}
+            aria-label="Вид"
+            sx={{
+              minHeight: 34,
+              borderBottom: '1px solid #30363d',
+              bgcolor: '#0d1117',
+              '& .MuiTab-root': { minHeight: 34, py: 0.5, textTransform: 'none' },
+            }}
+          >
+            <Tab value="scheme" label="Схема" />
+            <Tab value="racks" label={racks.length ? `Шкафы (${racks.length})` : 'Шкафы'} />
+          </Tabs>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+            <CanvasWorkspace />
+            {view === 'racks' && <RackView />}
+            <LessonPanel onOpenList={() => setLessonsOpen(true)} />
+          </Box>
         </Box>
 
         <Box component="aside" aria-label="Свойства" hidden={!isOpen('properties')} sx={panelSx('properties', 'right', 320)}>
