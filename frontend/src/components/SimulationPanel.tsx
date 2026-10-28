@@ -20,6 +20,7 @@ import {
 import { deviceTypeLabel } from '../data/labels';
 import { LINE_MAX_DBU, LINE_MIN_DBU, runSimulation } from '../sim/engine';
 import { SignalFlow, SimFix, SimIssue } from '../types/device.types';
+import { findLesson } from '../learning/lessons';
 
 function levelVerdict(db: number): string {
   if (db < LINE_MIN_DBU) return 'слабый сигнал';
@@ -32,6 +33,8 @@ const SimulationPanel: React.FC = () => {
   const simulation = useAppSelector((s) => s.canvas.simulation);
   const showSimulation = useAppSelector((s) => s.canvas.showSimulation);
   const devices = useAppSelector((s) => s.canvas.devices);
+  // В заданиях «найди неисправность» исправлять нужно самому
+  const fixesAllowed = useAppSelector((s) => findLesson(s.lesson.activeId)?.allowFixes ?? true);
 
   const name = (id: string) => devices.find((d) => d.id === id)?.model || id;
 
@@ -56,7 +59,7 @@ const SimulationPanel: React.FC = () => {
   };
 
   const fixButton = (issue: SimIssue) =>
-    issue.fix ? (
+    issue.fix && fixesAllowed ? (
       <Tooltip title={issue.fix.label}>
         <Button
           size="small"

@@ -38,6 +38,9 @@ import TuneIcon from '@mui/icons-material/Tune';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExportStage from './ExportStage';
 import DrawingExportDialog from './DrawingExportDialog';
+import LessonsDialog from './LessonsDialog';
+import LessonPanel from './LessonPanel';
+import SchoolIcon from '@mui/icons-material/School';
 import ArchitectureIcon from '@mui/icons-material/Architecture';
 import AutosaveIndicator from './AutosaveIndicator';
 import EquipmentLibrary from './EquipmentLibrary';
@@ -137,6 +140,7 @@ const MainLayout: React.FC = () => {
   const [menu, setMenu] = useState<{ name: MenuName; anchor: HTMLElement } | null>(null);
   const [layoutRunning, setLayoutRunning] = useState(false);
   const [drawingsOpen, setDrawingsOpen] = useState(false);
+  const [lessonsOpen, setLessonsOpen] = useState(false);
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
 
   // Если хватает ширины, панель стоит сбоку от холста и сворачивается (библиотека —
@@ -146,7 +150,8 @@ const MainLayout: React.FC = () => {
   const wide = useMediaQuery(theme.breakpoints.up('lg'), { noSsr: true });
   const medium = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
   const phone = !useMediaQuery(theme.breakpoints.up('sm'), { noSsr: true });
-  const compact = !wide;
+  // Подписи кнопок панели инструментов помещаются целиком только на широком экране
+  const compact = !useMediaQuery('(min-width:1460px)', { noSsr: true });
   const dockable: PanelState = { library: medium, properties: wide };
   const [docked, setDocked] = useState<PanelState>(loadPanels);
   const [overlay, setOverlay] = useState<PanelName | null>(null);
@@ -382,6 +387,13 @@ const MainLayout: React.FC = () => {
               <ToolButton compact={compact} icon={<AutoAwesomeIcon fontSize="small" />} label="Примеры" onClick={openMenu('examples')} />
               <ToolButton
                 compact={compact}
+                icon={<SchoolIcon fontSize="small" />}
+                label="Учёба"
+                tooltip="Учебные задания: соберите систему или найдите неисправность"
+                onClick={() => setLessonsOpen(true)}
+              />
+              <ToolButton
+                compact={compact}
                 icon={<AccountTreeIcon fontSize="small" />}
                 label="Упорядочить"
                 tooltip="Расставить устройства по ходу сигнала: источники слева, приёмники справа"
@@ -438,6 +450,7 @@ const MainLayout: React.FC = () => {
 
         <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative' }}>
           <CanvasWorkspace />
+          <LessonPanel onOpenList={() => setLessonsOpen(true)} />
         </Box>
 
         <Box component="aside" aria-label="Свойства" hidden={!isOpen('properties')} sx={panelSx('properties', 'right', 320)}>
@@ -495,6 +508,17 @@ const MainLayout: React.FC = () => {
             <AutoAwesomeIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Примеры…" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            setLessonsOpen(true);
+          }}
+        >
+          <ListItemIcon>
+            <SchoolIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Учёба…" />
         </MenuItem>
         <MenuItem
           disabled={devices.length === 0 || layoutRunning}
@@ -598,6 +622,7 @@ const MainLayout: React.FC = () => {
       </Menu>
 
       <DrawingExportDialog open={drawingsOpen} onClose={() => setDrawingsOpen(false)} />
+      <LessonsDialog open={lessonsOpen} onClose={() => setLessonsOpen(false)} />
 
       {exportJob && (
         <ExportStage

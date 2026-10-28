@@ -12,6 +12,7 @@ import {
   InputAdornment,
   IconButton,
   Tooltip,
+  Button,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
@@ -19,6 +20,8 @@ import AddIcon from '@mui/icons-material/Add';
 import { EQUIPMENT_LIBRARY, createDevice, newDeviceId } from '../data/equipment';
 import { useAppDispatch, useAppSelector } from '../store';
 import { addDevice, showToast } from '../features/canvasSlice';
+import { toggleAllEquipment } from '../features/lessonSlice';
+import { findLesson } from '../learning/lessons';
 import { EquipmentTemplate } from '../types/device.types';
 import { CATEGORY_LABELS, SUBCATEGORY_LABELS, deviceTypeLabel } from '../data/labels';
 import DeviceIcon from './DeviceIcon';
@@ -34,6 +37,11 @@ const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
   const viewport = useAppSelector((s) => s.canvas.viewport);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string>('audio');
+  // В задании библиотека показывает только его оборудование (можно открыть всё)
+  const lessonId = useAppSelector((s) => s.lesson.activeId);
+  const showAll = useAppSelector((s) => s.lesson.showAllEquipment);
+  const palette = findLesson(lessonId)?.palette;
+  const limited = !!palette && !showAll;
 
   // Без перетаскивания (клавиатура, сенсорный экран): устройство встаёт в центр
   // видимой части холста, на ближайшее свободное место
@@ -63,11 +71,12 @@ const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
         ...sub,
         items: sub.items.filter(
           (item) =>
-            q === '' ||
+            (!limited || palette!.includes(item._id)) &&
+            (q === '' ||
             item.full_name.toLowerCase().includes(q) ||
             item.model.toLowerCase().includes(q) ||
             item.manufacturer.toLowerCase().includes(q) ||
-            deviceTypeLabel(item.type).toLowerCase().includes(q)
+            deviceTypeLabel(item.type).toLowerCase().includes(q))
         ),
       }))
       .filter((sub) => sub.items.length > 0),
@@ -78,9 +87,21 @@ const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
       <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 700 }}>
         Библиотека оборудования
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: palette ? 1 : 2 }}>
         Перетащите устройство на холст или нажмите «+»
       </Typography>
+      {palette && (
+        <Button
+          size="small"
+          variant="outlined"
+          color="warning"
+          fullWidth
+          onClick={() => dispatch(toggleAllEquipment())}
+          sx={{ mb: 2, justifyContent: 'flex-start', textTransform: 'none' }}
+        >
+          {limited ? 'Оборудование задания · показать всё' : 'Вся библиотека · только задание'}
+        </Button>
+      )}
 
       <TextField
         fullWidth
@@ -100,7 +121,7 @@ const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
 
       {filtered.map((category) => {
         const count = category.subcategories.reduce((acc, s) => acc + s.items.length, 0);
-        const isExpanded = q !== '' || expandedCategory === category.category;
+        const isExpanded = q !== '' || limited || expandedCategory === category.category;
         return (
           <Accordion
             key={category.category}
