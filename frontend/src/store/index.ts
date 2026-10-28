@@ -1,11 +1,29 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import canvasReducer, { initialCanvasState } from '../features/canvasSlice';
+import lessonReducer, { initialLessonState, LessonState } from '../features/lessonSlice';
 import { parseProjectDoc, serializeProject } from '../data/projectSchema';
 import { setSaveStatus } from './saveStatus';
 
 const STORAGE_KEY = 'av-tracer:autosave';
 const PREFS_KEY = 'av-tracer:prefs';
+const LESSON_KEY = 'av-tracer:lesson';
+
+/** Учебный режим (текущее задание и пройденные) — удобство конкретного браузера. */
+function loadLesson(): LessonState {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LESSON_KEY) || '{}');
+    return {
+      ...initialLessonState,
+      activeId: typeof raw.activeId === 'string' ? raw.activeId : null,
+      hintsShown: Number.isInteger(raw.hintsShown) ? raw.hintsShown : 0,
+      solutionShown: raw.solutionShown === true,
+      completed: Array.isArray(raw.completed) ? raw.completed.filter((x: unknown) => typeof x === 'string') : [],
+    };
+  } catch {
+    return initialLessonState;
+  }
+}
 
 function loadPersisted() {
   try {
@@ -49,8 +67,22 @@ const persisted = loadPersisted();
 export const store = configureStore({
   reducer: {
     canvas: canvasReducer,
+    lesson: lessonReducer,
   },
-  preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...persisted } },
+  preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...persisted }, lesson: loadLesson() },
+});
+
+let lastLesson = store.getState().lesson;
+store.subscribe(() => {
+  const lesson = store.getState().lesson;
+  if (lesson === lastLesson) return;
+  lastLesson = lesson;
+  try {
+    const { activeId, hintsShown, solutionShown, completed } = lesson;
+    localStorage.setItem(LESSON_KEY, JSON.stringify({ activeId, hintsShown, solutionShown, completed }));
+  } catch {
+    /* хранилище недоступно — прогресс просто не запомнится */
+  }
 });
 
 let lastSaved: {

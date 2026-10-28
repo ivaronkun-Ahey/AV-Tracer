@@ -1,0 +1,470 @@
+{
+  "$comment": "Учебные задания AV-Tracer. Устройства — карточки каталога (eq), кабели — «устройство.порт». start — стартовая схема, solution — эталонное решение (по нему тесты проверяют, что задание решаемо, и его можно показать ученику). Проверяется схемой src/learning/lessonSchema.ts.",
+  "lessons": [
+    {
+      "id": "first-sound",
+      "title": "Первый звук",
+      "kind": "build",
+      "level": 1,
+      "goal": "Соберите систему озвучивания: голос с микрофона должен звучать из активной колонки.",
+      "theory": "Микрофон выдаёт очень слабый сигнал (около −50 дБu). Его усиливает предусилитель входа микшера до линейного уровня (около +4 дБu), с которым работает активная колонка — у неё усилитель встроенный.",
+      "hints": [
+        "Нужны три устройства: микрофон, микшер и активная колонка.",
+        "Микрофон подключается XLR-кабелем ко входу микшера (XLR IN 1).",
+        "Выход микшера (XLR OUT L) подключите ко входу колонки XLR IN, затем запустите «Симуляцию»."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "jbl-prx815w", "ev-evf1122", "crown-xls2502"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80 },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук микрофона доходит до колонки", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" } },
+        { "type": "no_issue", "text": "Уровень сигнала в норме", "issues": ["level_low", "level_high"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "condenser-mic",
+      "title": "Конденсаторный микрофон",
+      "kind": "build",
+      "level": 1,
+      "goal": "Подключите студийный конденсаторный микрофон AKG C414 к микшеру и выведите звук на колонку.",
+      "theory": "Конденсаторному микрофону нужно фантомное питание +48 В. Его подаёт вход микшера (кнопка +48V), а не сам микрофон: без питания микрофон молчит.",
+      "hints": [
+        "Соедините микрофон со входом микшера, а выход микшера — с колонкой.",
+        "Симуляция покажет ошибку про фантомное питание — посмотрите, на каком устройстве его включать.",
+        "Выберите микшер и включите параметр «Фантомное питание +48V»."
+      ],
+      "palette": ["akg-c414", "yamaha-mg12xu", "jbl-prx815w"],
+      "start": {
+        "devices": [
+          { "id": "mic", "eq": "akg-c414", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "phantom_power": false } },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 80 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "akg-c414", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "phantom_power": true } },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук конденсаторного микрофона доходит до колонки", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" } },
+        { "type": "no_issue", "text": "Микрофон получает фантомное питание", "issues": ["phantom_power"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "stereo-amp",
+      "title": "Пассивные колонки и усилитель",
+      "kind": "build",
+      "level": 2,
+      "goal": "Озвучьте зал двумя пассивными колонками: левая и правая, через усилитель мощности.",
+      "theory": "У пассивной колонки нет своего усилителя: её подключают акустическим кабелем (Speakon) к выходу усилителя мощности. Усилитель передаёт сигнал из входа в выход того же канала: вход L → выход L, вход R → выход R.",
+      "hints": [
+        "Цепочка: микрофон → микшер → усилитель → колонки.",
+        "Выходы микшера L и R подключите к входам усилителя L и R.",
+        "Каждую колонку подключите к своему выходу усилителя: SPEAKON OUT L и SPEAKON OUT R."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "crown-xls2502", "ev-evf1122", "jbl-prx815w"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80 },
+          { "id": "amp", "eq": "crown-xls2502", "x": 640, "y": 80 },
+          { "id": "spl", "eq": "ev-evf1122", "x": 940, "y": 80 },
+          { "id": "spr", "eq": "ev-evf1122", "x": 940, "y": 200 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in_l", "length": 3 },
+          { "from": "mix.xlr_out_r", "to": "amp.xlr_in_r", "length": 3 },
+          { "from": "amp.speakon_out_l", "to": "spl.speakon_in", "length": 15 },
+          { "from": "amp.speakon_out_r", "to": "spr.speakon_in", "length": 15 }
+        ]
+      },
+      "checks": [
+        { "type": "uses", "text": "На схеме две пассивные колонки", "select": { "model": "EVF-1122S" }, "min": 2 },
+        { "type": "reaches", "text": "Звук доходит до обеих колонок", "domain": "audio", "from": { "type": "microphone" }, "to": { "model": "EVF-1122S" }, "all": true },
+        { "type": "no_issue", "text": "Колонки подключены к усилителю правильно", "issues": ["passive_no_amp", "active_on_amp", "impedance_low"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "presentation",
+      "title": "Ноутбук на проектор",
+      "kind": "build",
+      "level": 1,
+      "goal": "Выведите презентацию с ноутбука на проектор.",
+      "theory": "Ноутбук — источник видео: его HDMI-выход подключается ко входу проектора. Обычный пассивный HDMI-кабель надёжно работает до 10–15 метров.",
+      "hints": [
+        "Нужны ноутбук и проектор.",
+        "Соедините HDMI OUT ноутбука с HDMI IN 1 проектора.",
+        "Кликните по кабелю и проверьте длину: для HDMI не больше 15 м."
+      ],
+      "palette": ["generic-laptop", "epson-l1755u", "lg-75up8000"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 80 },
+          { "id": "proj", "eq": "epson-l1755u", "x": 340, "y": 80 }
+        ],
+        "connections": [{ "from": "pc.hdmi_out", "to": "proj.hdmi_in_1", "length": 5 }]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение ноутбука доходит до проектора", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" } },
+        { "type": "no_issue", "text": "Длина кабелей в пределах нормы", "issues": ["cable_length"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "long-run",
+      "title": "Проектор в 30 метрах",
+      "kind": "build",
+      "level": 2,
+      "goal": "Проектор стоит в проекционной, в 30 м от кафедры с ноутбуком. Доведите до него изображение.",
+      "theory": "HDMI на 30 м не работает надёжно. HDBaseT-удлинитель передаёт видео по витой паре до 100 м: передатчик у источника, приёмник у проектора, между ними — кабель Cat6. Это не Ethernet: в сетевой коммутатор такой кабель не включают.",
+      "hints": [
+        "Добавьте передатчик и приёмник HDBaseT (раздел «Удлинители и конвертеры»).",
+        "Ноутбук → передатчик (HDMI), передатчик → приёмник (HDBT, Cat6), приёмник → проектор (HDMI).",
+        "Кликните по кабелю между передатчиком и приёмником и задайте длину 30 м; HDMI-кабели оставьте короткими."
+      ],
+      "palette": ["generic-laptop", "epson-l1755u", "generic-hdbt-tx", "generic-hdbt-rx", "cisco-sg350"],
+      "start": {
+        "rooms": [
+          { "id": "desk", "name": "Кафедра", "color": "#5B8DEF" },
+          { "id": "booth", "name": "Проекционная", "color": "#E0A030" }
+        ],
+        "devices": [
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 100, "room": "desk" },
+          { "id": "proj", "eq": "epson-l1755u", "x": 900, "y": 100, "room": "booth" }
+        ]
+      },
+      "solution": {
+        "rooms": [
+          { "id": "desk", "name": "Кафедра", "color": "#5B8DEF" },
+          { "id": "booth", "name": "Проекционная", "color": "#E0A030" }
+        ],
+        "devices": [
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 100, "room": "desk" },
+          { "id": "tx", "eq": "generic-hdbt-tx", "x": 340, "y": 100, "room": "desk" },
+          { "id": "rx", "eq": "generic-hdbt-rx", "x": 640, "y": 100, "room": "booth" },
+          { "id": "proj", "eq": "epson-l1755u", "x": 940, "y": 100, "room": "booth" }
+        ],
+        "connections": [
+          { "from": "pc.hdmi_out", "to": "tx.hdmi_in", "length": 2 },
+          { "from": "tx.hdbt_out", "to": "rx.hdbt_in", "length": 30 },
+          { "from": "rx.hdmi_out", "to": "proj.hdmi_in_1", "length": 2 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение доходит до проектора по трассе не короче 30 м", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" }, "minLength": 30 },
+        { "type": "uses", "text": "Использован удлинитель HDBaseT (передатчик и приёмник)", "select": { "type": "extender" }, "min": 2 },
+        { "type": "no_issue", "text": "Ни один кабель не длиннее допустимого", "issues": ["cable_length"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "dante-ceiling",
+      "title": "Потолочный микрофон по сети Dante",
+      "kind": "build",
+      "level": 3,
+      "goal": "Подключите потолочный микрофонный массив Shure MXA910 к процессору QSC Core по сети Dante и выведите звук на активную колонку.",
+      "theory": "Dante передаёт звук по обычной Ethernet-сети через коммутатор. Микрофонный массив питается по тому же кабелю (PoE), поэтому коммутатор должен уметь подавать PoE.",
+      "hints": [
+        "Цепочка: массив → сетевой коммутатор → процессор (вход Dante) → колонка.",
+        "Сравните коммутаторы в библиотеке: какой из них подаёт питание PoE?",
+        "Выход процессора XLR OUT 1 подключите ко входу активной колонки."
+      ],
+      "palette": ["shure-mxa910", "cisco-sg350", "netgear-gs728tp", "qsc-core-110f", "jbl-prx815w"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "arr", "eq": "shure-mxa910", "x": 40, "y": 80 },
+          { "id": "sw", "eq": "netgear-gs728tp", "x": 340, "y": 80 },
+          { "id": "dsp", "eq": "qsc-core-110f", "x": 640, "y": 80 },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 940, "y": 80 }
+        ],
+        "connections": [
+          { "from": "arr.dante_out", "to": "sw.eth_1", "length": 20 },
+          { "from": "sw.eth_2", "to": "dsp.dante_in", "length": 5 },
+          { "from": "dsp.xlr_out_1", "to": "spk.xlr_in", "length": 15 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук массива доходит до колонки", "domain": "audio", "from": { "type": "array_microphone" }, "to": { "type": "speaker" } },
+        { "type": "no_issue", "text": "Массив получает питание PoE", "issues": ["no_poe"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "av-over-ip",
+      "title": "Видео по сети",
+      "kind": "build",
+      "level": 2,
+      "goal": "Передайте изображение камеры на дисплей в другом конце здания по сети: кодер → сетевой коммутатор → декодер.",
+      "theory": "AV-over-IP: кодер превращает HDMI в сетевой поток, коммутатор его доставляет, декодер возвращает HDMI для дисплея. Так один источник можно показать на многих дисплеях.",
+      "hints": [
+        "Камера (HDMI) → кодер, выход кодера NETWORK OUT → порт коммутатора.",
+        "Другой порт коммутатора → вход декодера NETWORK IN.",
+        "Декодер (HDMI OUT) → вход дисплея."
+      ],
+      "palette": ["sony-srg300h", "crestron-nvx-enc", "crestron-nvx-dec", "netgear-gs728tp", "lg-75up8000"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "cam", "eq": "sony-srg300h", "x": 40, "y": 80 },
+          { "id": "enc", "eq": "crestron-nvx-enc", "x": 340, "y": 80 },
+          { "id": "sw", "eq": "netgear-gs728tp", "x": 640, "y": 80 },
+          { "id": "dec", "eq": "crestron-nvx-dec", "x": 940, "y": 80 },
+          { "id": "tv", "eq": "lg-75up8000", "x": 1240, "y": 80 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "enc.hdmi_in", "length": 3 },
+          { "from": "enc.network_out", "to": "sw.eth_1", "length": 40 },
+          { "from": "sw.eth_2", "to": "dec.network_in", "length": 60 },
+          { "from": "dec.hdmi_out", "to": "tv.hdmi_in_1", "length": 2 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение камеры доходит до дисплея", "domain": "video", "from": { "type": "camera" }, "to": { "type": "display" } },
+        { "type": "uses", "text": "Видео идёт через сетевой коммутатор", "select": { "type": "network_switch" }, "min": 1 },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "meeting-room",
+      "title": "Переговорная с ВКС",
+      "kind": "build",
+      "level": 2,
+      "goal": "Соберите переговорную: видеобар подключается к ноутбуку, а ноутбук выводит видеоконференцию на дисплей.",
+      "theory": "Видеобар объединяет камеру, микрофоны и динамик и подключается к компьютеру одним USB-кабелем; программа ВКС на компьютере получает изображение и звук и выводит конференцию на дисплей по HDMI.",
+      "hints": [
+        "Видеобар USB OUT → USB IN ноутбука (кабель короткий, USB — до 5 м).",
+        "Ноутбук HDMI OUT → вход дисплея.",
+        "Проверьте длину USB-кабеля: по умолчанию он 10 м — уменьшите."
+      ],
+      "palette": ["generic-video-bar", "generic-laptop", "samsung-qm85r"],
+      "start": { "devices": [] },
+      "solution": {
+        "devices": [
+          { "id": "bar", "eq": "generic-video-bar", "x": 40, "y": 80 },
+          { "id": "pc", "eq": "generic-laptop", "x": 340, "y": 80 },
+          { "id": "tv", "eq": "samsung-qm85r", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "bar.usb_out", "to": "pc.usb_in", "length": 3 },
+          { "from": "pc.hdmi_out", "to": "tv.hdmi_in_1", "length": 5 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение камеры видеобара доходит до дисплея", "domain": "video", "from": { "type": "video_bar" }, "to": { "type": "display" } },
+        { "type": "no_issue", "text": "Длина кабелей в пределах нормы", "issues": ["cable_length"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "fix-quiet",
+      "title": "Неисправность: слишком тихо",
+      "kind": "troubleshoot",
+      "level": 1,
+      "allowFixes": false,
+      "goal": "Система собрана, но голос из колонки еле слышен. Найдите причину и исправьте настройку.",
+      "theory": "Если усиление входа (gain) слишком мало, сигнал микрофона не поднимается до линейного уровня и колонка играет тихо. Норма на входе активной колонки — от −10 до +20 дБu.",
+      "hints": [
+        "Запустите «Симуляцию» и посмотрите уровень сигнала на колонке.",
+        "Уровень поднимает предусилитель микшера.",
+        "Выберите микшер и увеличьте «Усиление входа (дБ)», например до 45."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "jbl-prx815w"],
+      "start": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "input_gain": 0 } },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "input_gain": 45 } },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук микрофона доходит до колонки", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" } },
+        { "type": "no_issue", "text": "Уровень сигнала в норме (без «слабого сигнала» и перегрузки)", "issues": ["level_low", "level_high"] }
+      ]
+    },
+    {
+      "id": "fix-switcher",
+      "title": "Неисправность: на проекторе не та картинка",
+      "kind": "troubleshoot",
+      "level": 2,
+      "allowFixes": false,
+      "goal": "Докладчик подключил ноутбук, но на проекторе по-прежнему камера. Выведите на проектор презентацию с ноутбука.",
+      "theory": "Презентационный коммутатор передаёт на выход только выбранный вход. Ноутбук подключён — значит, нужно выбрать его вход.",
+      "hints": [
+        "Посмотрите, к какому входу коммутатора подключён ноутбук.",
+        "Выбранный вход на холсте отмечен «▶».",
+        "Выберите коммутатор и измените «Выбранный вход (номер)»."
+      ],
+      "palette": ["sony-srg300h", "generic-laptop", "extron-in1608", "epson-l1755u"],
+      "start": {
+        "devices": [
+          { "id": "cam", "eq": "sony-srg300h", "x": 40, "y": 60 },
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 200 },
+          { "id": "sw", "eq": "extron-in1608", "x": 340, "y": 80, "props": { "selected_input": 1 } },
+          { "id": "proj", "eq": "epson-l1755u", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "sw.hdmi_in_1", "length": 10 },
+          { "from": "pc.hdmi_out", "to": "sw.hdmi_in_2", "length": 5 },
+          { "from": "sw.hdmi_out_1", "to": "proj.hdmi_in_1", "length": 10 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "cam", "eq": "sony-srg300h", "x": 40, "y": 60 },
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 200 },
+          { "id": "sw", "eq": "extron-in1608", "x": 340, "y": 80, "props": { "selected_input": 2 } },
+          { "id": "proj", "eq": "epson-l1755u", "x": 640, "y": 80 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "sw.hdmi_in_1", "length": 10 },
+          { "from": "pc.hdmi_out", "to": "sw.hdmi_in_2", "length": 5 },
+          { "from": "sw.hdmi_out_1", "to": "proj.hdmi_in_1", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение ноутбука доходит до проектора", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" } },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "fix-amp",
+      "title": "Неисправность: усилитель уходит в защиту",
+      "kind": "troubleshoot",
+      "level": 3,
+      "allowFixes": false,
+      "goal": "Три колонки по 8 Ом подключены к одному каналу усилителя, и на громкости он отключается. Перераспределите нагрузку, чтобы звучали все три колонки.",
+      "theory": "Колонки на одном выходе включаются параллельно: три по 8 Ом дают около 2,7 Ом — меньше минимальных 4 Ом этого усилителя. Нагрузку делят между каналами: например, две колонки на левом (4 Ом) и одна на правом (8 Ом).",
+      "hints": [
+        "Запустите «Симуляцию»: какая нагрузка получается на канале?",
+        "У усилителя два канала. Используйте и правый: на вход R нужен сигнал с микшера.",
+        "Подключите выход микшера R к входу усилителя R, а одну колонку перенесите на SPEAKON OUT R."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "crown-xls2502", "ev-evf1122"],
+      "start": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80 },
+          { "id": "amp", "eq": "crown-xls2502", "x": 640, "y": 80 },
+          { "id": "s1", "eq": "ev-evf1122", "x": 940, "y": 40 },
+          { "id": "s2", "eq": "ev-evf1122", "x": 940, "y": 160 },
+          { "id": "s3", "eq": "ev-evf1122", "x": 940, "y": 280 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in_l", "length": 3 },
+          { "from": "amp.speakon_out_l", "to": "s1.speakon_in", "length": 15 },
+          { "from": "amp.speakon_out_l", "to": "s2.speakon_in", "length": 15 },
+          { "from": "amp.speakon_out_l", "to": "s3.speakon_in", "length": 15 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80 },
+          { "id": "amp", "eq": "crown-xls2502", "x": 640, "y": 80 },
+          { "id": "s1", "eq": "ev-evf1122", "x": 940, "y": 40 },
+          { "id": "s2", "eq": "ev-evf1122", "x": 940, "y": 160 },
+          { "id": "s3", "eq": "ev-evf1122", "x": 940, "y": 280 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in_l", "length": 3 },
+          { "from": "mix.xlr_out_r", "to": "amp.xlr_in_r", "length": 3 },
+          { "from": "amp.speakon_out_l", "to": "s1.speakon_in", "length": 15 },
+          { "from": "amp.speakon_out_l", "to": "s2.speakon_in", "length": 15 },
+          { "from": "amp.speakon_out_r", "to": "s3.speakon_in", "length": 15 }
+        ]
+      },
+      "checks": [
+        { "type": "uses", "text": "На схеме три колонки", "select": { "model": "EVF-1122S" }, "min": 3 },
+        { "type": "reaches", "text": "Звук доходит до всех трёх колонок", "domain": "audio", "from": { "type": "microphone" }, "to": { "model": "EVF-1122S" }, "all": true },
+        { "type": "no_issue", "text": "Нагрузка на каналах не ниже допустимой", "issues": ["impedance_low"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "fix-matrix",
+      "title": "Неисправность: второй экран пустой",
+      "kind": "troubleshoot",
+      "level": 3,
+      "allowFixes": false,
+      "goal": "Камера должна показываться на обоих дисплеях, но второй экран пустой. Настройте матричный коммутатор.",
+      "theory": "Матрица передаёт входы на выходы по таблице коммутации «вход>выход». Один вход можно отправить сразу на несколько выходов: «1>1, 1>2».",
+      "hints": [
+        "К каким выходам матрицы подключены дисплеи?",
+        "Посмотрите параметр «Коммутация матрицы» у матрицы.",
+        "Добавьте в таблицу маршрут с входа 1 на выход 2: «1>1, 1>2»."
+      ],
+      "palette": ["sony-srg300h", "lightware-mx2-8x8", "lg-75up8000", "samsung-qm85r"],
+      "start": {
+        "devices": [
+          { "id": "cam", "eq": "sony-srg300h", "x": 40, "y": 80 },
+          { "id": "mx", "eq": "lightware-mx2-8x8", "x": 340, "y": 80, "props": { "routes": "1>1" } },
+          { "id": "tv1", "eq": "lg-75up8000", "x": 640, "y": 40 },
+          { "id": "tv2", "eq": "samsung-qm85r", "x": 640, "y": 200 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "mx.hdmi_in_1", "length": 10 },
+          { "from": "mx.hdmi_out_1", "to": "tv1.hdmi_in_1", "length": 10 },
+          { "from": "mx.hdmi_out_2", "to": "tv2.hdmi_in_1", "length": 10 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "cam", "eq": "sony-srg300h", "x": 40, "y": 80 },
+          { "id": "mx", "eq": "lightware-mx2-8x8", "x": 340, "y": 80, "props": { "routes": "1>1, 1>2" } },
+          { "id": "tv1", "eq": "lg-75up8000", "x": 640, "y": 40 },
+          { "id": "tv2", "eq": "samsung-qm85r", "x": 640, "y": 200 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "mx.hdmi_in_1", "length": 10 },
+          { "from": "mx.hdmi_out_1", "to": "tv1.hdmi_in_1", "length": 10 },
+          { "from": "mx.hdmi_out_2", "to": "tv2.hdmi_in_1", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Камера на обоих дисплеях", "domain": "video", "from": { "type": "camera" }, "to": { "type": "display" }, "all": true },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    }
+  ]
+}
