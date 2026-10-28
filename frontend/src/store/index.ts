@@ -4,10 +4,32 @@ import canvasReducer, { initialCanvasState } from '../features/canvasSlice';
 import lessonReducer, { initialLessonState, LessonState } from '../features/lessonSlice';
 import { parseProjectDoc, serializeProject } from '../data/projectSchema';
 import { setSaveStatus } from './saveStatus';
+import { Lesson, lessonsFile, parseLesson } from '../learning/lessonSchema';
 
 const STORAGE_KEY = 'av-tracer:autosave';
 const PREFS_KEY = 'av-tracer:prefs';
 const LESSON_KEY = 'av-tracer:lesson';
+const CUSTOM_LESSONS_KEY = 'av-tracer:custom-lessons';
+
+/**
+ * Свои задания преподавателя. Каждое проверяется отдельно: задание, ставшее
+ * некорректным (например, карточку убрали из каталога), не мешает остальным.
+ */
+function loadCustomLessons(): Lesson[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOM_LESSONS_KEY) || '{}');
+    if (!Array.isArray(raw.lessons)) return [];
+    return raw.lessons.flatMap((l: unknown) => {
+      try {
+        return [parseLesson(l)];
+      } catch {
+        return [];
+      }
+    });
+  } catch {
+    return [];
+  }
+}
 
 /** Учебный режим (текущее задание и пройденные) — удобство конкретного браузера. */
 function loadLesson(): LessonState {
@@ -19,9 +41,10 @@ function loadLesson(): LessonState {
       hintsShown: Number.isInteger(raw.hintsShown) ? raw.hintsShown : 0,
       solutionShown: raw.solutionShown === true,
       completed: Array.isArray(raw.completed) ? raw.completed.filter((x: unknown) => typeof x === 'string') : [],
+      custom: loadCustomLessons(),
     };
   } catch {
-    return initialLessonState;
+    return { ...initialLessonState, custom: loadCustomLessons() };
   }
 }
 
@@ -76,10 +99,15 @@ let lastLesson = store.getState().lesson;
 store.subscribe(() => {
   const lesson = store.getState().lesson;
   if (lesson === lastLesson) return;
+  const customChanged = lesson.custom !== lastLesson.custom;
   lastLesson = lesson;
   try {
     const { activeId, hintsShown, solutionShown, completed } = lesson;
     localStorage.setItem(LESSON_KEY, JSON.stringify({ activeId, hintsShown, solutionShown, completed }));
+    if (customChanged) {
+      if (lesson.custom.length) localStorage.setItem(CUSTOM_LESSONS_KEY, JSON.stringify(lessonsFile(lesson.custom)));
+      else localStorage.removeItem(CUSTOM_LESSONS_KEY);
+    }
   } catch {
     /* хранилище недоступно — прогресс просто не запомнится */
   }

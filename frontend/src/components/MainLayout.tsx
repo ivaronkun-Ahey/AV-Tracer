@@ -39,6 +39,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExportStage from './ExportStage';
 import DrawingExportDialog from './DrawingExportDialog';
 import LessonsDialog from './LessonsDialog';
+import LessonEditorDialog from './LessonEditorDialog';
+import type { Lesson } from '../learning/lessonSchema';
 import LessonPanel from './LessonPanel';
 import SchoolIcon from '@mui/icons-material/School';
 import ArchitectureIcon from '@mui/icons-material/Architecture';
@@ -141,6 +143,7 @@ const MainLayout: React.FC = () => {
   const [layoutRunning, setLayoutRunning] = useState(false);
   const [drawingsOpen, setDrawingsOpen] = useState(false);
   const [lessonsOpen, setLessonsOpen] = useState(false);
+  const [lessonEditor, setLessonEditor] = useState<{ open: boolean; lesson?: Lesson }>({ open: false });
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
 
   // Если хватает ширины, панель стоит сбоку от холста и сворачивается (библиотека —
@@ -622,7 +625,15 @@ const MainLayout: React.FC = () => {
       </Menu>
 
       <DrawingExportDialog open={drawingsOpen} onClose={() => setDrawingsOpen(false)} />
-      <LessonsDialog open={lessonsOpen} onClose={() => setLessonsOpen(false)} />
+      <LessonsDialog
+        open={lessonsOpen}
+        onClose={() => setLessonsOpen(false)}
+        onEdit={(lesson) => {
+          setLessonsOpen(false);
+          setLessonEditor({ open: true, lesson });
+        }}
+      />
+      <LessonEditorDialog open={lessonEditor.open} lesson={lessonEditor.lesson} onClose={() => setLessonEditor((e) => ({ ...e, open: false }))} />
 
       {exportJob && (
         <ExportStage

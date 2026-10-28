@@ -34,7 +34,7 @@ const SimulationPanel: React.FC = () => {
   const showSimulation = useAppSelector((s) => s.canvas.showSimulation);
   const devices = useAppSelector((s) => s.canvas.devices);
   // В заданиях «найди неисправность» исправлять нужно самому
-  const fixesAllowed = useAppSelector((s) => findLesson(s.lesson.activeId)?.allowFixes ?? true);
+  const fixesAllowed = useAppSelector((s) => findLesson(s.lesson.activeId, s.lesson.custom)?.allowFixes ?? true);
 
   const name = (id: string) => devices.find((d) => d.id === id)?.model || id;
 

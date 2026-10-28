@@ -21,7 +21,7 @@ const LessonPanel: React.FC<{ onOpenList: () => void }> = ({ onOpenList }) => {
   const connections = useAppSelector((s) => s.canvas.connections);
   const [collapsed, setCollapsed] = useState(false);
   const [theoryOpen, setTheoryOpen] = useState(false);
-  const lesson = findLesson(lessonState.activeId);
+  const lesson = findLesson(lessonState.activeId, lessonState.custom);
 
   // Схема изменилась — прежний результат проверки уже не про неё
   useEffect(() => {
@@ -32,7 +32,9 @@ const LessonPanel: React.FC<{ onOpenList: () => void }> = ({ onOpenList }) => {
   useEffect(() => setTheoryOpen(false), [lessonState.activeId]);
 
   if (!lesson) return null;
-  const next = LESSONS[LESSONS.indexOf(lesson) + 1];
+  // Следующее — в том же списке: встроенные задания или свои
+  const list = LESSONS.includes(lesson) ? LESSONS : lessonState.custom;
+  const next = list[list.indexOf(lesson) + 1];
 
   if (collapsed) {
     return (

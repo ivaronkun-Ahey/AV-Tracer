@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 async function openClean(page: Page) {
   page.on('dialog', (d) => d.accept());
@@ -64,4 +65,59 @@ test('задание со своим оборудованием: библиот�
   await expect(library.getByRole('button', { name: /^SM58, Микрофон/ })).toHaveCount(0);
   await library.getByRole('button', { name: /показать всё/ }).click();
   await expect(library.getByRole('button', { name: /^SM58, Микрофон/ })).toBeVisible();
+});
+
+test('преподаватель: задание из схемы, прохождение, файл заданий и загрузка обратно', async ({ page }) => {
+  await openClean(page);
+  await page.getByRole('button', { name: 'Примеры' }).click();
+  await page.getByText('Базовая система оповещения').click();
+  await expect(page.getByText(/Устройств: [1-9]/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Учёба' }).click();
+  await page.getByRole('button', { name: 'Создать задание' }).click();
+  const editor = page.getByRole('dialog', { name: 'Новое задание' });
+  await editor.getByLabel('Название').fill('Оповещение в зале');
+  await editor.getByLabel('Цель задания').fill('Соберите систему оповещения: голос с микрофона в колонках.');
+  await editor.getByLabel('Подсказки').fill('Начните с микрофона.\nВыход микшера — на колонку.');
+  // Без решения сохранить нельзя
+  await editor.getByRole('button', { name: 'Сохранить задание' }).click();
+  await expect(editor.getByText(/Задайте эталонное решение/)).toBeVisible();
+
+  await editor.getByRole('button', { name: 'Взять текущую схему как решение' }).click();
+  await expect(editor.getByLabel('Эталонное решение')).toHaveText(/устройств: \d+, кабелей: \d+/);
+  await expect(editor.getByRole('checkbox', { name: /Проверка: Звук: Микрофон →/ })).toBeChecked();
+  await editor.getByRole('button', { name: 'Сохранить задание' }).click();
+  await expect(page.getByText(/Задание «Оповещение в зале» сохранено/)).toBeVisible();
+
+  // Задание в списке «Свои задания»; ученик начинает с пустого холста и оборудования задания
+  await page.getByRole('button', { name: 'Учёба' }).click();
+  await page.getByRole('list', { name: 'Свои задания' }).getByText('Оповещение в зале').click();
+  const panel = page.getByRole('region', { name: 'Учебное задание' });
+  await expect(panel.getByText('Оповещение в зале')).toBeVisible();
+  await expect(page.getByText('Устройств: 0')).toBeVisible();
+  const library = page.getByRole('complementary', { name: 'Библиотека оборудования' });
+  await expect(library.getByRole('button', { name: /^SM58, Микрофон/ })).toBeVisible();
+  await expect(library.getByRole('button', { name: /^Beta 87A, Микрофон/ })).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Проверить' }).click();
+  await expect(panel.getByRole('img', { name: 'не выполнено' }).first()).toBeVisible();
+  await panel.getByRole('button', { name: 'Выйти из задания' }).click();
+  await expect(page.getByText(/Устройств: [1-9]/)).toBeVisible();
+
+  // Файл заданий: скачать, удалить задание, загрузить файл обратно
+  await page.getByRole('button', { name: 'Учёба' }).click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Скачать свои задания' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^av-tracer-zadaniya-\d{4}-\d{2}-\d{2}\.json$/);
+  const file = JSON.parse(readFileSync((await download.path())!, 'utf8'));
+  expect(file.lessons).toHaveLength(1);
+  expect(file.lessons[0]).toMatchObject({ id: 'my-opoveshchenie-v-zale', kind: 'build', hints: ['Начните с микрофона.', 'Выход микшера — на колонку.'] });
+
+  await page.getByRole('button', { name: 'Удалить «Оповещение в зале»' }).click();
+  await expect(page.getByRole('list', { name: 'Свои задания' })).toHaveCount(0);
+  await page.getByTestId('lessons-file').setInputFiles((await download.path())!);
+  await expect(page.getByText('Загружено заданий: 1')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Свои задания' }).getByText('Оповещение в зале')).toBeVisible();
+  // Свои задания переживают перезагрузку
+  await page.reload();
+  await page.getByRole('button', { name: 'Учёба' }).click();
+  await expect(page.getByRole('list', { name: 'Свои задания' }).getByText('Оповещение в зале')).toBeVisible();
 });

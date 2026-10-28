@@ -39,8 +39,9 @@ const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
   const [expandedCategory, setExpandedCategory] = useState<string>('audio');
   // В задании библиотека показывает только его оборудование (можно открыть всё)
   const lessonId = useAppSelector((s) => s.lesson.activeId);
+  const customLessons = useAppSelector((s) => s.lesson.custom);
   const showAll = useAppSelector((s) => s.lesson.showAllEquipment);
-  const palette = findLesson(lessonId)?.palette;
+  const palette = findLesson(lessonId, customLessons)?.palette;
   const limited = !!palette && !showAll;
 
   // Без перетаскивания (клавиатура, сенсорный экран): устройство встаёт в центр

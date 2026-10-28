@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { CheckResult } from '../learning/checks';
+import type { Lesson } from '../learning/lessonSchema';
 
 /** Состояние учебного режима: задание, подсказки, результат проверки, пройденные задания. */
 export interface LessonState {
@@ -12,6 +13,8 @@ export interface LessonState {
   /** Показать всю библиотеку, а не только оборудование задания. */
   showAllEquipment: boolean;
   completed: string[];
+  /** Свои задания (редактор преподавателя или загруженные из файла). */
+  custom: Lesson[];
 }
 
 export const initialLessonState: LessonState = {
@@ -22,6 +25,7 @@ export const initialLessonState: LessonState = {
   solutionShown: false,
   showAllEquipment: false,
   completed: [],
+  custom: [],
 };
 
 const lessonSlice = createSlice({
@@ -59,8 +63,29 @@ const lessonSlice = createSlice({
     toggleAllEquipment: (state) => {
       state.showAllEquipment = !state.showAllEquipment;
     },
+    /** Добавить задание или заменить задание с тем же id. */
+    saveCustomLessons: (state, action: PayloadAction<Lesson[]>) => {
+      for (const lesson of action.payload) {
+        const i = state.custom.findIndex((l) => l.id === lesson.id);
+        if (i >= 0) state.custom[i] = lesson;
+        else state.custom.push(lesson);
+      }
+    },
+    removeCustomLesson: (state, action: PayloadAction<string>) => {
+      state.custom = state.custom.filter((l) => l.id !== action.payload);
+      state.completed = state.completed.filter((id) => id !== action.payload);
+    },
   },
 });
 
-export const { startLesson, exitLesson, showHint, setResults, markSolutionShown, toggleAllEquipment } = lessonSlice.actions;
+export const {
+  startLesson,
+  exitLesson,
+  showHint,
+  setResults,
+  markSolutionShown,
+  toggleAllEquipment,
+  saveCustomLessons,
+  removeCustomLesson,
+} = lessonSlice.actions;
 export default lessonSlice.reducer;

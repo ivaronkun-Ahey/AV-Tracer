@@ -84,6 +84,12 @@ export type LessonCheck = z.infer<typeof checkSchema>;
 export type DocSpec = z.infer<typeof docSpecSchema>;
 export type Lesson = z.infer<typeof lessonSchema>;
 
+function checkEquipment(l: Lesson) {
+  for (const eq of [...(l.palette ?? []), ...l.start.devices.map((d) => d.eq), ...l.solution.devices.map((d) => d.eq)]) {
+    if (!findEquipment(eq)) throw new Error(`Ошибка в задании «${l.id}»: нет в каталоге «${eq}»`);
+  }
+}
+
 export function parseLessons(raw: unknown): Lesson[] {
   const parsed = lessonsFileSchema.safeParse(raw, PARSE_OPTIONS);
   if (!parsed.success) throw new Error(`Ошибка в заданиях: ${describeZodError(parsed.error)}`);
@@ -91,12 +97,21 @@ export function parseLessons(raw: unknown): Lesson[] {
   for (const l of parsed.data.lessons) {
     if (ids.has(l.id)) throw new Error(`Ошибка в заданиях: повторяется id «${l.id}»`);
     ids.add(l.id);
-    for (const eq of l.palette ?? []) {
-      if (!findEquipment(eq)) throw new Error(`Ошибка в задании «${l.id}»: нет в каталоге «${eq}»`);
-    }
+    checkEquipment(l);
   }
   return parsed.data.lessons;
 }
+
+/** Одно задание (из редактора преподавателя). */
+export function parseLesson(raw: unknown): Lesson {
+  const parsed = lessonSchema.safeParse(raw, PARSE_OPTIONS);
+  if (!parsed.success) throw new Error(`Ошибка в задании: ${describeZodError(parsed.error)}`);
+  checkEquipment(parsed.data);
+  return parsed.data;
+}
+
+/** Файл заданий — того же формата, что src/data/lessons.json. */
+export const lessonsFile = (lessons: Lesson[]) => ({ $comment: 'Учебные задания AV-Tracer', lessons });
 
 /** Схема из короткой записи: устройства из каталога, кабели «устройство.порт». */
 export function buildDoc(spec: DocSpec, lessonId = ''): ProjectDoc {
