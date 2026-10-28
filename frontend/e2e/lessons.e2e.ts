@@ -47,7 +47,8 @@ test('учебное задание: проверка, исправление в
   await panel.getByRole('button', { name: 'Выйти из задания' }).click();
   await expect(page.getByText('Устройств: 4')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Учебное задание' })).toHaveCount(0);
-  expect((await autosave(page)).devices).toHaveLength(4);
+  // Автосохранение отложено (до 0,4 с) — ждём, пока в нём появится своя схема
+  await expect.poll(async () => (await autosave(page)).devices?.length).toBe(4);
 
   // В списке задание отмечено пройденным
   await page.getByRole('button', { name: 'Учёба' }).click();

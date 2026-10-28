@@ -41,8 +41,9 @@ test('чертежи по ГОСТ СПДС: штамп сохраняется �
   await expect(page.getByText(/PDF сформирован/)).toBeVisible();
 
   // Данные штампа сохранились в проекте
-  const meta = await page.evaluate(() => JSON.parse(localStorage.getItem('av-tracer:autosave') || '{}').meta);
-  expect(meta).toMatchObject({ code: '2026-07-СС', developer: 'Иванов', stage: 'Р' });
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('av-tracer:autosave') || '{}').meta))
+    .toMatchObject({ code: '2026-07-СС', developer: 'Иванов', stage: 'Р' });
   expect(errors).toEqual([]);
 });
 
