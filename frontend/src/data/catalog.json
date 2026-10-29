@@ -1031,6 +1031,71 @@
                 "resolution": "1920x1080",
                 "output_level": -10
               }
+            },
+            {
+              "_id": "generic-vc-codec",
+              "type": "vc_codec",
+              "manufacturer": "Типовое",
+              "model": "Кодек ВКС",
+              "full_name": "Кодек видеоконференцсвязи (типовой): вход камеры и презентации, два микрофонных входа, два выхода на дисплеи, аудиовыход, LAN",
+              "ports": [
+                {
+                  "id": "hdmi_in_1",
+                  "type": "hdmi",
+                  "direction": "input",
+                  "signal_type": "hdmi",
+                  "label": "CAMERA IN"
+                },
+                {
+                  "id": "hdmi_in_2",
+                  "type": "hdmi",
+                  "direction": "input",
+                  "signal_type": "hdmi",
+                  "label": "CONTENT IN"
+                },
+                {
+                  "id": "xlr_in_1",
+                  "type": "xlr",
+                  "direction": "input",
+                  "signal_type": "analog_audio",
+                  "label": "MIC IN 1"
+                },
+                {
+                  "id": "xlr_in_2",
+                  "type": "xlr",
+                  "direction": "input",
+                  "signal_type": "analog_audio",
+                  "label": "MIC IN 2"
+                },
+                {
+                  "id": "hdmi_out_1",
+                  "type": "hdmi",
+                  "direction": "output",
+                  "signal_type": "hdmi",
+                  "label": "DISPLAY 1"
+                },
+                {
+                  "id": "hdmi_out_2",
+                  "type": "hdmi",
+                  "direction": "output",
+                  "signal_type": "hdmi",
+                  "label": "DISPLAY 2"
+                },
+                {
+                  "id": "xlr_out",
+                  "type": "xlr",
+                  "direction": "output",
+                  "signal_type": "analog_audio",
+                  "label": "AUDIO OUT"
+                },
+                "eth"
+              ],
+              "default_properties": {
+                "resolution": "1920x1080",
+                "input_gain": 45,
+                "phantom_power": false,
+                "output_level": 4
+              }
             }
           ]
         }

@@ -643,6 +643,60 @@
         { "type": "reaches", "text": "Звук микрофона доходит до всех рупоров", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" }, "all": true },
         { "type": "no_issue", "text": "Линия 100 В не перегружена и с запасом мощности", "issues": ["line_overload", "line_headroom"] }
       ]
+    },
+    {
+      "id": "fix-vc-mic",
+      "title": "Неисправность: на видеоконференции вас не слышат",
+      "kind": "troubleshoot",
+      "level": 2,
+      "allowFixes": false,
+      "goal": "В переговорной всё подключено: камера, микрофон, кодек ВКС, дисплей и колонка. Собеседников видно и слышно, но они говорят, что не слышат вас. Найдите причину и исправьте.",
+      "theory": "Кодек ВКС отправляет на дальнюю сторону изображение камеры и звук микрофонов, а изображение и звук собеседников выводит на дисплей и колонки. Конденсаторному микрофону нужно фантомное питание +48 В — его подаёт вход, к которому микрофон подключён: здесь это микрофонный вход кодека.",
+      "hints": [
+        "Запустите «Симуляцию»: что не так с микрофоном?",
+        "Shure Beta 87A — конденсаторный микрофон, без +48 В он не работает.",
+        "Выберите кодек ВКС и включите «Фантомное питание +48V»."
+      ],
+      "palette": ["ptzoptics-20x", "shure-beta87a", "generic-vc-codec", "samsung-qm85r", "jbl-prx815w", "cisco-sg350"],
+      "start": {
+        "devices": [
+          { "id": "cam", "eq": "ptzoptics-20x", "x": 40, "y": 80 },
+          { "id": "mic", "eq": "shure-beta87a", "x": 40, "y": 260 },
+          { "id": "vc", "eq": "generic-vc-codec", "x": 400, "y": 120, "props": { "phantom_power": false } },
+          { "id": "tv", "eq": "samsung-qm85r", "x": 760, "y": 80 },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 760, "y": 260 },
+          { "id": "lan", "eq": "cisco-sg350", "x": 400, "y": 460 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "vc.hdmi_in_1", "length": 10 },
+          { "from": "mic.xlr_out", "to": "vc.xlr_in_1", "length": 8 },
+          { "from": "vc.hdmi_out_1", "to": "tv.hdmi_in_1", "length": 5 },
+          { "from": "vc.xlr_out", "to": "spk.xlr_in", "length": 5 },
+          { "from": "vc.eth", "to": "lan.eth_1", "length": 15 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "cam", "eq": "ptzoptics-20x", "x": 40, "y": 80 },
+          { "id": "mic", "eq": "shure-beta87a", "x": 40, "y": 260 },
+          { "id": "vc", "eq": "generic-vc-codec", "x": 400, "y": 120, "props": { "phantom_power": true } },
+          { "id": "tv", "eq": "samsung-qm85r", "x": 760, "y": 80 },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 760, "y": 260 },
+          { "id": "lan", "eq": "cisco-sg350", "x": 400, "y": 460 }
+        ],
+        "connections": [
+          { "from": "cam.hdmi_out", "to": "vc.hdmi_in_1", "length": 10 },
+          { "from": "mic.xlr_out", "to": "vc.xlr_in_1", "length": 8 },
+          { "from": "vc.hdmi_out_1", "to": "tv.hdmi_in_1", "length": 5 },
+          { "from": "vc.xlr_out", "to": "spk.xlr_in", "length": 5 },
+          { "from": "vc.eth", "to": "lan.eth_1", "length": 15 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук микрофона уходит в кодек ВКС", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "vc_codec" } },
+        { "type": "reaches", "text": "Изображение камеры уходит в кодек ВКС", "domain": "video", "from": { "type": "camera" }, "to": { "type": "vc_codec" } },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
     }
   ]
 }

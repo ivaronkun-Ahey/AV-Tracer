@@ -186,4 +186,35 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       };
     },
   },
+  {
+    id: 'vc-codec-room',
+    name: 'Переговорная с кодеком ВКС',
+    description: 'PTZ-камера и ноутбук → кодек; два микрофона; собеседники и презентация — на двух дисплеях, звук — в колонку; кодек в сети',
+    build: () => {
+      const cam = instantiate('ptzoptics-20x', 'v_cam', 40, 80);
+      const pc = instantiate('generic-laptop', 'v_pc', 40, 240);
+      const mic1 = instantiate('sennheiser-e835', 'v_mic1', 40, 420);
+      const mic2 = instantiate('sennheiser-e835', 'v_mic2', 40, 540);
+      const vc = instantiate('generic-vc-codec', 'v_vc', 400, 200);
+      const tv1 = instantiate('samsung-qm85r', 'v_tv1', 760, 80);
+      const tv2 = instantiate('lg-75up8000', 'v_tv2', 760, 260);
+      const spk = instantiate('jbl-prx815w', 'v_spk', 760, 440);
+      const lan = instantiate('cisco-sg350', 'v_lan', 400, 620);
+      const uplink = connect(['v_vc', 'eth'], ['v_lan', 'eth_1'], 'cat6');
+      uplink.cable_length = 15;
+      return {
+        devices: [cam, pc, mic1, mic2, vc, tv1, tv2, spk, lan],
+        connections: [
+          connect(['v_cam', 'hdmi_out'], ['v_vc', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_pc', 'hdmi_out'], ['v_vc', 'hdmi_in_2'], 'hdmi'),
+          connect(['v_mic1', 'xlr_out'], ['v_vc', 'xlr_in_1'], 'xlr'),
+          connect(['v_mic2', 'xlr_out'], ['v_vc', 'xlr_in_2'], 'xlr'),
+          connect(['v_vc', 'hdmi_out_1'], ['v_tv1', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_vc', 'hdmi_out_2'], ['v_tv2', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_vc', 'xlr_out'], ['v_spk', 'xlr_in'], 'xlr'),
+          uplink,
+        ],
+      };
+    },
+  },
 ];

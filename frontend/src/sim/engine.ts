@@ -18,7 +18,9 @@ const NOMINAL_DBU = 4;
 const MAX_FIX_GAIN_DB = 70;
 
 // Компьютер и видеобар выдают звук линейного уровня (параметр output_level, дБu)
-const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'computer', 'video_bar', 'media_player'];
+const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'computer', 'video_bar', 'media_player', 'vc_codec'];
+/** Источники звука «нашей» стороны для кодека ВКС. */
+const MIC_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'video_bar'];
 // Компьютер, плеер, видеобар без указанного уровня — бытовой линейный уровень, дБu
 const LINE_SOURCES = ['computer', 'media_player', 'video_bar'];
 const LINE_SOURCE_DBU = -10;
@@ -26,7 +28,7 @@ const LINE_SOURCE_DBU = -10;
 const EMBEDDED = new Set(['hdmi', 'sdi', 'hdbaset']);
 // DI-бокс без подключённого входа изображает инструмент (гитару, клавиши)
 const DI_LEVEL_DBU = -35;
-const VIDEO_SOURCES = ['camera', 'media_player', 'computer', 'document_camera', 'video_bar'];
+const VIDEO_SOURCES = ['camera', 'media_player', 'computer', 'document_camera', 'video_bar', 'vc_codec'];
 const AUDIO_SINKS = ['speaker', 'subwoofer'];
 const VIDEO_SINKS = ['display', 'projector'];
 // Каскады с регулируемым усилением: предусилитель входа + выходной уровень
@@ -183,6 +185,14 @@ function analyzeAudioPath(traced: TracedPath, byId: Record<string, Device>) {
     level = level + stageGain(d, traced.entries[i]);
     lastStage = { device: d, entry: traced.entries[i] };
     if (!clip && level > LINE_MAX_DBU) clip = { device: d, entry: traced.entries[i], level };
+  }
+  // Кодек ВКС — конечная точка звука микрофонов: уровень — после его предусилителя
+  const last = byId[path[path.length - 1]];
+  if (measureIdx === -1 && path.length > 1 && last.type === 'vc_codec') {
+    const entry = traced.entries[path.length - 1];
+    level += channelGain(last, entry);
+    lastStage = { device: last, entry };
+    if (!clip && level > LINE_MAX_DBU) clip = { device: last, entry, level };
   }
   const at = byId[measureIdx === -1 ? path[path.length - 1] : path[measureIdx]];
   const issues: SimIssue[] = [];
@@ -471,6 +481,30 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
           severity: 'medium',
         });
       }
+    }
+  }
+
+  // Кодек ВКС: дальней стороне нужны сеть, камера и микрофоны, а изображение и звук
+  // собеседников выводятся на дисплей и колонки
+  const flows = [...audioFlows, ...videoFlows].filter((f) => f.status !== 'error');
+  for (const codec of devices) {
+    if (codec.type !== 'vc_codec') continue;
+    const lan = new Set(codec.ports.filter((p) => p.signal_type === 'network').map((p) => p.id));
+    const online = connections.some(
+      (c) => (c.from.device === codec.id && lan.has(c.from.port)) || (c.to.device === codec.id && lan.has(c.to.port))
+    );
+    const into = (type: 'audio' | 'video', sources: string[]) =>
+      flows.some((f) => f.type === type && f.path.indexOf(codec.id) > 0 && sources.includes(byId[f.source]?.type));
+    const out = (type: 'audio' | 'video', sinks: string[]) =>
+      flows.some((f) => f.type === type && f.source === codec.id && f.path.slice(1).some((id) => sinks.includes(byId[id]?.type)));
+    const warn = (type: string, message: string, severity: 'low' | 'medium' = 'medium') =>
+      warnings.push({ type, device: codec.id, message, severity });
+    if (!online) warn('codec_offline', `«${codec.model}» не подключён к сети — звонок не состоится: подключите LAN к сетевому коммутатору`);
+    if (!into('video', ['camera', 'video_bar', 'document_camera'])) warn('codec_no_camera', `К «${codec.model}» не подключена камера — дальняя сторона вас не увидит`);
+    if (!into('audio', MIC_SOURCES)) warn('codec_no_mic', `К «${codec.model}» не подключены микрофоны — дальняя сторона вас не услышит`);
+    if (!out('video', VIDEO_SINKS)) warn('codec_no_display', `Изображение собеседников с «${codec.model}» не выведено на дисплей`, 'low');
+    if (!out('audio', AUDIO_SINKS)) {
+      warn('codec_no_speaker', `Звук собеседников с «${codec.model}» не выведен на колонки (звук дисплея в модели не учитывается)`, 'low');
     }
   }
 

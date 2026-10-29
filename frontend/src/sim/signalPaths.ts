@@ -133,9 +133,9 @@ export function transfer(device: Device, entry: string | null, domain: Domain): 
     return (id: string) => ids.has(id);
   };
   if (entry === null) return { exits: allow(device.ports) };
-  // Звук, пришедший в компьютер (микрофоны видеобара по USB), уходит в звонок, а не
-  // обратно на его выходы — иначе было бы эхо; видео через компьютер проходит
-  if (domain === 'audio' && device.type === 'computer') return { exits: () => false };
+  // Звук, пришедший в компьютер или кодек ВКС (микрофоны), уходит в звонок, а не
+  // обратно на их выходы — иначе было бы эхо; видео через них проходит
+  if (domain === 'audio' && (device.type === 'computer' || device.type === 'vc_codec')) return { exits: () => false };
 
   const mode = routingMode(device);
   if (mode === 'channel') {

@@ -37,6 +37,7 @@ import DocumentScanner from '@mui/icons-material/DocumentScanner';
 import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
 import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import VideoCameraFront from '@mui/icons-material/VideoCameraFront';
+import VideoCall from '@mui/icons-material/VideoCall';
 import Wifi from '@mui/icons-material/Wifi';
 
 const ICONS: Record<string, SvgIconComponent> = {
@@ -61,6 +62,7 @@ const ICONS: Record<string, SvgIconComponent> = {
   extender: SettingsEthernet,
   converter: SwapHoriz,
   video_bar: VideoCameraFront,
+  vc_codec: VideoCall,
   encoder: Output,
   decoder: Input,
   video_recorder: FiberSmartRecord,

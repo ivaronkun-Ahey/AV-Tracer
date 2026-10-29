@@ -23,6 +23,7 @@ const TAG_PREFIX: Record<string, string> = {
   extender: 'EXT',
   converter: 'CNV',
   video_bar: 'VB',
+  vc_codec: 'VC',
   encoder: 'ENC',
   decoder: 'DEC',
   video_recorder: 'REC',

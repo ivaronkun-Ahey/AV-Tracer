@@ -22,6 +22,7 @@ export const DEVICE_TYPE_LABELS: Record<string, string> = {
   extender: 'Удлинитель',
   converter: 'Конвертер',
   video_bar: 'Видеобар (ВКС)',
+  vc_codec: 'Кодек ВКС',
   encoder: 'AV-over-IP кодер',
   decoder: 'AV-over-IP декодер',
   video_recorder: 'Видеорекордер',
