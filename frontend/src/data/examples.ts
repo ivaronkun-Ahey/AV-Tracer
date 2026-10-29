@@ -217,4 +217,30 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
       };
     },
   },
+  {
+    id: 'stage-light',
+    name: 'Свет сцены (DMX)',
+    description: 'Пульт: вселенная 1 — четыре прожектора PAR (адреса 1, 9, 17, 25), вселенная 2 — две вращающиеся головы; терминаторы на концах линий',
+    build: () => {
+      const desk = instantiate('generic-dmx-console', 'l_desk', 40, 200);
+      const pars = [1, 9, 17, 25].map((address, i) => {
+        const d = instantiate('generic-led-par', `l_par${i + 1}`, 340 + i * 300, 80);
+        d.properties.dmx_address = address;
+        d.properties.dmx_terminator = i === 3;
+        return d;
+      });
+      const heads = [1, 17].map((address, i) => {
+        const d = instantiate('generic-moving-head', `l_head${i + 1}`, 340 + i * 300, 320);
+        d.properties.dmx_address = address;
+        d.properties.dmx_terminator = i === 1;
+        return d;
+      });
+      const line = (list: Device[], deskPort: string) =>
+        list.map((d, i) => connect(i === 0 ? ['l_desk', deskPort] : [list[i - 1].id, 'dmx_thru'], [d.id, 'dmx_in'], 'xlr'));
+      return {
+        devices: [desk, ...pars, ...heads],
+        connections: [...line(pars, 'dmx_out_1'), ...line(heads, 'dmx_out_2')],
+      };
+    },
+  },
 ];

@@ -10,6 +10,8 @@ export const SIGNAL_TYPES = [
   'usb',
   /** Трансляционная линия 70/100 В (громкоговорители с трансформаторами). */
   'line_100v',
+  /** DMX512 — управление светом (пульт → приборы по цепочке). */
+  'dmx',
 ] as const;
 /** terminal — клеммы трансляционной линии (винтовые или Phoenix). */
 export const CABLE_TYPES = ['xlr', 'trs', 'speakon', 'hdmi', 'sdi', 'cat6', 'rca', 'bnc', 'usb', 'terminal'] as const;

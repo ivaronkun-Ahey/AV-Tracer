@@ -164,7 +164,9 @@ const SimulationPanel: React.FC = () => {
               </Typography>
               {simulation.signal_flows.length === 0 && (
                 <Typography variant="body2" color="text.secondary">
-                  Источники сигнала (микрофоны, камеры) не найдены
+                  {devices.some((d) => d.type === 'lighting_console')
+                    ? 'Звука и видео в схеме нет. Свет (DMX) проверяется по линиям и адресам приборов — замечания слева.'
+                    : 'Источники сигнала (микрофоны, камеры) не найдены'}
                 </Typography>
               )}
               <Stack spacing={1.5} divider={<Divider flexItem sx={{ borderColor: '#222' }} />}>

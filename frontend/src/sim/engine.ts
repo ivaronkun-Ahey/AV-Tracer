@@ -44,6 +44,7 @@ const DBV_TO_DBU = 2.2;
 const SIG_RU: Record<string, string> = {
   analog_audio: 'аналог. аудио',
   line_100v: 'линия 100 В',
+  dmx: 'DMX',
   digital_audio: 'цифр. аудио',
   video: 'видео',
   hdmi: 'HDMI',
@@ -611,6 +612,128 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
         });
       }
     }
+  }
+
+  // Свет, DMX512: линия — шина от выхода пульта (или сплиттера) к приборам по
+  // цепочке «вход → проходной выход». На сегменте линии — до 32 устройств, в
+  // конце — терминатор 120 Ом, разветвлять линию можно только сплиттером.
+  // Каналы приборов одной вселенной (512 каналов) не должны пересекаться.
+  const dmxOuts = (d: Device) => d.ports.filter((p) => p.signal_type === 'dmx' && p.direction === 'output');
+  const dmxCables = (d: Device, port: string) => connections.filter((c) => c.from.device === d.id && c.from.port === port);
+  const dmxName = (d: Device) => d.tag ?? d.model;
+  const dmxReached = new Set<string>();
+  const branchWarned = new Set<string>();
+  const warnBranch = (d: Device, n: number) => {
+    if (branchWarned.has(d.id)) return;
+    branchWarned.add(d.id);
+    warnings.push({
+      type: 'dmx_branch',
+      device: d.id,
+      message: `С выхода «${dmxName(d)}» DMX идёт по ${n} кабелям — линию DMX нельзя разветвлять Y-кабелем, поставьте DMX-сплиттер`,
+      severity: 'medium',
+    });
+  };
+  for (const desk of devices) {
+    if (desk.type !== 'lighting_console') continue;
+    dmxOuts(desk).forEach((out, index) => {
+      const fixtures: Device[] = [];
+      const segments: Array<{ from: Device; port: string }> = [{ from: desk, port: out.id }];
+      while (segments.length) {
+        const { from, port } = segments.shift()!;
+        const first = dmxCables(from, port);
+        if (first.length > 1) warnBranch(from, first.length);
+        const queue = [...first];
+        let loads = 0;
+        while (queue.length) {
+          const d = byId[queue.shift()!.to.device];
+          if (!d || dmxReached.has(d.id)) continue;
+          dmxReached.add(d.id);
+          loads += 1;
+          // Сплиттер — нагрузка этого сегмента, его выходы начинают новые сегменты той же вселенной
+          if (d.type === 'dmx_splitter') {
+            for (const o of dmxOuts(d)) segments.push({ from: d, port: o.id });
+            continue;
+          }
+          if (d.type === 'light_fixture') fixtures.push(d);
+          const next = dmxOuts(d).flatMap((o) => dmxCables(d, o.id));
+          if (next.length > 1) warnBranch(d, next.length);
+          const terminated = d.properties?.dmx_terminator === true;
+          if (next.length === 0 && d.type === 'light_fixture' && !terminated) {
+            warnings.push({
+              type: 'dmx_no_terminator',
+              device: d.id,
+              message: `«${dmxName(d)}» — последний на линии DMX, но без терминатора 120 Ом: возможны сбои и мерцание`,
+              severity: 'low',
+              fix: { kind: 'set_property', label: `Включить терминатор на «${dmxName(d)}»`, device: d.id, property: 'dmx_terminator', value: true },
+            });
+          } else if (next.length > 0 && terminated) {
+            warnings.push({
+              type: 'dmx_terminator_middle',
+              device: d.id,
+              message: `На «${dmxName(d)}» включён терминатор, но линия DMX идёт дальше — терминатор ставят только на последнем приборе`,
+              severity: 'medium',
+              fix: { kind: 'set_property', label: `Выключить терминатор на «${dmxName(d)}»`, device: d.id, property: 'dmx_terminator', value: false },
+            });
+          }
+          queue.push(...next);
+        }
+        if (loads > 32) {
+          warnings.push({
+            type: 'dmx_too_many',
+            device: from.id,
+            message: `На линии DMX от «${dmxName(from)}» ${loads} устройств — больше 32: разделите линию DMX-сплиттером`,
+            severity: 'medium',
+          });
+        }
+      }
+      // Адреса приборов вселенной: в пределах 1–512 и без пересечений
+      const universe = `«${dmxName(desk)}», вселенная ${index + 1}`;
+      const ranges = fixtures.map((d) => {
+        const start = num(d.properties?.dmx_address, 1);
+        return { d, start, end: start + Math.max(1, num(d.properties?.dmx_channels, 1)) - 1 };
+      });
+      for (const r of ranges) {
+        if (!Number.isInteger(r.start) || r.start < 1 || r.end > 512) {
+          errors.push({
+            type: 'dmx_address_range',
+            device: r.d.id,
+            message: `Адрес «${dmxName(r.d)}» (каналы ${r.start}–${r.end}) выходит за пределы вселенной DMX 1–512 (${universe})`,
+            severity: 'high',
+          });
+        }
+      }
+      const reported = new Set<string>();
+      const sorted = [...ranges].sort((a, b) => a.start - b.start);
+      for (let i = 0; i < sorted.length; i++) {
+        for (let j = i + 1; j < sorted.length && sorted[j].start <= sorted[i].end; j++) {
+          const a = sorted[i];
+          const b = sorted[j];
+          // Одинаковый адрес и режим — приборы намеренно работают вместе
+          if (a.start === b.start && a.end === b.end) continue;
+          if (reported.has(b.d.id)) continue;
+          reported.add(b.d.id);
+          warnings.push({
+            type: 'dmx_address_overlap',
+            device: b.d.id,
+            message: `Каналы «${dmxName(a.d)}» (${a.start}–${a.end}) и «${dmxName(b.d)}» (${b.start}–${b.end}) пересекаются (${universe}) — приборы будут реагировать на чужие каналы; задайте «${dmxName(b.d)}» адрес ${a.end + 1}`,
+            severity: 'medium',
+            fix: { kind: 'set_property', label: `Задать «${dmxName(b.d)}» адрес ${a.end + 1}`, device: b.d.id, property: 'dmx_address', value: a.end + 1 },
+          });
+        }
+      }
+    });
+  }
+  for (const d of devices) {
+    if (d.type !== 'light_fixture' || dmxReached.has(d.id)) continue;
+    const fed = connections.some((c) => c.to.device === d.id && portSignal(d, c.to.port) === 'dmx');
+    errors.push({
+      type: 'dmx_no_signal',
+      device: d.id,
+      message: fed
+        ? `На «${dmxName(d)}» не приходит DMX: в цепочке нет пульта управления светом`
+        : `На «${dmxName(d)}» не подан DMX — подключите вход DMX к пульту или к проходному выходу предыдущего прибора`,
+      severity: 'high',
+    });
   }
 
   // Длина кабеля относительно рекомендуемой для типа разъёма

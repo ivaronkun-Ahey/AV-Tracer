@@ -38,6 +38,9 @@ import SettingsEthernet from '@mui/icons-material/SettingsEthernet';
 import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import VideoCameraFront from '@mui/icons-material/VideoCameraFront';
 import VideoCall from '@mui/icons-material/VideoCall';
+import Dashboard from '@mui/icons-material/Dashboard';
+import Highlight from '@mui/icons-material/Highlight';
+import CallSplit from '@mui/icons-material/CallSplit';
 import Wifi from '@mui/icons-material/Wifi';
 
 const ICONS: Record<string, SvgIconComponent> = {
@@ -63,6 +66,9 @@ const ICONS: Record<string, SvgIconComponent> = {
   converter: SwapHoriz,
   video_bar: VideoCameraFront,
   vc_codec: VideoCall,
+  lighting_console: Dashboard,
+  light_fixture: Highlight,
+  dmx_splitter: CallSplit,
   encoder: Output,
   decoder: Input,
   video_recorder: FiberSmartRecord,

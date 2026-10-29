@@ -23,6 +23,9 @@ export const DEVICE_TYPE_LABELS: Record<string, string> = {
   converter: 'Конвертер',
   video_bar: 'Видеобар (ВКС)',
   vc_codec: 'Кодек ВКС',
+  lighting_console: 'Пульт управления светом',
+  light_fixture: 'Световой прибор',
+  dmx_splitter: 'DMX-сплиттер',
   encoder: 'AV-over-IP кодер',
   decoder: 'AV-over-IP декодер',
   video_recorder: 'Видеорекордер',
@@ -63,10 +66,12 @@ export const SUBCATEGORY_LABELS: Record<string, string> = {
   'Wireless & Access Points': 'Точки доступа Wi-Fi',
   'Touch Panels': 'Панели управления',
   'Public Address 100V': 'Трансляционная система 100 В',
+  'Lighting (DMX)': 'Свет (DMX)',
 };
 
 export const SIGNAL_LABELS: Record<SignalType, string> = {
   line_100v: 'Трансляционная линия 100 В',
+  dmx: 'DMX512 (управление светом)',
   analog_audio: 'Аналоговое аудио',
   digital_audio: 'Цифровое аудио (Dante)',
   video: 'Видео',
@@ -144,6 +149,11 @@ export const PROPERTY_LABELS: Record<string, string> = {
   // Трансляционная линия 70/100 В
   line_voltage: 'Напряжение линии (В)',
   tap_watts: 'Отвод трансформатора (Вт)',
+  // Свет (DMX)
+  dmx_address: 'DMX-адрес (первый канал)',
+  dmx_channels: 'Каналов DMX (режим)',
+  dmx_terminator: 'Терминатор DMX на выходе',
+  universes: 'Вселенных DMX',
   max_spl_db: 'Макс. SPL (дБ)',
   // Медиаплееры / запись
   storage_gb: 'Накопитель (ГБ)',

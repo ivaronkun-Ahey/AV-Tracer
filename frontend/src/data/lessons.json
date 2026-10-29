@@ -697,6 +697,56 @@
         { "type": "reaches", "text": "Изображение камеры уходит в кодек ВКС", "domain": "video", "from": { "type": "camera" }, "to": { "type": "vc_codec" } },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
       ]
+    },
+    {
+      "id": "fix-dmx",
+      "title": "Неисправность: прожекторы реагируют на чужие команды",
+      "kind": "troubleshoot",
+      "level": 2,
+      "allowFixes": false,
+      "goal": "Четыре прожектора PAR (по 8 каналов) подключены к пульту по DMX. Когда меняют цвет первого прожектора, второй тоже меняется, а последний иногда мерцает. Найдите и исправьте обе причины.",
+      "theory": "DMX512 — шина: пульт передаёт 512 каналов (вселенную), приборы подключаются цепочкой «вход → проходной выход». Каждый прибор занимает подряд столько каналов, сколько у него в режиме, начиная со своего адреса: прибор с адресом 1 в 8-канальном режиме занимает каналы 1–8, следующему нужен адрес 9. На последнем приборе линии ставят терминатор 120 Ом — без него сигнал отражается и приборы сбоят.",
+      "hints": [
+        "Запустите «Симуляцию»: какие каналы у первых двух прожекторов?",
+        "Прожектор 1 занимает каналы 1–8, а второму задан адрес 5 — задайте ему адрес 9.",
+        "Последний прожектор на линии — включите на нём «Терминатор DMX на выходе»."
+      ],
+      "palette": ["generic-dmx-console", "generic-led-par", "generic-dmx-splitter"],
+      "start": {
+        "devices": [
+          { "id": "desk", "eq": "generic-dmx-console", "x": 40, "y": 80 },
+          { "id": "par1", "eq": "generic-led-par", "x": 340, "y": 80, "props": { "dmx_address": 1, "dmx_terminator": false } },
+          { "id": "par2", "eq": "generic-led-par", "x": 640, "y": 80, "props": { "dmx_address": 5, "dmx_terminator": false } },
+          { "id": "par3", "eq": "generic-led-par", "x": 940, "y": 80, "props": { "dmx_address": 17, "dmx_terminator": false } },
+          { "id": "par4", "eq": "generic-led-par", "x": 1240, "y": 80, "props": { "dmx_address": 25, "dmx_terminator": false } }
+        ],
+        "connections": [
+          { "from": "desk.dmx_out_1", "to": "par1.dmx_in", "length": 15 },
+          { "from": "par1.dmx_thru", "to": "par2.dmx_in", "length": 5 },
+          { "from": "par2.dmx_thru", "to": "par3.dmx_in", "length": 5 },
+          { "from": "par3.dmx_thru", "to": "par4.dmx_in", "length": 5 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "desk", "eq": "generic-dmx-console", "x": 40, "y": 80 },
+          { "id": "par1", "eq": "generic-led-par", "x": 340, "y": 80, "props": { "dmx_address": 1, "dmx_terminator": false } },
+          { "id": "par2", "eq": "generic-led-par", "x": 640, "y": 80, "props": { "dmx_address": 9, "dmx_terminator": false } },
+          { "id": "par3", "eq": "generic-led-par", "x": 940, "y": 80, "props": { "dmx_address": 17, "dmx_terminator": false } },
+          { "id": "par4", "eq": "generic-led-par", "x": 1240, "y": 80, "props": { "dmx_address": 25, "dmx_terminator": true } }
+        ],
+        "connections": [
+          { "from": "desk.dmx_out_1", "to": "par1.dmx_in", "length": 15 },
+          { "from": "par1.dmx_thru", "to": "par2.dmx_in", "length": 5 },
+          { "from": "par2.dmx_thru", "to": "par3.dmx_in", "length": 5 },
+          { "from": "par3.dmx_thru", "to": "par4.dmx_in", "length": 5 }
+        ]
+      },
+      "checks": [
+        { "type": "no_issue", "text": "Каналы прожекторов не пересекаются", "issues": ["dmx_address_overlap", "dmx_address_range"] },
+        { "type": "no_issue", "text": "Линия DMX завершена терминатором", "issues": ["dmx_no_terminator", "dmx_terminator_middle"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
     }
   ]
 }

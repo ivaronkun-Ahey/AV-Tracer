@@ -1313,6 +1313,70 @@
               }
             }
           ]
+        },
+        {
+          "name": "Lighting (DMX)",
+          "items": [
+            {
+              "_id": "generic-dmx-console",
+              "type": "lighting_console",
+              "category": "control",
+              "manufacturer": "Типовое",
+              "model": "Пульт управления светом",
+              "full_name": "Пульт управления светом (типовой): два выхода DMX512 — две вселенные по 512 каналов",
+              "ports": ["dmx_out_1", "dmx_out_2", "eth"],
+              "default_properties": {
+                "universes": 2
+              }
+            },
+            {
+              "_id": "generic-led-par",
+              "type": "light_fixture",
+              "category": "control",
+              "manufacturer": "Типовое",
+              "model": "Светодиодный прожектор PAR",
+              "full_name": "Светодиодный прожектор PAR RGBW (типовой): вход и проходной выход DMX, режимы 4 или 8 каналов",
+              "ports": ["dmx_in", "dmx_thru"],
+              "default_properties": {
+                "dmx_address": 1,
+                "dmx_channels": 8,
+                "dmx_terminator": false
+              },
+              "specs": {
+                "dmx_channels_options": [8, 4]
+              }
+            },
+            {
+              "_id": "generic-moving-head",
+              "type": "light_fixture",
+              "category": "control",
+              "manufacturer": "Типовое",
+              "model": "Вращающаяся голова",
+              "full_name": "Прибор с вращающейся головой (moving head, типовой): вход и проходной выход DMX, режимы 16 или 24 канала",
+              "ports": ["dmx_in", "dmx_thru"],
+              "default_properties": {
+                "dmx_address": 1,
+                "dmx_channels": 16,
+                "dmx_terminator": false
+              },
+              "specs": {
+                "dmx_channels_options": [16, 24]
+              }
+            },
+            {
+              "_id": "generic-dmx-splitter",
+              "type": "dmx_splitter",
+              "category": "control",
+              "manufacturer": "Типовое",
+              "model": "DMX-сплиттер 1→4",
+              "full_name": "DMX-сплиттер (типовой): один вход, четыре гальванически развязанных выхода — новые сегменты линии",
+              "ports": ["dmx_in", "dmx_out*4"],
+              "default_properties": {},
+              "specs": {
+                "rack_units": 1
+              }
+            }
+          ]
         }
       ]
     }
