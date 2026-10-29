@@ -57,10 +57,13 @@ export function portDomains(device: Device, port: Port): Set<Domain> {
       return new Set(['audio']);
     case 'usb':
       return new Set(['audio', 'video']);
+    // HDMI, SDI и HDBaseT несут и встроенный звук: он идёт вместе с видео до
+    // деэмбеддера, где выходит в аналоговый тракт
     case 'hdmi':
     case 'sdi':
-    case 'video':
     case 'hdbaset':
+      return new Set(['video', 'audio']);
+    case 'video':
       return new Set(['video']);
     case 'network':
       // Коммутатор передаёт любые потоки; LAN-порт оконечного устройства — управление;
@@ -130,6 +133,9 @@ export function transfer(device: Device, entry: string | null, domain: Domain): 
     return (id: string) => ids.has(id);
   };
   if (entry === null) return { exits: allow(device.ports) };
+  // Звук, пришедший в компьютер (микрофоны видеобара по USB), уходит в звонок, а не
+  // обратно на его выходы — иначе было бы эхо; видео через компьютер проходит
+  if (domain === 'audio' && device.type === 'computer') return { exits: () => false };
 
   const mode = routingMode(device);
   if (mode === 'channel') {

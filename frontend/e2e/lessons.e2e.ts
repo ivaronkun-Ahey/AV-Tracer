@@ -53,7 +53,7 @@ test('учебное задание: проверка, исправление в
 
   // В списке задание отмечено пройденным
   await page.getByRole('button', { name: 'Учёба' }).click();
-  await expect(page.getByText('Пройдено: 1 из 14')).toBeVisible();
+  await expect(page.getByText('Пройдено: 1 из 15')).toBeVisible();
 });
 
 test('задание со своим оборудованием: библиотека показывает только его, можно открыть всё', async ({ page }) => {

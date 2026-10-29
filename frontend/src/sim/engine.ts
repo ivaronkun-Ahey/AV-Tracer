@@ -18,7 +18,12 @@ const NOMINAL_DBU = 4;
 const MAX_FIX_GAIN_DB = 70;
 
 // Компьютер и видеобар выдают звук линейного уровня (параметр output_level, дБu)
-const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'computer', 'video_bar'];
+const AUDIO_SOURCES = ['microphone', 'array_microphone', 'wireless_mic', 'computer', 'video_bar', 'media_player'];
+// Компьютер, плеер, видеобар без указанного уровня — бытовой линейный уровень, дБu
+const LINE_SOURCES = ['computer', 'media_player', 'video_bar'];
+const LINE_SOURCE_DBU = -10;
+/** Звук, встроенный в видеосигнал: идёт вместе с видео, в аналоговый тракт — через деэмбеддер. */
+const EMBEDDED = new Set(['hdmi', 'sdi', 'hdbaset']);
 // DI-бокс без подключённого входа изображает инструмент (гитару, клавиши)
 const DI_LEVEL_DBU = -35;
 const VIDEO_SOURCES = ['camera', 'media_player', 'computer', 'document_camera', 'video_bar'];
@@ -110,6 +115,7 @@ function startLevel(d: Device): number {
   if (d.type === 'array_microphone') return ARRAY_MIC_LEVEL_DBU;
   if (d.type === 'di_box') return DI_LEVEL_DBU - Math.abs(num(p.pad, 0));
   if (typeof p.output_level === 'number') return p.output_level - Math.abs(num(p.pad, 0));
+  if (LINE_SOURCES.includes(d.type)) return LINE_SOURCE_DBU;
   const base = typeof p.sensitivity === 'number' ? p.sensitivity + DBV_TO_DBU : MIC_LEVEL_DBU;
   return base - Math.abs(num(p.pad, 0));
 }
@@ -335,9 +341,13 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
   for (const d of devices) {
     if (!isAudioSource(d)) continue;
     for (const traced of tracePaths(d.id, 'audio', byId, edges)) {
+      noteBlocked(traced);
+      // Звук так и не вышел из HDMI/SDI (дошёл до дисплея вместе с видео) — отдельной
+      // аудиоцепочкой не показывается и уровень не проверяется
+      const embeddedOnly = traced.entries.slice(1).every((entry, i) => EMBEDDED.has(portSignal(byId[traced.devices[i + 1]], entry ?? '') ?? ''));
+      if (embeddedOnly && traced.devices.length > 1 && !AUDIO_SINKS.includes(byId[traced.devices[traced.devices.length - 1]].type)) continue;
       const r = analyzeAudioPath(traced, byId);
       r.issues.forEach(addFlowWarning);
-      noteBlocked(traced);
       const unpowered = phantomMissing.has(d.id);
       audioFlows.push({
         type: 'audio',

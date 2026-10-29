@@ -816,6 +816,28 @@
               "default_properties": {
                 "max_resolution": "1920x1080"
               }
+            },
+            {
+              "_id": "generic-hdmi-deembedder",
+              "type": "converter",
+              "manufacturer": "Типовое",
+              "model": "Деэмбеддер HDMI",
+              "full_name": "Деэмбеддер HDMI (типовой): извлекает звук из HDMI на аналоговый стереовыход, видео проходит дальше",
+              "ports": ["hdmi_in", "hdmi_out", "trs_out_l", "trs_out_r"],
+              "default_properties": {
+                "max_resolution": "3840x2160"
+              }
+            },
+            {
+              "_id": "generic-hdmi-embedder",
+              "type": "converter",
+              "manufacturer": "Типовое",
+              "model": "Эмбеддер HDMI",
+              "full_name": "Эмбеддер HDMI (типовой): встраивает аналоговый стереозвук в HDMI — например, звук микшера на дисплей",
+              "ports": ["hdmi_in", "trs_in_l", "trs_in_r", "hdmi_out"],
+              "default_properties": {
+                "max_resolution": "3840x2160"
+              }
             }
           ]
         },

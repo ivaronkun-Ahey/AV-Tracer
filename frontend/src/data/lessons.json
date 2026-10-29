@@ -329,6 +329,54 @@
       ]
     },
     {
+      "id": "hdmi-sound",
+      "title": "Звук презентации из HDMI",
+      "kind": "build",
+      "level": 2,
+      "goal": "Ноутбук на кафедре подключён к проектору одним кабелем HDMI — аудиовыхода 3,5 мм на кафедре нет. Сделайте так, чтобы звук видеоролика из презентации шёл в колонку зала, а картинка — на проектор.",
+      "theory": "HDMI передаёт вместе с изображением и звук. Проектор его не воспроизводит в зал, поэтому звук нужно «извлечь» из HDMI: деэмбеддер ставится в разрыв HDMI-кабеля, видео проходит дальше, а звук выходит на аналоговый выход, который подключают к микшеру. Обратная задача — эмбеддер: встраивает звук в HDMI, например чтобы подать звук микшера на телевизор.",
+      "hints": [
+        "Звук ноутбука уже идёт по HDMI вместе с картинкой — его нужно вывести из HDMI.",
+        "Поставьте «Деэмбеддер HDMI» между ноутбуком и проектором: HDMI ноутбука — во вход деэмбеддера, его HDMI-выход — в проектор.",
+        "Аудиовыход деэмбеддера подключите к линейному входу микшера (TRS IN 7) и поднимите усиление входа (около 10 дБ)."
+      ],
+      "palette": ["generic-laptop", "generic-hdmi-deembedder", "generic-hdmi-embedder", "epson-l1755u", "yamaha-mg12xu", "jbl-prx815w", "generic-hdmi-to-sdi"],
+      "start": {
+        "devices": [
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 80 },
+          { "id": "proj", "eq": "epson-l1755u", "x": 640, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 320 },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 320 }
+        ],
+        "connections": [
+          { "from": "pc.hdmi_out", "to": "proj.hdmi_in_1", "length": 15 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "pc", "eq": "generic-laptop", "x": 40, "y": 80 },
+          { "id": "de", "eq": "generic-hdmi-deembedder", "x": 340, "y": 80 },
+          { "id": "proj", "eq": "epson-l1755u", "x": 640, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 320, "props": { "input_gain": 10 } },
+          { "id": "spk", "eq": "jbl-prx815w", "x": 640, "y": 320 }
+        ],
+        "connections": [
+          { "from": "pc.hdmi_out", "to": "de.hdmi_in", "length": 2 },
+          { "from": "de.hdmi_out", "to": "proj.hdmi_in_1", "length": 15 },
+          { "from": "de.trs_out_l", "to": "mix.trs_in_7", "length": 3 },
+          { "from": "mix.xlr_out_l", "to": "spk.xlr_in", "length": 10 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Изображение ноутбука на проекторе", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" } },
+        { "type": "reaches", "text": "Звук ноутбука в колонке зала", "domain": "audio", "from": { "type": "computer" }, "to": { "type": "speaker" } },
+        { "type": "uses", "text": "Звук взят из HDMI деэмбеддером", "select": { "model": "Деэмбеддер HDMI" }, "min": 1 },
+        { "type": "no_issue", "text": "Уровень звука в норме", "issues": ["level_low", "level_high"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
       "id": "fix-quiet",
       "title": "Неисправность: слишком тихо",
       "kind": "troubleshoot",
