@@ -10,32 +10,57 @@ import {
   CardContent,
   Chip,
   InputAdornment,
+  IconButton,
+  Tooltip,
+  Button,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
-import { EQUIPMENT_LIBRARY } from '../data/equipment';
+import AddIcon from '@mui/icons-material/Add';
+import { EQUIPMENT_LIBRARY, createDevice, newDeviceId } from '../data/equipment';
+import { useAppDispatch, useAppSelector } from '../store';
+import { addDevice, showToast } from '../features/canvasSlice';
+import { toggleAllEquipment } from '../features/lessonSlice';
+import { findLesson } from '../learning/lessons';
+import { EquipmentTemplate } from '../types/device.types';
 import { CATEGORY_LABELS, SUBCATEGORY_LABELS, deviceTypeLabel } from '../data/labels';
-import { deviceEmoji } from './deviceGeometry';
+import DeviceIcon from './DeviceIcon';
+import { categoryColor, freeSpot, nodeSize } from './deviceGeometry';
 
-function categoryColor(category: string): string {
-  switch (category) {
-    case 'audio':
-      return '#FF6B00';
-    case 'video':
-      return '#00B8D4';
-    case 'network':
-      return '#00C853';
-    default:
-      return '#0066CC';
-  }
-}
-
-const EquipmentLibrary: React.FC = () => {
+/** onAdded — устройство добавлено кнопкой (на узком экране панель закрывается). */
+const EquipmentLibrary: React.FC<{ onAdded?: () => void }> = ({ onAdded }) => {
+  const dispatch = useAppDispatch();
+  const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
+  const zoom = useAppSelector((s) => s.canvas.zoom);
+  const pan = useAppSelector((s) => s.canvas.pan);
+  const viewport = useAppSelector((s) => s.canvas.viewport);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string>('audio');
+  // В задании библиотека показывает только его оборудование (можно открыть всё)
+  const lessonId = useAppSelector((s) => s.lesson.activeId);
+  const customLessons = useAppSelector((s) => s.lesson.custom);
+  const showAll = useAppSelector((s) => s.lesson.showAllEquipment);
+  const palette = findLesson(lessonId, customLessons)?.palette;
+  const limited = !!palette && !showAll;
 
-  const handleDragStart = (equipment: any) => (e: React.DragEvent) => {
-    e.dataTransfer.setData('deviceData', JSON.stringify(equipment));
+  // Без перетаскивания (клавиатура, сенсорный экран): устройство встаёт в центр
+  // видимой части холста, на ближайшее свободное место
+  const addToDiagram = (equipment: EquipmentTemplate) => {
+    const device = createDevice(equipment, newDeviceId(), { x: 0, y: 0 });
+    const size = nodeSize(device);
+    const center = {
+      x: (viewport.width / 2 - pan.x) / zoom - size.width / 2,
+      y: (viewport.height / 2 - pan.y) / zoom - size.height / 2,
+    };
+    device.position = freeSpot(devices, size, center, connections);
+    dispatch(addDevice(device));
+    dispatch(showToast({ message: `Добавлено на схему: ${equipment.model}`, severity: 'success' }));
+    onAdded?.();
+  };
+
+  const handleDragStart = (equipment: EquipmentTemplate) => (e: React.DragEvent) => {
+    e.dataTransfer.setData('equipmentId', equipment._id);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -47,11 +72,12 @@ const EquipmentLibrary: React.FC = () => {
         ...sub,
         items: sub.items.filter(
           (item) =>
-            q === '' ||
+            (!limited || palette!.includes(item._id)) &&
+            (q === '' ||
             item.full_name.toLowerCase().includes(q) ||
             item.model.toLowerCase().includes(q) ||
             item.manufacturer.toLowerCase().includes(q) ||
-            deviceTypeLabel(item.type).toLowerCase().includes(q)
+            deviceTypeLabel(item.type).toLowerCase().includes(q))
         ),
       }))
       .filter((sub) => sub.items.length > 0),
@@ -62,9 +88,21 @@ const EquipmentLibrary: React.FC = () => {
       <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 700 }}>
         Библиотека оборудования
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-        Перетащите устройство на холст
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: palette ? 1 : 2 }}>
+        Перетащите устройство на холст или нажмите «+»
       </Typography>
+      {palette && (
+        <Button
+          size="small"
+          variant="outlined"
+          color="warning"
+          fullWidth
+          onClick={() => dispatch(toggleAllEquipment())}
+          sx={{ mb: 2, justifyContent: 'flex-start', textTransform: 'none' }}
+        >
+          {limited ? 'Оборудование задания · показать всё' : 'Вся библиотека · только задание'}
+        </Button>
+      )}
 
       <TextField
         fullWidth
@@ -84,7 +122,7 @@ const EquipmentLibrary: React.FC = () => {
 
       {filtered.map((category) => {
         const count = category.subcategories.reduce((acc, s) => acc + s.items.length, 0);
-        const isExpanded = q !== '' || expandedCategory === category.category;
+        const isExpanded = q !== '' || limited || expandedCategory === category.category;
         return (
           <Accordion
             key={category.category}
@@ -102,7 +140,10 @@ const EquipmentLibrary: React.FC = () => {
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' },
               }}
             >
-              <Typography sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', fontWeight: 600 }}>
+              <Typography
+                component="div"
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', fontWeight: 600 }}
+              >
                 <span>{category.icon}</span>
                 {CATEGORY_LABELS[category.category] || category.name}
                 <Chip
@@ -126,7 +167,17 @@ const EquipmentLibrary: React.FC = () => {
                       key={item._id}
                       draggable
                       onDragStart={handleDragStart(item)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`${item.model}, ${deviceTypeLabel(item.type)}: добавить на схему`}
+                      onKeyDown={(e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          addToDiagram(item);
+                        }
+                      }}
                       sx={{
+                        '&:focus-visible': { outline: '2px solid #0066CC', outlineOffset: 1 },
                         mb: 0.75,
                         cursor: 'grab',
                         bgcolor: 'rgba(255,255,255,0.04)',
@@ -141,15 +192,29 @@ const EquipmentLibrary: React.FC = () => {
                       }}
                     >
                       <CardContent sx={{ p: 1.25, '&:last-child': { pb: 1.25 }, display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Box sx={{ fontSize: 22, lineHeight: 1 }}>{deviceEmoji(item.type)}</Box>
-                        <Box sx={{ minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                          <DeviceIcon type={item.type} color={categoryColor(item.category)} />
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }} noWrap>
                             {item.model}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-                            {item.manufacturer} · {item.ports.length} порт.
+                            {deviceTypeLabel(item.type)} · {item.manufacturer} · {item.ports.length} порт.
                           </Typography>
                         </Box>
+                        <Tooltip title="Добавить на схему">
+                          <IconButton
+                            size="small"
+                            // Карточка сама — кнопка для клавиатуры и чтения с экрана
+                            tabIndex={-1}
+                            aria-hidden
+                            onClick={() => addToDiagram(item)}
+                            sx={{ flexShrink: 0, opacity: 0.75, '&:hover': { opacity: 1 } }}
+                          >
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </CardContent>
                     </Card>
                   ))}

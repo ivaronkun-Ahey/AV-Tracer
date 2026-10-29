@@ -1,0 +1,114 @@
+import { describe, it, expect } from 'vitest';
+import { buildBom, buildCableSchedule, cableTotals, toCsv, bomCsv, cableScheduleCsv, documentationHtml } from './exportDocs';
+import { EXAMPLE_PROJECTS } from '../data/examples';
+import { withCableLabels, nextCableLabel, cablePrefix } from '../data/cableLabels';
+import { createDevice, findEquipment, provenance } from '../data/equipment';
+
+const concert = () => {
+  const p = EXAMPLE_PROJECTS.find((e) => e.id === 'concert')!.build();
+  return { devices: p.devices, connections: withCableLabels(p.devices, p.connections), rooms: p.rooms ?? [] };
+};
+
+describe('маркировка кабелей', () => {
+  it('буква по назначению и сквозная нумерация', () => {
+    const { connections } = concert();
+    expect(connections.map((c) => c.label)).toEqual(['A-001', 'A-002', 'S-001', 'S-002']);
+  });
+
+  it('следующий номер — после максимального, существующие метки не меняются', () => {
+    const { connections } = concert();
+    expect(nextCableLabel(connections, 'S')).toBe('S-003');
+    expect(nextCableLabel(connections, 'V')).toBe('V-001');
+    expect(withCableLabels([], connections)).toBe(connections);
+  });
+
+  it('акустический кабель помечается S независимо от сигнала', () => {
+    expect(cablePrefix('analog_audio', 'speakon')).toBe('S');
+    expect(cablePrefix('hdmi', 'hdmi')).toBe('V');
+    expect(cablePrefix('digital_audio', 'cat6')).toBe('D');
+  });
+});
+
+describe('спецификация и кабельный журнал', () => {
+  it('одинаковые модели — одна строка с количеством и обозначениями', () => {
+    const bom = buildBom(concert().devices);
+    const yx = bom.find((r) => r.model === 'EVF-1122S')!;
+    expect(yx.qty).toBe(2);
+    expect(yx.tags).toEqual(['SPK-01', 'SPK-02']);
+    expect(bom.reduce((a, r) => a + r.qty, 0)).toBe(5);
+  });
+
+  it('кабельный журнал содержит концы, порты и итоги по типам', () => {
+    const { devices, connections } = concert();
+    const rows = buildCableSchedule(devices, connections);
+    expect(rows[0]).toMatchObject({ label: 'A-001', cable: 'XLR', from: 'MIC-01 SM58', fromPort: 'XLR OUT', to: 'MIX-01 SQ-5', toPort: 'XLR IN 1' });
+    expect(cableTotals(rows)).toEqual([
+      { cable: 'SPEAKON', count: 2, length: 20 },
+      { cable: 'XLR', count: 2, length: 80 },
+    ]);
+  });
+
+  it('CSV для Excel: BOM-метка, «;», экранирование', () => {
+    expect(toCsv([['a;b', 'say "hi"', 3]])).toBe('﻿"a;b";"say ""hi""";3\r\n');
+    expect(bomCsv(concert().devices).split('\r\n')[0]).toContain('Производитель');
+    expect(bomCsv(concert().devices).split('\r\n')[0]).toMatch(/;Данные$/);
+  });
+
+  it('документация экранирует названия и содержит все разделы', () => {
+    const { devices, connections } = concert();
+    const html = documentationHtml('data:image/png;base64,AAA', { devices, connections, rooms: [] });
+    expect(html).toContain('Allen &amp; Heath');
+    expect(html).toContain('Спецификация оборудования');
+    expect(html).toContain('Кабельный журнал');
+    expect(html).not.toContain('Allen & Heath');
+  });
+});
+
+describe('R8: CSV не превращает текст в формулы', () => {
+  it('текст с =, +, -, @, табуляцией в начале экранируется апострофом', () => {
+    for (const bad of ['=1+1', '+SUM(A1)', '-2+3', '@cmd', '\tx']) {
+      const line = toCsv([[bad]]).slice(1).trim();
+      expect(line.replace(/^"|"$/g, '').startsWith("'")).toBe(true);
+    }
+  });
+
+  it('числа остаются числами, обычный текст не меняется', () => {
+    expect(toCsv([[10, 'SM58', 'MIC-01']])).toBe('﻿10;SM58;MIC-01\r\n');
+  });
+
+  it('модель «=1+1» из импортированного проекта попадает в спецификацию как текст', () => {
+    const { devices } = concert();
+    devices[0] = { ...devices[0], model: '=1+1' };
+    expect(bomCsv(devices)).toContain(";'=1+1;");
+  });
+});
+
+describe('помещения в спецификации и кабельном журнале', () => {
+  it('спецификация разбита по помещениям, кабельный журнал знает помещения концов', () => {
+    const { devices, connections, rooms } = concert();
+    const bom = buildBom(devices, rooms);
+    expect(bom.map((r) => r.room)).toEqual(['Сцена', 'Сцена', 'Сцена', 'Пульт FOH']);
+    const cable = buildCableSchedule(devices, connections, rooms).find((r) => r.label === 'A-001')!;
+    expect([cable.fromRoom, cable.toRoom]).toEqual(['Сцена', 'Пульт FOH']);
+    expect(cableScheduleCsv(devices, connections, rooms).split('\r\n')[0]).toContain('Помещение (откуда)');
+    expect(bomCsv(devices, rooms).split('\r\n')[0]).toContain('Помещение');
+  });
+
+  it('без помещений колонок помещений нет', () => {
+    const { devices, connections } = concert();
+    expect(cableScheduleCsv(devices, connections).split('\r\n')[0]).not.toContain('Помещение');
+    expect(bomCsv(devices).split('\r\n')[0]).not.toContain('Помещение');
+  });
+});
+
+describe('происхождение характеристик в спецификации', () => {
+  it('сверенная карточка — с датой, остальные — «не сверено», типовые — «типовое»', () => {
+    const devices = ['shure-beta87a', 'shure-sm58', 'generic-laptop'].map((eq, i) => createDevice(findEquipment(eq)!, `d${i}`, { x: 0, y: 0 }));
+    expect(buildBom(devices).map((r) => [r.model, r.data.kind, r.data.short])).toEqual([
+      ['Beta 87A', 'verified', 'сверено 26.10.2026'],
+      ['SM58', 'indicative', 'не сверено'],
+      ['Ноутбук', 'generic', 'типовое'],
+    ]);
+    expect(provenance(devices[0]).url).toContain('shure.com');
+  });
+});

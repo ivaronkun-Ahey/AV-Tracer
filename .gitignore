@@ -50,3 +50,7 @@ coverage/
 *.tmp
 *.bak
 *.swp
+
+# Playwright
+test-results/
+playwright-report/

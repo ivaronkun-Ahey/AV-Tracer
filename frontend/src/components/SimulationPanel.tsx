@@ -1,22 +1,107 @@
 import React from 'react';
-import { Drawer, Box, Typography, IconButton, Chip, Stack, Alert, Divider } from '@mui/material';
+import { Drawer, Box, Typography, IconButton, Chip, Stack, Alert, Divider, Button, Tooltip } from '@mui/material';
+import { useStore } from 'react-redux';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { useAppSelector, useAppDispatch } from '../store';
-import { setShowSimulation, selectDevice } from '../features/canvasSlice';
+import BuildIcon from '@mui/icons-material/Build';
+import { useAppSelector, useAppDispatch, RootState } from '../store';
+import {
+  setShowSimulation,
+  selectDevice,
+  selectConnection,
+  updateDeviceProperty,
+  removeConnection,
+  setSimulation,
+  showToast,
+} from '../features/canvasSlice';
 import { deviceTypeLabel } from '../data/labels';
+import { LINE_MAX_DBU, LINE_MIN_DBU, runSimulation } from '../sim/engine';
+import { SignalFlow, SimFix, SimIssue } from '../types/device.types';
+import { findLesson } from '../learning/lessons';
+
+function levelVerdict(db: number): string {
+  if (db < LINE_MIN_DBU) return 'слабый сигнал';
+  if (db > LINE_MAX_DBU) return 'перегрузка';
+  return 'в норме';
+}
 
 const SimulationPanel: React.FC = () => {
   const dispatch = useAppDispatch();
   const simulation = useAppSelector((s) => s.canvas.simulation);
   const showSimulation = useAppSelector((s) => s.canvas.showSimulation);
   const devices = useAppSelector((s) => s.canvas.devices);
+  // В заданиях «найди неисправность» исправлять нужно самому
+  const fixesAllowed = useAppSelector((s) => findLesson(s.lesson.activeId, s.lesson.custom)?.allowFixes ?? true);
 
   const name = (id: string) => devices.find((d) => d.id === id)?.model || id;
 
   const close = () => dispatch(setShowSimulation(false));
+
+  const store = useStore<RootState>();
+
+  // Проблема с кабелем выделяет кабель, остальные — устройство
+  const focusIssue = (issue: SimIssue) =>
+    dispatch(issue.connection ? selectConnection(issue.connection) : selectDevice(issue.device));
+
+  // Исправление — обычная правка схемы (отменяется Ctrl+Z); затем симуляция пересчитывается
+  const applyFix = (fix: SimFix) => {
+    if (fix.kind === 'set_property') {
+      dispatch(updateDeviceProperty({ id: fix.device, property: fix.property, value: fix.value }));
+    } else {
+      dispatch(removeConnection(fix.connection));
+    }
+    const { devices: ds, connections: cs } = store.getState().canvas;
+    dispatch(setSimulation(runSimulation(ds, cs)));
+    dispatch(showToast({ message: `Исправлено: ${fix.label} · Ctrl+Z — отменить`, severity: 'success' }));
+  };
+
+  const fixButton = (issue: SimIssue) =>
+    issue.fix && fixesAllowed ? (
+      <Tooltip title={issue.fix.label}>
+        <Button
+          size="small"
+          color="inherit"
+          startIcon={<BuildIcon fontSize="small" />}
+          aria-label={`Исправить: ${issue.fix.label}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            applyFix(issue.fix!);
+          }}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
+          Исправить
+        </Button>
+      </Tooltip>
+    ) : undefined;
+
+  const flowCaption = (flow: SignalFlow) => {
+    const note = flow.note ? ` · ${flow.note}` : '';
+    if (flow.type === 'video') {
+      return `Разрешение: ${flow.resolution}${flow.status === 'ok' ? '' : ' · есть замечания'}${note}`;
+    }
+    const db = flow.final_level_db ?? 0;
+    const sign = db > 0 ? '+' : '';
+    return `Уровень на «${name(flow.level_at || flow.path[flow.path.length - 1])}»: ${sign}${db} дБu · ${levelVerdict(db)}${note}`;
+  };
+
+  const header = !simulation
+    ? null
+    : !simulation.valid
+      ? { icon: <ErrorIcon sx={{ color: '#F44336', mr: 1 }} />, text: 'Найдены ошибки' }
+      : simulation.incomplete
+        ? {
+            icon: <WarningAmberIcon sx={{ color: '#FF9800', mr: 1 }} />,
+            text: 'Проверка неполная: схема слишком разветвлённая, просмотрены не все пути сигнала',
+          }
+        : simulation.warnings.length > 0
+          ? {
+              icon: <WarningAmberIcon sx={{ color: '#FF9800', mr: 1 }} />,
+              text: `Система собрана, есть предупреждения (${simulation.warnings.length})`,
+            }
+          : { icon: <CheckCircleIcon sx={{ color: '#3DDC84', mr: 1 }} />, text: 'Система собрана корректно' };
 
   return (
     <Drawer
@@ -25,23 +110,14 @@ const SimulationPanel: React.FC = () => {
       onClose={close}
       PaperProps={{ sx: { bgcolor: '#161b22', borderTop: '1px solid #30363d', maxHeight: '55vh' } }}
     >
-      {simulation && (
+      {simulation && header && (
         <Box sx={{ p: 2.5 }}>
           {/* Шапка */}
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            {simulation.valid ? (
-              <CheckCircleIcon sx={{ color: '#3DDC84', mr: 1 }} />
-            ) : (
-              <ErrorIcon sx={{ color: '#F44336', mr: 1 }} />
-            )}
+            {header.icon}
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {simulation.valid ? 'Система собрана корректно' : 'Найдены проблемы'}
+              {header.text}
             </Typography>
-            <Chip
-              size="small"
-              label={simulation.computed_by === 'server' ? 'расчёт на сервере' : 'расчёт в браузере'}
-              sx={{ ml: 2, bgcolor: 'rgba(255,255,255,0.08)' }}
-            />
             <IconButton onClick={close} sx={{ ml: 'auto' }} size="small">
               <CloseIcon />
             </IconButton>
@@ -64,7 +140,8 @@ const SimulationPanel: React.FC = () => {
                     key={`e${i}`}
                     severity="error"
                     variant="outlined"
-                    onClick={() => dispatch(selectDevice(e.device))}
+                    onClick={() => focusIssue(e)}
+                    action={fixButton(e)}
                     sx={{ cursor: 'pointer' }}
                   >
                     <b>{name(e.device)}:</b> {e.message}
@@ -75,7 +152,8 @@ const SimulationPanel: React.FC = () => {
                     key={`w${i}`}
                     severity="warning"
                     variant="outlined"
-                    onClick={() => dispatch(selectDevice(w.device))}
+                    onClick={() => focusIssue(w)}
+                    action={fixButton(w)}
                     sx={{ cursor: 'pointer' }}
                   >
                     <b>{name(w.device)}:</b> {w.message}
@@ -91,7 +169,9 @@ const SimulationPanel: React.FC = () => {
               </Typography>
               {simulation.signal_flows.length === 0 && (
                 <Typography variant="body2" color="text.secondary">
-                  Источники сигнала (микрофоны, камеры) не найдены
+                  {devices.some((d) => d.type === 'lighting_console')
+                    ? 'Звука и видео в схеме нет. Свет (DMX) проверяется по линиям и адресам приборов — замечания слева.'
+                    : 'Источники сигнала (микрофоны, камеры) не найдены'}
                 </Typography>
               )}
               <Stack spacing={1.5} divider={<Divider flexItem sx={{ borderColor: '#222' }} />}>
@@ -115,16 +195,25 @@ const SimulationPanel: React.FC = () => {
                         </React.Fragment>
                       ))}
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      {flow.type === 'audio'
-                        ? `Итоговый уровень: ${flow.final_level_db} дБ · ${flow.status === 'ok' ? 'в норме' : 'требует внимания'}`
-                        : `Разрешение: ${flow.resolution}`}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: flow.status === 'ok' ? (flow.note ? 'text.primary' : 'text.secondary') : flow.status === 'error' ? '#F44336' : '#FF9800',
+                      }}
+                    >
+                      {flowCaption(flow)}
                     </Typography>
                   </Box>
                 ))}
               </Stack>
             </Box>
           </Box>
+
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2 }}>
+            Учебная оценка в пределах модели. Не проверяются: пропускная способность сети, кодеки,
+            подписки и тактирование Dante, HDCP/EDID, частота кадров, электрика линий и акустика.
+            Длины кабелей и уровни сигнала — упрощённые оценки.
+          </Typography>
         </Box>
       )}
     </Drawer>
