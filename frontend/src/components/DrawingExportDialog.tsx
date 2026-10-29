@@ -28,6 +28,7 @@ const KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'functional', title: 'Схема функциональная' },
   { kind: 'connections', title: 'Схема соединений' },
   { kind: 'racks', title: 'Схема расположения оборудования в шкафах' },
+  { kind: 'plan', title: 'План расположения оборудования' },
   { kind: 'cables', title: 'Кабельный журнал' },
   { kind: 'spec', title: 'Спецификация оборудования (ГОСТ 21.110)' },
 ];
@@ -76,6 +77,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
   const connections = useAppSelector((s) => s.canvas.connections);
   const rooms = useAppSelector((s) => s.canvas.rooms);
   const racks = useAppSelector((s) => s.canvas.racks);
+  const hasPlan = devices.some((d) => d.plan);
   const meta = useAppSelector((s) => s.canvas.meta);
   const [form, setForm] = useState<ProjectMeta>(meta);
   const [kinds, setKinds] = useState<DrawingKind[]>(KINDS.map((k) => k.kind));
@@ -175,7 +177,7 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
           Листы
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', mb: 1 }}>
-          {KINDS.filter((k) => k.kind !== 'racks' || racks.length > 0).map((k) => (
+          {KINDS.filter((k) => (k.kind !== 'racks' || racks.length > 0) && (k.kind !== 'plan' || hasPlan)).map((k) => (
             <FormControlLabel
               key={k.kind}
               control={<Checkbox size="small" checked={kinds.includes(k.kind)} onChange={() => toggle(k.kind)} />}
@@ -240,7 +242,9 @@ const DrawingExportDialog: React.FC<{ open: boolean; onClose: () => void }> = ({
         <Button
           variant="contained"
           onClick={generate}
-          disabled={busy || kinds.every((k) => k === 'racks' && racks.length === 0) || devices.length === 0}
+          disabled={
+            busy || kinds.every((k) => (k === 'racks' && racks.length === 0) || (k === 'plan' && !hasPlan)) || devices.length === 0
+          }
           startIcon={busy ? <CircularProgress size={16} /> : undefined}
         >
           Сформировать {OUTPUTS.find((o) => o.value === output)!.label}

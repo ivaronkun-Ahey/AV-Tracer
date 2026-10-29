@@ -66,7 +66,7 @@ test('шкафы: добавить шкаф, поставить оборудов
   // Шкаф сохраняется в проекте
   await expect.poll(async () => (await autosave(page)).racks?.map((r: { name: string }) => r.name)).toEqual(['ШТ-1']);
   const saved = await autosave(page);
-  expect(saved.schemaVersion).toBe(4);
+  expect(saved.schemaVersion).toBe(5);
   expect(saved.devices.find((d: { tag: string }) => d.tag === 'ENC-01').rack).toEqual({ rack: saved.racks[0].id, u: 12 });
 
   // Чертёж: схема расположения оборудования

@@ -1,9 +1,21 @@
 import { createSlice, PayloadAction, current } from '@reduxjs/toolkit';
-import { Device, Connection, SimulationResult, CableType, PropValue, ProjectDoc, ProjectMeta, Rack, Room } from '../types/device.types';
+import {
+  Device,
+  Connection,
+  SimulationResult,
+  CableType,
+  PropValue,
+  ProjectDoc,
+  ProjectMeta,
+  Rack,
+  Room,
+  RoomSize,
+} from '../types/device.types';
 import { connectionProblem, PortRef } from './connectionRules';
 import { nextDeviceTag, withDeviceTags } from '../data/deviceTags';
 import { connectionPrefix, nextCableLabel, withCableLabels } from '../data/cableLabels';
 import { MAX_RACK_UNITS, freePlace, placeProblem, rackUnits } from '../data/racks';
+import { clampPlace, validSize } from '../data/plan';
 
 type CanvasDoc = ProjectDoc;
 
@@ -146,8 +158,9 @@ const canvasSlice = createSlice({
       // При фильтре по помещению новое устройство попадает в это помещение — иначе оно сразу скрылось бы
       const room = action.payload.room ?? state.roomFilter ?? undefined;
       const device: Device = { ...action.payload, tag, ...(room ? { room } : {}) };
-      // Место в шкафу не копируется: новое устройство ставят в шкаф отдельно
+      // Место в шкафу и на плане не копируется: новое устройство расставляют отдельно
       delete device.rack;
+      delete device.plan;
       state.devices.push(device);
       state.selectedDeviceId = action.payload.id;
       state.selectedConnectionId = null;
@@ -221,7 +234,11 @@ const canvasSlice = createSlice({
       if (!state.rooms.some((r) => r.id === action.payload)) return;
       pushHistory(state, { keepSimulation: true });
       state.rooms = state.rooms.filter((r) => r.id !== action.payload);
-      for (const d of state.devices) if (d.room === action.payload) delete d.room;
+      for (const d of state.devices) {
+        if (d.room !== action.payload) continue;
+        delete d.room;
+        delete d.plan;
+      }
       if (state.selectedRoomId === action.payload) state.selectedRoomId = null;
       if (state.roomFilter === action.payload) state.roomFilter = null;
     },
@@ -244,12 +261,76 @@ const canvasSlice = createSlice({
       pushHistory(state, { keepSimulation: true });
       if (room === null) delete device.room;
       else device.room = room;
+      // План — у каждого помещения свой: в новом помещении устройство ещё не расставлено
+      delete device.plan;
       // Шкаф стоит в другом помещении — устройство из него вынимается
       const rack = state.racks.find((r) => r.id === device.rack?.rack);
       if (rack?.room && rack.room !== room) {
         delete device.rack;
         state.toast = { message: `${device.tag ?? device.model} вынут из шкафа «${rack.name}»: шкаф в другом помещении`, severity: 'info' };
       }
+    },
+
+    /** Размеры помещения для плана; устройства на плане остаются внутри помещения. */
+    setRoomSize: (state, action: PayloadAction<{ id: string; size: RoomSize | null }>) => {
+      const room = state.rooms.find((r) => r.id === action.payload.id);
+      const size = action.payload.size;
+      if (!room || (size && !validSize(size))) return;
+      pushHistory(state, { key: `room-size:${room.id}`, keepSimulation: true });
+      if (!size) {
+        delete room.size;
+        for (const d of state.devices) if (d.room === room.id) delete d.plan;
+        return;
+      }
+      room.size = { width: size.width, length: size.length };
+      for (const d of state.devices) if (d.room === room.id && d.plan) d.plan = clampPlace(d.plan, size);
+    },
+
+    /** Поставить или передвинуть устройство на плане его помещения (стрелки — подряд один шаг отмены). */
+    placeOnPlan: (state, action: PayloadAction<{ id: string; x: number; y: number; rotation?: number; historyKey?: string }>) => {
+      const device = state.devices.find((d) => d.id === action.payload.id);
+      const size = state.rooms.find((r) => r.id === device?.room)?.size;
+      if (!device || !validSize(size)) return;
+      const { x, y, rotation, historyKey } = action.payload;
+      pushHistory(state, { keepSimulation: true, ...(historyKey ? { key: historyKey } : {}) });
+      device.plan = clampPlace({ x, y, rotation: rotation ?? device.plan?.rotation }, size);
+      state.selectedDeviceId = device.id;
+      state.selectedConnectionId = null;
+      state.selectedRoomId = null;
+    },
+
+    /** Начало перетаскивания на плане: один снимок в историю на всё перемещение. */
+    beginPlanDrag: (state, action: PayloadAction<string>) => {
+      pushHistory(state, { keepSimulation: true });
+      state.selectedDeviceId = action.payload;
+      state.selectedConnectionId = null;
+      state.selectedRoomId = null;
+    },
+
+    /** Место на плане во время перетаскивания — без записи в историю. */
+    movePlanTo: (state, action: PayloadAction<{ id: string; x: number; y: number }>) => {
+      const device = state.devices.find((d) => d.id === action.payload.id);
+      const size = state.rooms.find((r) => r.id === device?.room)?.size;
+      if (!device || !validSize(size)) return;
+      device.plan = clampPlace({ ...action.payload, rotation: device.plan?.rotation }, size);
+    },
+
+    removeFromPlan: (state, action: PayloadAction<string>) => {
+      const device = state.devices.find((d) => d.id === action.payload);
+      if (!device?.plan) return;
+      pushHistory(state, { keepSimulation: true });
+      delete device.plan;
+    },
+
+    /** Длины нескольких кабелей сразу (по плану) — один шаг отмены. */
+    setConnectionLengths: (state, action: PayloadAction<Record<string, number>>) => {
+      const changes = state.connections.filter((c) => {
+        const v = action.payload[c.id];
+        return v !== undefined && Number.isFinite(v) && v >= 0 && v !== c.cable_length;
+      });
+      if (changes.length === 0) return;
+      pushHistory(state);
+      for (const c of changes) c.cable_length = action.payload[c.id];
     },
 
     addRack: (state, action: PayloadAction<Rack>) => {
@@ -565,6 +646,12 @@ export const {
   updateRoom,
   removeRoom,
   setDeviceRoom,
+  setRoomSize,
+  placeOnPlan,
+  beginPlanDrag,
+  movePlanTo,
+  removeFromPlan,
+  setConnectionLengths,
   addRack,
   updateRack,
   removeRack,

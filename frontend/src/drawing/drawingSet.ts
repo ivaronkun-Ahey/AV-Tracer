@@ -3,6 +3,7 @@ import { blockScheme, connectionScheme, functionalLinks, structuralLinks } from 
 import { layoutBlocks, MIN_SHEET_TEXT, placeOnSheet } from './layout';
 import { cableColumns, cableRows, SPEC_COLUMNS, specRows, tablePages } from './tables';
 import { rackPages } from './rackSheet';
+import { planPages } from './planSheet';
 import { frame, titleBlock } from './titleBlock';
 import { renderPdf } from './pdf';
 import { DrawingFonts, createTextKit } from './textkit';
@@ -15,13 +16,14 @@ import { translit } from './translit';
  * по ГОСТ Р 21.101 (форма 3); число листов указывается на первом листе.
  */
 
-export type DrawingKind = 'structural' | 'functional' | 'connections' | 'racks' | 'cables' | 'spec';
+export type DrawingKind = 'structural' | 'functional' | 'connections' | 'racks' | 'plan' | 'cables' | 'spec';
 
 export const DRAWING_KINDS: Array<{ kind: DrawingKind; title: string }> = [
   { kind: 'structural', title: 'Схема структурная' },
   { kind: 'functional', title: 'Схема функциональная' },
   { kind: 'connections', title: 'Схема соединений' },
   { kind: 'racks', title: 'Схема расположения оборудования в шкафах' },
+  { kind: 'plan', title: 'План расположения оборудования' },
   { kind: 'cables', title: 'Кабельный журнал' },
   { kind: 'spec', title: 'Спецификация оборудования, изделий и материалов' },
 ];
@@ -56,10 +58,16 @@ const shortDate = (d: Date) =>
  */
 export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
   if (doc.devices.length === 0) throw new Error('схема пуста — нечего выпускать');
-  // Схема расположения — только если в проекте есть шкафы
-  const kinds = DRAWING_KINDS.filter((k) => opts.kinds.includes(k.kind) && (k.kind !== 'racks' || (doc.racks?.length ?? 0) > 0));
+  // Схема расположения в шкафах — если есть шкафы, план — если оборудование расставлено на плане
+  const available = (k: DrawingKind) =>
+    k === 'racks' ? (doc.racks?.length ?? 0) > 0 : k === 'plan' ? doc.devices.some((d) => d.plan) : true;
+  const kinds = DRAWING_KINDS.filter((k) => opts.kinds.includes(k.kind) && available(k.kind));
   if (kinds.length === 0) {
-    throw new Error(opts.kinds.includes('racks') ? 'в проекте нет шкафов — схему расположения строить не из чего' : 'не выбран ни один лист');
+    throw new Error(
+      opts.kinds.some((k) => k === 'racks' || k === 'plan')
+        ? 'в проекте нет шкафов и оборудования на плане — строить не из чего'
+        : 'не выбран ни один лист'
+    );
   }
   const meta = doc.meta ?? {};
   const notes: string[] = [];
@@ -98,6 +106,11 @@ export async function prepareDrawingSet(doc: ProjectDoc, opts: DrawingOptions) {
         const racks = rackPages(doc, opts.format);
         notes.push(...racks.notes);
         racks.pages.forEach((p, i) => pages.push({ format: p.format, title: i === 0 ? title : `${title} (продолжение)`, items: p.items }));
+      }
+      if (kind === 'plan') {
+        const plans = planPages(doc, opts.format);
+        notes.push(...plans.notes);
+        plans.pages.forEach((p) => pages.push({ format: p.format, title: `${title}. ${p.room}`, items: p.items }));
       }
       if (kind === 'cables') table(title, tablePages(cableColumns(doc.rooms.length > 0), cableRows(doc), measure));
       if (kind === 'spec') table(title, tablePages(SPEC_COLUMNS, specRows(doc), measure));

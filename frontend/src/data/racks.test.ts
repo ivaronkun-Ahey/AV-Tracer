@@ -11,6 +11,7 @@ import reducer, {
 } from '../features/canvasSlice';
 import { createDevice, findEquipment } from './equipment';
 import { parseProjectDoc, serializeProject } from './projectSchema';
+import { SCHEMA_VERSION } from './migrations';
 import { freePlace, placeProblem, rackUnits, usedUnits } from './racks';
 import { Device, Rack } from '../types/device.types';
 
@@ -45,7 +46,7 @@ describe('шкафы 19″', () => {
       { ...device('cisco-sg350', 's2'), rack: { rack: 'r1', u: 12 } },
     ];
     const raw = serializeProject({ devices, connections: [], rooms: [], racks: [{ ...RACK, room: 'gone' }] });
-    expect(raw.schemaVersion).toBe(4);
+    expect(raw.schemaVersion).toBe(SCHEMA_VERSION);
     const parsed = parseProjectDoc(JSON.parse(JSON.stringify(raw)));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;

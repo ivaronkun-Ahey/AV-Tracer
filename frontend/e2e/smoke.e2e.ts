@@ -76,7 +76,7 @@ test('сохранение в файл и открытие обратно', asyn
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Сохранить' }).click()]);
   const path = await download.path();
   const saved = JSON.parse(readFileSync(path, 'utf8'));
-  expect(saved.schemaVersion).toBe(4);
+  expect(saved.schemaVersion).toBe(5);
   expect(saved.devices).toHaveLength(4);
 
   await page.getByRole('button', { name: 'Очистить' }).click();

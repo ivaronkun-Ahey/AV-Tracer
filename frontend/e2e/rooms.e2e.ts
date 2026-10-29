@@ -50,7 +50,7 @@ test('помещения: создание, фильтр, новое устро�
   // Файл проекта: формат 3 с помещениями
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Сохранить' }).click()]);
   const saved = JSON.parse(readFileSync((await download.path())!, 'utf8'));
-  expect(saved.schemaVersion).toBe(4);
+  expect(saved.schemaVersion).toBe(5);
   expect(saved.rooms).toHaveLength(2);
 
   // Кабельный журнал — с помещениями концов

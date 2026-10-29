@@ -17,6 +17,7 @@ import { withCableLabels } from './cableLabels';
 import { withDeviceTags } from './deviceTags';
 import { migrateProject, SCHEMA_VERSION } from './migrations';
 import { MAX_RACK_UNITS, validateRackPlaces } from './racks';
+import { ROOM_SIZE_LIMITS, validatePlanPlaces } from './plan';
 
 /**
  * Схема файла проекта. Проверяет и открытые пользователем файлы, и автосейв:
@@ -48,6 +49,7 @@ const deviceSchema = z.object({
   tag: text(32).optional(),
   room: text(100).optional(),
   rack: z.object({ rack: text(100), u: z.number().int().min(1) }).optional(),
+  plan: z.object({ x: z.number(), y: z.number(), rotation: z.number().optional() }).optional(),
   type: text(100),
   category: z.enum(DEVICE_CATEGORIES),
   manufacturer: text(200),
@@ -76,6 +78,12 @@ const roomSchema = z.object({
   id: text(100),
   name: text(64).min(1, 'пустое название помещения'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'цвет помещения в формате #rrggbb'),
+  size: z
+    .object({
+      width: z.number().min(ROOM_SIZE_LIMITS.min).max(ROOM_SIZE_LIMITS.max),
+      length: z.number().min(ROOM_SIZE_LIMITS.min).max(ROOM_SIZE_LIMITS.max),
+    })
+    .optional(),
 });
 
 const rackSchema = z.object({
@@ -182,7 +190,9 @@ export function parseProjectDoc(raw: unknown): ParsedProject {
   // Высота в юнитах — из каталога (withTemplateDefaults), поэтому места проверяются после неё
   const racked = validateRackPlaces(placed.map(withTemplateDefaults), racks);
   if (racked.removed > 0) notes.push(`устройств с недопустимым местом в шкафу: ${racked.removed} — место снято`);
-  const devices = withDeviceTags(racked.devices);
+  const planned = validatePlanPlaces(racked.devices, rooms);
+  if (planned.removed > 0) notes.push(`устройств на плане без помещения с размерами: ${planned.removed} — место на плане снято`);
+  const devices = withDeviceTags(planned.devices);
   // Соединения, ссылающиеся на несуществующие устройства или порты, отбрасываем
   const hasPort = (deviceId: string, portId: string) =>
     devices.some((d) => d.id === deviceId && d.ports.some((p) => p.id === portId));

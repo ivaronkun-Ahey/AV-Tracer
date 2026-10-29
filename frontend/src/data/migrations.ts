@@ -5,7 +5,7 @@ import { findEquipment } from './equipment';
  * Версия формата файла проекта. Файл без поля schemaVersion — версия 1
  * (всё, что сохранялось до появления миграций).
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface MigrationResult {
   devices: Device[];
@@ -79,6 +79,11 @@ function v1to2(devices: Device[], notes: string[]): Device[] {
 /*
  * 3 → 4: шкафы 19″ (racks, device.rack). Как и помещения — поля необязательные,
  * старый проект открывается без изменений.
+ */
+
+/*
+ * 4 → 5: план помещения (room.size, device.plan). Поля необязательные — старый
+ * проект открывается без изменений.
  */
 
 /** Приводит проект версии `from` к текущей версии формата. */

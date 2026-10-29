@@ -44,11 +44,26 @@ export interface Port {
 }
 
 /** Помещение (зона) проекта: на холсте — рамка вокруг своих устройств. */
+/** Размеры помещения в плане, м. */
+export interface RoomSize {
+  width: number;
+  length: number;
+}
+
 export interface Room {
   id: string;
   name: string;
   /** Цвет рамки, #rrggbb. */
   color: string;
+  /** Размеры для плана помещения. */
+  size?: RoomSize;
+}
+
+/** Место устройства на плане своего помещения: от левого верхнего угла, м; направление, °. */
+export interface PlanPlace {
+  x: number;
+  y: number;
+  rotation?: number;
 }
 
 /** Шкаф или открытая стойка 19″. */
@@ -75,6 +90,8 @@ export interface Device {
   room?: string;
   /** Место в шкафу 19″ (для устройств с высотой specs.rack_units). */
   rack?: RackPlace;
+  /** Место на плане помещения (помещение — device.room). */
+  plan?: PlanPlace;
   type: string;
   category: DeviceCategory;
   manufacturer: string;

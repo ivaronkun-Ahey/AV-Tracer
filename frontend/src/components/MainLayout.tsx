@@ -43,6 +43,7 @@ import DrawingExportDialog from './DrawingExportDialog';
 import LessonsDialog from './LessonsDialog';
 import LessonEditorDialog from './LessonEditorDialog';
 import RackView from './RackView';
+import PlanView from './PlanView';
 import type { Lesson } from '../learning/lessonSchema';
 import LessonPanel from './LessonPanel';
 import SchoolIcon from '@mui/icons-material/School';
@@ -147,7 +148,7 @@ const MainLayout: React.FC = () => {
   const [layoutRunning, setLayoutRunning] = useState(false);
   const [drawingsOpen, setDrawingsOpen] = useState(false);
   const [lessonsOpen, setLessonsOpen] = useState(false);
-  const [view, setView] = useState<'scheme' | 'racks'>('scheme');
+  const [view, setView] = useState<'scheme' | 'racks' | 'plan'>('scheme');
   const [lessonEditor, setLessonEditor] = useState<{ open: boolean; lesson?: Lesson }>({ open: false });
   const [exportJob, setExportJob] = useState<{ kind: 'png' | 'print'; win: Window | null } | null>(null);
 
@@ -472,10 +473,12 @@ const MainLayout: React.FC = () => {
           >
             <Tab value="scheme" label="Схема" />
             <Tab value="racks" label={racks.length ? `Шкафы (${racks.length})` : 'Шкафы'} />
+            <Tab value="plan" label="План" />
           </Tabs>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
             <CanvasWorkspace />
             {view === 'racks' && <RackView />}
+            {view === 'plan' && <PlanView />}
             <LessonPanel onOpenList={() => setLessonsOpen(true)} />
           </Box>
         </Box>
