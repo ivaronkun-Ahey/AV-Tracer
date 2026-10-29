@@ -3,10 +3,11 @@ import { CableType, Connection, Device, SignalType } from '../types/device.types
 /**
  * Маркировка кабелей, как в кабельном журнале: буква по назначению и номер.
  * A — аналоговое аудио, S — акустический (усилитель → АС), D — Dante,
- * V — видео, N — сеть, C — управление, U — USB.
+ * V — видео, N — сеть, C — управление, U — USB, L — трансляционная линия 100 В.
  */
 export function cablePrefix(signal: SignalType | undefined, cable: CableType): string {
   if (cable === 'speakon') return 'S';
+  if (signal === 'line_100v') return 'L';
   switch (signal) {
     case 'analog_audio':
       return 'A';

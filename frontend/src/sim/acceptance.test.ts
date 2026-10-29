@@ -26,8 +26,8 @@ function cable(from: string, fromPort: string, to: string, toPort: string, type:
 
 const types = (issues: { type: string; device: string }[], device?: string) =>
   issues.filter((i) => !device || i.device === device).map((i) => i.type);
-const reached = (r: ReturnType<typeof runSimulation>, sink: string) =>
-  r.signal_flows.some((f) => f.path[f.path.length - 1] === sink);
+// Приёмник может стоять и в середине цепочки (сквозной выход, проходные клеммы линии 100 В)
+const reached = (r: ReturnType<typeof runSimulation>, sink: string) => r.signal_flows.some((f) => f.path.indexOf(sink) > 0);
 
 describe('R1: приёмник получает сигнал только от достижимого источника', () => {
   it('микшер → колонка без источника — ошибка «нет сигнала»', () => {

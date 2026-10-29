@@ -403,6 +403,31 @@ function renderProperties(device: Device, onChange: (prop: string, value: PropVa
             />
           );
         }
+        // Значение из списка (отводы трансформатора, напряжение линии): варианты — в specs.<параметр>_options
+        const options = device.specs?.[`${key}_options`];
+        if (Array.isArray(options) && options.length > 0) {
+          const list = options.includes(value as never) ? options : [value as string | number, ...options];
+          return (
+            <TextField
+              key={`${device.id}:${key}`}
+              select
+              label={propertyLabel(key)}
+              size="small"
+              fullWidth
+              value={String(value)}
+              onChange={(e) => onChange(key, typeof list[0] === 'number' ? Number(e.target.value) : e.target.value)}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 1.5 }}
+            >
+              {list.map((o) => (
+                <option key={String(o)} value={String(o)}>
+                  {String(o).replace('.', ',')}
+                </option>
+              ))}
+            </TextField>
+          );
+        }
         if (typeof value === 'number') {
           return (
             <NumberField

@@ -110,7 +110,7 @@ export function suggestChecks(spec: DocSpec): LessonCheck[] {
       sinks.length > 1 &&
       sinks.every((s) =>
         sim.signal_flows.some(
-          (f) => f.type === flow.type && f.status !== 'error' && f.path[f.path.length - 1] === s.id && byId[f.source]?.type === source.type
+          (f) => f.type === flow.type && f.status !== 'error' && f.path.indexOf(s.id) > 0 && byId[f.source]?.type === source.type
         )
       );
     checks.push({

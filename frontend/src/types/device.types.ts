@@ -8,8 +8,11 @@ export const SIGNAL_TYPES = [
   'network',
   'control',
   'usb',
+  /** Трансляционная линия 70/100 В (громкоговорители с трансформаторами). */
+  'line_100v',
 ] as const;
-export const CABLE_TYPES = ['xlr', 'trs', 'speakon', 'hdmi', 'sdi', 'cat6', 'rca', 'bnc', 'usb'] as const;
+/** terminal — клеммы трансляционной линии (винтовые или Phoenix). */
+export const CABLE_TYPES = ['xlr', 'trs', 'speakon', 'hdmi', 'sdi', 'cat6', 'rca', 'bnc', 'usb', 'terminal'] as const;
 export const PORT_DIRECTIONS = ['input', 'output', 'bidirectional'] as const;
 export const DEVICE_CATEGORIES = ['audio', 'video', 'network', 'control'] as const;
 /**

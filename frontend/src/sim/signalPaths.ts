@@ -53,6 +53,7 @@ export function portDomains(device: Device, port: Port): Set<Domain> {
   switch (port.signal_type) {
     case 'analog_audio':
     case 'digital_audio':
+    case 'line_100v':
       return new Set(['audio']);
     case 'usb':
       return new Set(['audio', 'video']);

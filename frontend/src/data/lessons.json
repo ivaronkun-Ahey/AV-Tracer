@@ -280,6 +280,55 @@
       ]
     },
     {
+      "id": "pa-hall",
+      "title": "Трансляция в холле (100 В)",
+      "kind": "build",
+      "level": 2,
+      "goal": "Озвучьте холл: голос с микрофона должен звучать из шести потолочных громкоговорителей, подключённых к трансляционному усилителю по линии 100 В.",
+      "theory": "В трансляционной системе громкоговорители включаются параллельно на одну линию с напряжением 100 В (или 70 В): у каждого есть трансформатор с отводами — 6, 3 или 1,5 Вт. Линия идёт от выхода усилителя к первому громкоговорителю и дальше по проходным клеммам. Сумма отводов должна быть не больше мощности усилителя, а с запасом — не больше 80 % от неё. Низкоомные колонки со Speakon к такой линии не подключаются.",
+      "hints": [
+        "Нужны микрофон, микшер, трансляционный усилитель и шесть потолочных громкоговорителей 100 В.",
+        "Микрофон — в XLR IN 1 микшера, выход микшера — на XLR-вход усилителя; поднимите усиление входа микшера (около 50 дБ).",
+        "Выход усилителя на линию 100 В — к входу первого громкоговорителя, его проходные клеммы — к следующему, и так до шестого. Сумма отводов 6 × 6 = 36 Вт — запас большой."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "generic-pa-amp-240", "generic-ceiling-spk-100v", "crown-xls2502", "ev-evf1122"],
+      "start": {
+        "devices": [
+        ],
+        "connections": [
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "input_gain": 50 } },
+          { "id": "amp", "eq": "generic-pa-amp-240", "x": 640, "y": 80 },
+          { "id": "c1", "eq": "generic-ceiling-spk-100v", "x": 940, "y": 80 },
+          { "id": "c2", "eq": "generic-ceiling-spk-100v", "x": 1240, "y": 80 },
+          { "id": "c3", "eq": "generic-ceiling-spk-100v", "x": 1540, "y": 80 },
+          { "id": "c4", "eq": "generic-ceiling-spk-100v", "x": 940, "y": 220 },
+          { "id": "c5", "eq": "generic-ceiling-spk-100v", "x": 1240, "y": 220 },
+          { "id": "c6", "eq": "generic-ceiling-spk-100v", "x": 1540, "y": 220 }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in", "length": 3 },
+          { "from": "amp.line100_out", "to": "c1.line100_in", "length": 30 },
+          { "from": "c1.line100_thru", "to": "c2.line100_in", "length": 8 },
+          { "from": "c2.line100_thru", "to": "c3.line100_in", "length": 8 },
+          { "from": "c3.line100_thru", "to": "c4.line100_in", "length": 8 },
+          { "from": "c4.line100_thru", "to": "c5.line100_in", "length": 8 },
+          { "from": "c5.line100_thru", "to": "c6.line100_in", "length": 8 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук микрофона доходит до всех громкоговорителей", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" }, "all": true },
+        { "type": "uses", "text": "Используется шесть потолочных громкоговорителей 100 В", "select": { "model": "Потолочный громкоговоритель 100 В" }, "min": 6 },
+        { "type": "no_issue", "text": "Линия 100 В не перегружена, уровень в норме", "issues": ["line_overload", "line_headroom", "tap_missing", "level_low", "level_high"] },
+        { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
       "id": "fix-quiet",
       "title": "Неисправность: слишком тихо",
       "kind": "troubleshoot",
@@ -464,6 +513,87 @@
       "checks": [
         { "type": "reaches", "text": "Камера на обоих дисплеях", "domain": "video", "from": { "type": "camera" }, "to": { "type": "display" }, "all": true },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
+      ]
+    },
+    {
+      "id": "fix-line-overload",
+      "title": "Неисправность: трансляционный усилитель перегружен",
+      "kind": "troubleshoot",
+      "level": 2,
+      "allowFixes": false,
+      "goal": "На складе повесили десять рупорных громкоговорителей, но при объявлении усилитель уходит в защиту. Найдите причину и устраните её, не меняя усилитель.",
+      "theory": "Нагрузка трансляционной линии — сумма отводов всех громкоговорителей. Если она больше мощности усилителя, он перегружается и срабатывает защита; рекомендуется загружать усилитель не больше чем на 80 %. Уменьшить нагрузку можно, переключив отводы громкоговорителей на меньшую мощность или разделив их на две линии.",
+      "hints": [
+        "Запустите «Симуляцию» и прочитайте сообщение о линии 100 В.",
+        "Десять рупоров по 30 Вт — 300 Вт, а усилитель — 240 Вт; 80 % от него — 192 Вт.",
+        "Выберите каждый рупор и переключите «Отвод трансформатора» на 15 Вт: 10 × 15 = 150 Вт."
+      ],
+      "palette": ["shure-sm58", "yamaha-mg12xu", "generic-pa-amp-240", "generic-horn-100v"],
+      "start": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "input_gain": 50 } },
+          { "id": "amp", "eq": "generic-pa-amp-240", "x": 640, "y": 80 },
+          { "id": "h1", "eq": "generic-horn-100v", "x": 940, "y": 80, "props": { "tap_watts": 30 } },
+          { "id": "h2", "eq": "generic-horn-100v", "x": 1240, "y": 80, "props": { "tap_watts": 30 } },
+          { "id": "h3", "eq": "generic-horn-100v", "x": 1540, "y": 80, "props": { "tap_watts": 30 } },
+          { "id": "h4", "eq": "generic-horn-100v", "x": 940, "y": 220, "props": { "tap_watts": 30 } },
+          { "id": "h5", "eq": "generic-horn-100v", "x": 1240, "y": 220, "props": { "tap_watts": 30 } },
+          { "id": "h6", "eq": "generic-horn-100v", "x": 1540, "y": 220, "props": { "tap_watts": 30 } },
+          { "id": "h7", "eq": "generic-horn-100v", "x": 940, "y": 360, "props": { "tap_watts": 30 } },
+          { "id": "h8", "eq": "generic-horn-100v", "x": 1240, "y": 360, "props": { "tap_watts": 30 } },
+          { "id": "h9", "eq": "generic-horn-100v", "x": 1540, "y": 360, "props": { "tap_watts": 30 } },
+          { "id": "h10", "eq": "generic-horn-100v", "x": 940, "y": 500, "props": { "tap_watts": 30 } }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in", "length": 3 },
+          { "from": "amp.line100_out", "to": "h1.line100_in", "length": 30 },
+          { "from": "h1.line100_thru", "to": "h2.line100_in", "length": 8 },
+          { "from": "h2.line100_thru", "to": "h3.line100_in", "length": 8 },
+          { "from": "h3.line100_thru", "to": "h4.line100_in", "length": 8 },
+          { "from": "h4.line100_thru", "to": "h5.line100_in", "length": 8 },
+          { "from": "h5.line100_thru", "to": "h6.line100_in", "length": 8 },
+          { "from": "h6.line100_thru", "to": "h7.line100_in", "length": 8 },
+          { "from": "h7.line100_thru", "to": "h8.line100_in", "length": 8 },
+          { "from": "h8.line100_thru", "to": "h9.line100_in", "length": 8 },
+          { "from": "h9.line100_thru", "to": "h10.line100_in", "length": 8 }
+        ]
+      },
+      "solution": {
+        "devices": [
+          { "id": "mic", "eq": "shure-sm58", "x": 40, "y": 80 },
+          { "id": "mix", "eq": "yamaha-mg12xu", "x": 340, "y": 80, "props": { "input_gain": 50 } },
+          { "id": "amp", "eq": "generic-pa-amp-240", "x": 640, "y": 80 },
+          { "id": "h1", "eq": "generic-horn-100v", "x": 940, "y": 80, "props": { "tap_watts": 15 } },
+          { "id": "h2", "eq": "generic-horn-100v", "x": 1240, "y": 80, "props": { "tap_watts": 15 } },
+          { "id": "h3", "eq": "generic-horn-100v", "x": 1540, "y": 80, "props": { "tap_watts": 15 } },
+          { "id": "h4", "eq": "generic-horn-100v", "x": 940, "y": 220, "props": { "tap_watts": 15 } },
+          { "id": "h5", "eq": "generic-horn-100v", "x": 1240, "y": 220, "props": { "tap_watts": 15 } },
+          { "id": "h6", "eq": "generic-horn-100v", "x": 1540, "y": 220, "props": { "tap_watts": 15 } },
+          { "id": "h7", "eq": "generic-horn-100v", "x": 940, "y": 360, "props": { "tap_watts": 15 } },
+          { "id": "h8", "eq": "generic-horn-100v", "x": 1240, "y": 360, "props": { "tap_watts": 15 } },
+          { "id": "h9", "eq": "generic-horn-100v", "x": 1540, "y": 360, "props": { "tap_watts": 15 } },
+          { "id": "h10", "eq": "generic-horn-100v", "x": 940, "y": 500, "props": { "tap_watts": 15 } }
+        ],
+        "connections": [
+          { "from": "mic.xlr_out", "to": "mix.xlr_in_1", "length": 5 },
+          { "from": "mix.xlr_out_l", "to": "amp.xlr_in", "length": 3 },
+          { "from": "amp.line100_out", "to": "h1.line100_in", "length": 30 },
+          { "from": "h1.line100_thru", "to": "h2.line100_in", "length": 8 },
+          { "from": "h2.line100_thru", "to": "h3.line100_in", "length": 8 },
+          { "from": "h3.line100_thru", "to": "h4.line100_in", "length": 8 },
+          { "from": "h4.line100_thru", "to": "h5.line100_in", "length": 8 },
+          { "from": "h5.line100_thru", "to": "h6.line100_in", "length": 8 },
+          { "from": "h6.line100_thru", "to": "h7.line100_in", "length": 8 },
+          { "from": "h7.line100_thru", "to": "h8.line100_in", "length": 8 },
+          { "from": "h8.line100_thru", "to": "h9.line100_in", "length": 8 },
+          { "from": "h9.line100_thru", "to": "h10.line100_in", "length": 8 }
+        ]
+      },
+      "checks": [
+        { "type": "reaches", "text": "Звук микрофона доходит до всех рупоров", "domain": "audio", "from": { "type": "microphone" }, "to": { "type": "speaker" }, "all": true },
+        { "type": "no_issue", "text": "Линия 100 В не перегружена и с запасом мощности", "issues": ["line_overload", "line_headroom"] }
       ]
     }
   ]

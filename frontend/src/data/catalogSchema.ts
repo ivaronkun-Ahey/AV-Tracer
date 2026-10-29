@@ -30,6 +30,8 @@ const PORT_RULES: Array<[RegExp, CableType, PortDirection, SignalType]> = [
   [/^rca_out/, 'rca', 'output', 'analog_audio'],
   [/^speakon_in/, 'speakon', 'input', 'analog_audio'],
   [/^speakon_out/, 'speakon', 'output', 'analog_audio'],
+  [/^line100_in/, 'terminal', 'input', 'line_100v'],
+  [/^line100_(out|thru)/, 'terminal', 'output', 'line_100v'],
   [/^hdmi_in/, 'hdmi', 'input', 'hdmi'],
   [/^hdmi_out/, 'hdmi', 'output', 'hdmi'],
   [/^sdi_in/, 'bnc', 'input', 'sdi'],

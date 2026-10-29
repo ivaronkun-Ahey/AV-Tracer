@@ -61,9 +61,11 @@ export const SUBCATEGORY_LABELS: Record<string, string> = {
   'Control Systems': 'Системы управления',
   'Wireless & Access Points': 'Точки доступа Wi-Fi',
   'Touch Panels': 'Панели управления',
+  'Public Address 100V': 'Трансляционная система 100 В',
 };
 
 export const SIGNAL_LABELS: Record<SignalType, string> = {
+  line_100v: 'Трансляционная линия 100 В',
   analog_audio: 'Аналоговое аудио',
   digital_audio: 'Цифровое аудио (Dante)',
   video: 'Видео',
@@ -138,6 +140,9 @@ export const PROPERTY_LABELS: Record<string, string> = {
   passive: 'Пассивный',
   crossover_hz: 'Частота кроссовера (Гц)',
   power_handling_watts: 'Допустимая мощность (Вт)',
+  // Трансляционная линия 70/100 В
+  line_voltage: 'Напряжение линии (В)',
+  tap_watts: 'Отвод трансформатора (Вт)',
   max_spl_db: 'Макс. SPL (дБ)',
   // Медиаплееры / запись
   storage_gb: 'Накопитель (ГБ)',

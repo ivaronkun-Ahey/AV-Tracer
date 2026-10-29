@@ -355,6 +355,90 @@
           ]
         },
         {
+          "name": "Public Address 100V",
+          "items": [
+            {
+              "_id": "generic-pa-amp-240",
+              "type": "amplifier",
+              "manufacturer": "Типовое",
+              "model": "Трансляционный усилитель 240 Вт",
+              "full_name": "Трансляционный усилитель (типовой): линейный вход, выход на линию 100 В, 240 Вт",
+              "ports": ["xlr_in", "trs_in", "line100_out"],
+              "default_properties": {
+                "power_watts": 240,
+                "line_voltage": 100
+              },
+              "specs": {
+                "rack_units": 2,
+                "line_voltage_options": [100, 70]
+              },
+              "routing": "all"
+            },
+            {
+              "_id": "generic-pa-amp-2x120",
+              "type": "amplifier",
+              "manufacturer": "Типовое",
+              "model": "Трансляционный усилитель 2×120 Вт",
+              "full_name": "Двухканальный трансляционный усилитель (типовой): две зоны, выходы на линии 100 В, 120 Вт на канал",
+              "ports": ["xlr_in_1", "xlr_in_2", "line100_out_1", "line100_out_2"],
+              "default_properties": {
+                "power_watts": 120,
+                "line_voltage": 100
+              },
+              "specs": {
+                "rack_units": 2,
+                "line_voltage_options": [100, 70]
+              },
+              "routing": "channel"
+            },
+            {
+              "_id": "generic-ceiling-spk-100v",
+              "type": "speaker",
+              "manufacturer": "Типовое",
+              "model": "Потолочный громкоговоритель 100 В",
+              "full_name": "Потолочный громкоговоритель с трансформатором (типовой), отводы 6 / 3 / 1,5 Вт, проходные клеммы",
+              "ports": ["line100_in", "line100_thru"],
+              "default_properties": {
+                "active": false,
+                "tap_watts": 6
+              },
+              "specs": {
+                "tap_watts_options": [6, 3, 1.5]
+              }
+            },
+            {
+              "_id": "generic-wall-spk-100v",
+              "type": "speaker",
+              "manufacturer": "Типовое",
+              "model": "Настенный громкоговоритель 100 В",
+              "full_name": "Настенный громкоговоритель с трансформатором (типовой), отводы 10 / 5 / 2,5 Вт, проходные клеммы",
+              "ports": ["line100_in", "line100_thru"],
+              "default_properties": {
+                "active": false,
+                "tap_watts": 10
+              },
+              "specs": {
+                "tap_watts_options": [10, 5, 2.5]
+              }
+            },
+            {
+              "_id": "generic-horn-100v",
+              "type": "speaker",
+              "manufacturer": "Типовое",
+              "model": "Рупорный громкоговоритель 100 В",
+              "full_name": "Рупорный громкоговоритель с трансформатором (типовой) для улицы и цехов, отводы 30 / 15 / 7,5 Вт",
+              "ports": ["line100_in", "line100_thru"],
+              "default_properties": {
+                "active": false,
+                "tap_watts": 30
+              },
+              "specs": {
+                "tap_watts_options": [30, 15, 7.5]
+              }
+            }
+          ]
+        },
+        {
           "name": "Wireless Systems",
           "items": [
             {

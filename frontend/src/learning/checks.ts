@@ -16,10 +16,10 @@ export interface LessonEvaluation {
 
 const matches = (d: Device, s: Selector) => (!s.type || d.type === s.type) && (!s.model || d.model === s.model);
 
-/** Суммарная длина кабелей по пути сигнала (по портам входа в каждое устройство). */
-export function pathLength(flow: SignalFlow, connections: Connection[]): number {
+/** Суммарная длина кабелей по пути сигнала до устройства с индексом upTo (по портам входа в каждое устройство). */
+export function pathLength(flow: SignalFlow, connections: Connection[], upTo = flow.path.length - 1): number {
   let total = 0;
-  for (let i = 1; i < flow.path.length; i++) {
+  for (let i = 1; i <= upTo; i++) {
     const prev = flow.path[i - 1];
     const cur = flow.path[i];
     const entry = flow.entry_ports?.[i];
@@ -51,17 +51,20 @@ function evaluateCheck(check: LessonCheck, doc: ProjectDoc, sim: SimulationResul
     case 'reaches': {
       const sinks = doc.devices.filter((d) => matches(d, check.to));
       if (sinks.length === 0) return { text: check.text, ok: false, detail: 'на схеме нет нужного приёмника' };
+      // Приёмник может стоять и в середине цепочки: колонки по сквозному выходу, громкоговорители линии 100 В
       const flowsTo = (sink: Device) =>
         sim.signal_flows.filter(
           (f) =>
             f.type === check.domain &&
             f.status !== 'error' &&
-            f.path[f.path.length - 1] === sink.id &&
+            f.path.indexOf(sink.id) > 0 &&
             byId[f.source] &&
             matches(byId[f.source], check.from)
         );
       const ok = (sink: Device) =>
-        flowsTo(sink).some((f) => check.minLength === undefined || pathLength(f, doc.connections) >= check.minLength);
+        flowsTo(sink).some(
+          (f) => check.minLength === undefined || pathLength(f, doc.connections, f.path.indexOf(sink.id)) >= check.minLength
+        );
       const reached = sinks.filter(ok);
       const pass = check.all ? reached.length === sinks.length : reached.length > 0;
       if (pass) return { text: check.text, ok: true };

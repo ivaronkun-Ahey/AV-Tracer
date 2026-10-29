@@ -116,6 +116,52 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
     },
   },
   {
+    id: 'pa-100v',
+    name: 'Трансляция 100 В (две зоны)',
+    description: 'Микшер → усилитель 2×120 Вт: холл — 6 потолочных громкоговорителей, улица — 4 рупора; линии по проходным клеммам',
+    build: () => {
+      const rooms: Room[] = [
+        { id: 'p_tech', name: 'Аппаратная', color: '#5B8DEF' },
+        { id: 'p_hall', name: 'Холл', color: '#E0A030' },
+        { id: 'p_out', name: 'Улица', color: '#43A047' },
+      ];
+      const mic = instantiate('shure-sm58', 'p_mic', 40, 80);
+      const mix = instantiate('yamaha-mg12xu', 'p_mix', 340, 80);
+      mix.properties.input_gain = 50;
+      const amp = instantiate('generic-pa-amp-2x120', 'p_amp', 640, 80);
+      for (const d of [mic, mix, amp]) d.room = 'p_tech';
+      const hall = Array.from({ length: 6 }, (_, i) => {
+        const d = instantiate('generic-ceiling-spk-100v', `p_c${i + 1}`, 940 + (i % 3) * 300, 380 + Math.floor(i / 3) * 140);
+        d.room = 'p_hall';
+        return d;
+      });
+      const street = Array.from({ length: 4 }, (_, i) => {
+        const d = instantiate('generic-horn-100v', `p_h${i + 1}`, 940 + i * 300, 760);
+        d.properties.tap_watts = 15;
+        d.room = 'p_out';
+        return d;
+      });
+      // Линия — от выхода усилителя к первому громкоговорителю, дальше по проходным клеммам
+      const chain = (line: Device[], ampPort: string) =>
+        line.map((d, i) => {
+          const c = connect(i === 0 ? ['p_amp', ampPort] : [line[i - 1].id, 'line100_thru'], [d.id, 'line100_in'], 'terminal');
+          c.cable_length = i === 0 ? 30 : 8;
+          return c;
+        });
+      return {
+        rooms,
+        devices: [mic, mix, amp, ...hall, ...street],
+        connections: [
+          connect(['p_mic', 'xlr_out'], ['p_mix', 'xlr_in_1'], 'xlr'),
+          connect(['p_mix', 'xlr_out_l'], ['p_amp', 'xlr_in_1'], 'xlr'),
+          connect(['p_mix', 'xlr_out_r'], ['p_amp', 'xlr_in_2'], 'xlr'),
+          ...chain(hall, 'line100_out_1'),
+          ...chain(street, 'line100_out_2'),
+        ],
+      };
+    },
+  },
+  {
     id: 'meeting-room',
     name: 'Переговорная с ВКС',
     description: 'Видеобар → ноутбук (USB) → HDBaseT по витой паре 40 м → дисплей',

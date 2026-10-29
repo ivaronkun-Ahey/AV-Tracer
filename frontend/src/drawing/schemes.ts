@@ -125,6 +125,7 @@ export type SignalGroup = 'audio' | 'video' | 'data';
 
 const SIGNAL_GROUP: Record<SignalType, SignalGroup> = {
   analog_audio: 'audio',
+  line_100v: 'audio',
   digital_audio: 'audio',
   hdmi: 'video',
   sdi: 'video',
@@ -143,6 +144,7 @@ export const GROUP_STYLE: Record<SignalGroup, { style: LineStyle; name: string }
 
 const SIGNAL_SHORT: Record<SignalType, string> = {
   analog_audio: 'Аудио',
+  line_100v: '100 В',
   digital_audio: 'Dante',
   hdmi: 'HDMI',
   sdi: 'SDI',

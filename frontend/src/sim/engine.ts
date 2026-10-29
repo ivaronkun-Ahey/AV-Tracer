@@ -36,6 +36,7 @@ const DBV_TO_DBU = 2.2;
 
 const SIG_RU: Record<string, string> = {
   analog_audio: 'аналог. аудио',
+  line_100v: 'линия 100 В',
   digital_audio: 'цифр. аудио',
   video: 'видео',
   hdmi: 'HDMI',
@@ -424,6 +425,8 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     for (const c of incoming(d.id)) {
       const from = byId[c.from.device];
       if (!from) continue;
+      // Громкоговоритель 100 В питается от линии: от усилителя или по проходным клеммам соседнего
+      if (d.ports.find((p) => p.id === c.to.port)?.signal_type === 'line_100v') continue;
       if (active === true && from.type === 'amplifier') {
         errors.push({
           type: 'active_on_amp',
@@ -469,6 +472,8 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     const byPort: Record<string, Device[]> = {};
     for (const c of connections) {
       if (c.from.device !== amp.id) continue;
+      // Выход на трансляционную линию считается отдельно — по отводам громкоговорителей
+      if (amp.ports.find((p) => p.id === c.from.port)?.signal_type === 'line_100v') continue;
       const sink = byId[c.to.device];
       if (!sink) continue;
       if (AUDIO_SINKS.includes(sink.type) && sink.properties?.active === false) {
@@ -505,6 +510,61 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
             severity: 'medium',
           });
         }
+      }
+    }
+  }
+
+  // Трансляционная линия 70/100 В: громкоговорители с трансформаторами включены
+  // параллельно (по проходным клеммам), нагрузка — сумма отводов; её держат не
+  // больше 80 % мощности канала. Отводы заданы для 100 В: на 70 В мощность
+  // каждого — в (70/100)² ≈ 2 раза меньше.
+  for (const amp of devices) {
+    if (amp.type !== 'amplifier') continue;
+    const ampW = num(amp.properties?.power_watts, 0);
+    const voltage = num(amp.properties?.line_voltage, 100);
+    const factor = (voltage / 100) ** 2;
+    for (const out of amp.ports.filter((p) => p.signal_type === 'line_100v' && p.direction === 'output')) {
+      const speakers: Device[] = [];
+      const seen = new Set<string>([amp.id]);
+      const queue = connections.filter((c) => c.from.device === amp.id && c.from.port === out.id).map((c) => c.to.device);
+      while (queue.length) {
+        const id = queue.shift()!;
+        const d = byId[id];
+        if (!d || seen.has(id)) continue;
+        seen.add(id);
+        speakers.push(d);
+        for (const c of connections) {
+          if (c.from.device === id && d.ports.find((p) => p.id === c.from.port)?.signal_type === 'line_100v') queue.push(c.to.device);
+        }
+      }
+      if (speakers.length === 0) continue;
+      const line = `${amp.tag ?? amp.model} · ${out.id.replace('line100_out', 'выход').replace('_', ' ')}`;
+      for (const s of speakers.filter((x) => !(num(x.properties?.tap_watts, 0) > 0))) {
+        warnings.push({
+          type: 'tap_missing',
+          device: s.id,
+          message: `У «${s.model}» не выбран отвод трансформатора — нагрузку линии «${line}» не посчитать`,
+          severity: 'medium',
+        });
+      }
+      const total = round1(speakers.reduce((acc, x) => acc + num(x.properties?.tap_watts, 0), 0) * factor);
+      if (ampW <= 0 || total <= 0) continue;
+      const of = `${total} Вт на ${speakers.length} громкоговорител${speakers.length === 1 ? 'ь' : speakers.length < 5 ? 'я' : 'ей'}`;
+      const at70 = voltage !== 100 ? ` (на ${voltage} В отводы дают в ${round1(1 / factor)} раза меньше мощности)` : '';
+      if (total > ampW) {
+        errors.push({
+          type: 'line_overload',
+          device: amp.id,
+          message: `Линия ${voltage} В «${line}»: сумма отводов ${of} больше мощности канала ${ampW} Вт — усилитель перегружен${at70}; уменьшите отводы или разделите громкоговорители на две линии`,
+          severity: 'high',
+        });
+      } else if (total > ampW * 0.8) {
+        warnings.push({
+          type: 'line_headroom',
+          device: amp.id,
+          message: `Линия ${voltage} В «${line}»: сумма отводов ${of} — больше 80 % мощности канала ${ampW} Вт, запаса почти нет${at70}`,
+          severity: 'low',
+        });
       }
     }
   }

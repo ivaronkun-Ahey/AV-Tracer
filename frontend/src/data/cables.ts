@@ -11,6 +11,8 @@ export const CABLE_MAX_LENGTH: Record<CableType, number> = {
   rca: 10,
   bnc: 100,
   usb: 5,
+  // Трансляционная линия: потери зависят от сечения; ориентир для 1,5 мм² и десятков ватт
+  terminal: 300,
 };
 
 /** Короткое описание разъёма/кабеля для инспектора. */
@@ -24,6 +26,7 @@ export const CABLE_DESCRIPTION: Record<CableType, string> = {
   rca: 'RCA — небалансный аналоговый сигнал',
   bnc: 'BNC — коаксиальный разъём (SDI/видео)',
   usb: 'USB — подключение к компьютеру',
+  terminal: 'Кабель трансляционной линии 70/100 В (2 жилы, клеммы)',
 };
 
 export function cableMaxLength(cable: CableType): number {

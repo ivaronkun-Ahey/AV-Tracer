@@ -288,6 +288,7 @@ export function categoryColor(category: string): string {
 
 const SIGNAL_COLORS: Record<string, string> = {
   analog_audio: '#FF6B00',
+  line_100v: '#FFB300',
   digital_audio: '#0066CC',
   video: '#00B8D4',
   hdmi: '#00B8D4',
