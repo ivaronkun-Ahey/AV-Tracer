@@ -3,6 +3,7 @@ import { rackBom, rackTitle } from '../data/racks';
 import { deviceTypeLabel, portLabel, SIGNAL_LABELS, CATEGORY_LABELS } from '../data/labels';
 import { deviceTags } from '../data/deviceTags';
 import { roomNameOf } from '../data/rooms';
+import { Provenance, provenance } from '../data/equipment';
 
 export interface BomRow {
   /** Помещение (пустая строка — вне помещений или в проекте нет помещений). */
@@ -14,6 +15,8 @@ export interface BomRow {
   model: string;
   fullName: string;
   qty: number;
+  /** Сверены ли характеристики с производителем. */
+  data: Provenance;
 }
 
 export interface CableRow {
@@ -68,6 +71,7 @@ export function buildBom(devices: Device[], rooms: Room[] = []): BomRow[] {
           model: d.model,
           fullName: d.full_name,
           qty: 1,
+          data: provenance(d),
         },
       });
     }
@@ -156,6 +160,7 @@ export function bomCsv(devices: Device[], rooms: Room[] = [], racks: Rack[] = []
       'Модель',
       'Наименование',
       'Кол-во',
+      'Данные',
     ],
     ...rows.map((r, i) => [
       i + 1,
@@ -167,6 +172,7 @@ export function bomCsv(devices: Device[], rooms: Room[] = [], racks: Rack[] = []
       r.model,
       r.fullName,
       r.qty,
+      r.data.short,
     ]),
     ...rackBom(racks).map((r, i) => [
       rows.length + i + 1,
@@ -178,6 +184,7 @@ export function bomCsv(devices: Device[], rooms: Room[] = [], racks: Rack[] = []
       `${r.units}U`,
       rackTitle(r.units),
       r.qty,
+      '',
     ]),
   ]);
 }

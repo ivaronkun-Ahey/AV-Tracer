@@ -12,6 +12,7 @@ import {
   IconButton,
   Tooltip,
   ButtonBase,
+  Link as MuiLink,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
@@ -32,6 +33,7 @@ import { Connection, Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
 import { signalColor, categoryColor } from './deviceGeometry';
 import { deviceTags } from '../data/deviceTags';
+import { provenance } from '../data/equipment';
 import ConnectionInspector from './ConnectionInspector';
 import { DeviceRoomField, RoomPanel, RoomsAndDevices } from './RoomPanels';
 import { DeviceRackField } from './RackView';
@@ -107,6 +109,7 @@ const PropertiesPanel: React.FC = () => {
         <Typography variant="caption" color="text.secondary">
           {device.full_name}
         </Typography>
+        <DataNote device={device} />
       </Box>
 
       <Divider sx={{ my: 2 }} />
@@ -303,6 +306,29 @@ const ConnectForm: React.FC<{ device: Device }> = ({ device }) => {
 };
 
 /** Обозначение устройства (MIC-01): редактируется, должно быть уникальным. */
+/** Откуда характеристики: сверены с производителем, ориентировочные или типовое учебное устройство. */
+const DataNote: React.FC<{ device: Device }> = ({ device }) => {
+  const data = provenance(device);
+  return (
+    <Typography
+      variant="caption"
+      component="p"
+      sx={{ mt: 0.5, color: data.kind === 'indicative' ? 'warning.main' : 'text.secondary' }}
+      data-testid="device-data-note"
+    >
+      {data.label}
+      {data.url && (
+        <>
+          {' · '}
+          <MuiLink href={data.url} target="_blank" rel="noopener noreferrer">
+            источник
+          </MuiLink>
+        </>
+      )}
+    </Typography>
+  );
+};
+
 const TagField: React.FC<{ value: string; isTaken: (tag: string) => boolean; onCommit: (tag: string) => void }> = ({
   value,
   isTaken,

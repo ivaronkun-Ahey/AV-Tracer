@@ -20,6 +20,28 @@ export function findEquipment(equipmentId: string): EquipmentTemplate | undefine
   return getAllEquipment().find((e) => e._id === equipmentId);
 }
 
+export interface Provenance {
+  /** verified — сверено с документацией производителя; indicative — не сверено; generic — типовое учебное. */
+  kind: 'verified' | 'indicative' | 'generic';
+  label: string;
+  /** Коротко — для таблиц спецификации. */
+  short: string;
+  url?: string;
+}
+
+/** Насколько можно доверять характеристикам устройства (по карточке каталога с тем же производителем и моделью). */
+export function provenance(d: { manufacturer: string; model: string }): Provenance {
+  if (d.manufacturer === 'Типовое') {
+    return { kind: 'generic', label: 'Типовое учебное устройство: типичные характеристики, а не конкретная модель', short: 'типовое' };
+  }
+  const source = getAllEquipment().find((e) => e.manufacturer === d.manufacturer && e.model === d.model)?.source;
+  if (source) {
+    const date = source.verified.split('-').reverse().join('.');
+    return { kind: 'verified', label: `Сверено с документацией производителя ${date}`, short: `сверено ${date}`, url: source.url };
+  }
+  return { kind: 'indicative', label: 'Характеристики ориентировочные: с документацией производителя не сверены', short: 'не сверено' };
+}
+
 /** Уникальный идентификатор нового устройства на схеме. */
 export function newDeviceId(): string {
   return `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;

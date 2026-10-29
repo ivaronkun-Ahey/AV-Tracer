@@ -60,6 +60,8 @@ test('шкафы: добавить шкаф, поставить оборудов
   await expect(props.getByLabel('Шкаф (1U)')).toHaveValue(/rack_/);
   await expect(props.getByLabel('Юнит (низ)')).toHaveValue('4');
   await expect(props.getByLabel('Обозначение на схеме')).toHaveCount(1);
+  // Происхождение характеристик: модель производителя, с документацией не сверена
+  await expect(props.getByTestId('device-data-note')).toHaveText(/ориентировочные: с документацией производителя не сверены/);
   await rack.getByRole('button', { name: /^DEC-01/ }).press('Delete');
   await expect(loose.getByRole('button', { name: /DEC-01/ })).toBeVisible();
 

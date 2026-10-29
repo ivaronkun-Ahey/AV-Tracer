@@ -153,7 +153,7 @@ export function specRows({ devices, connections, rooms, racks = [] }: ProjectDoc
       room = r.room;
       rows.push(empty(r.room || 'Вне помещений'));
     }
-    const generic = r.manufacturer === 'Типовое';
+    const generic = r.data.kind === 'generic';
     rows.push({
       cells: [
         r.tags.join(', '),
@@ -164,7 +164,7 @@ export function specRows({ devices, connections, rooms, racks = [] }: ProjectDoc
         'шт.',
         String(r.qty),
         '',
-        generic ? 'типовое, подобрать модель' : '',
+        generic ? 'типовое, подобрать модель' : r.data.kind === 'indicative' ? 'характеристики не сверены' : '',
       ],
     });
   }

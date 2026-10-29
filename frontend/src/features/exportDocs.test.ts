@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildBom, buildCableSchedule, cableTotals, toCsv, bomCsv, cableScheduleCsv, documentationHtml } from './exportDocs';
 import { EXAMPLE_PROJECTS } from '../data/examples';
 import { withCableLabels, nextCableLabel, cablePrefix } from '../data/cableLabels';
+import { createDevice, findEquipment, provenance } from '../data/equipment';
 
 const concert = () => {
   const p = EXAMPLE_PROJECTS.find((e) => e.id === 'concert')!.build();
@@ -50,6 +51,7 @@ describe('спецификация и кабельный журнал', () => {
   it('CSV для Excel: BOM-метка, «;», экранирование', () => {
     expect(toCsv([['a;b', 'say "hi"', 3]])).toBe('﻿"a;b";"say ""hi""";3\r\n');
     expect(bomCsv(concert().devices).split('\r\n')[0]).toContain('Производитель');
+    expect(bomCsv(concert().devices).split('\r\n')[0]).toMatch(/;Данные$/);
   });
 
   it('документация экранирует названия и содержит все разделы', () => {
@@ -96,5 +98,17 @@ describe('помещения в спецификации и кабельном �
     const { devices, connections } = concert();
     expect(cableScheduleCsv(devices, connections).split('\r\n')[0]).not.toContain('Помещение');
     expect(bomCsv(devices).split('\r\n')[0]).not.toContain('Помещение');
+  });
+});
+
+describe('происхождение характеристик в спецификации', () => {
+  it('сверенная карточка — с датой, остальные — «не сверено», типовые — «типовое»', () => {
+    const devices = ['shure-beta87a', 'shure-sm58', 'generic-laptop'].map((eq, i) => createDevice(findEquipment(eq)!, `d${i}`, { x: 0, y: 0 }));
+    expect(buildBom(devices).map((r) => [r.model, r.data.kind, r.data.short])).toEqual([
+      ['Beta 87A', 'verified', 'сверено 26.10.2026'],
+      ['SM58', 'indicative', 'не сверено'],
+      ['Ноутбук', 'generic', 'типовое'],
+    ]);
+    expect(provenance(devices[0]).url).toContain('shure.com');
   });
 });
