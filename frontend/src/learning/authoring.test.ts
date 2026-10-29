@@ -50,8 +50,10 @@ describe('задание из схемы', () => {
 
   it('проверки по симуляции решения: звук до колонок, уровень, нет ошибок', () => {
     const checks = suggestChecks(docToSpec(example('basic-pa')));
-    expect(checks.map((c) => c.type)).toEqual(['reaches', 'no_issue', 'no_errors']);
+    expect(checks.map((c) => c.type)).toEqual(['reaches', 'reaches', 'no_issue', 'no_errors']);
     expect(checks[0]).toMatchObject({ domain: 'audio', from: { type: 'microphone' }, to: { type: 'speaker' } });
+    // Вторая — тракт решения: в обход микшера не засчитывается
+    expect(checks[1]).toMatchObject({ domain: 'audio', via: [{ type: 'mixer' }], text: expect.stringContaining('через Микшер') });
     const video = suggestChecks(docToSpec(example('presentation')));
     expect(video.some((c) => c.type === 'reaches' && c.domain === 'video')).toBe(true);
   });

@@ -28,7 +28,7 @@ import { dateStamp, downloadFile } from '../features/exportDocs';
 import { LESSONS } from '../learning/lessons';
 import { Lesson, lessonsFile, parseLessons } from '../learning/lessonSchema';
 import { lessonId } from '../learning/authoring';
-import { exitLessonSession, startLessonSession } from '../learning/session';
+import { exitLessonSession, hasContent, startLessonSession } from '../learning/session';
 
 const LEVEL = ['', 'начальный', 'средний', 'продвинутый'];
 const GROUPS = [
@@ -50,11 +50,10 @@ const LessonsDialog: React.FC<{ open: boolean; onClose: () => void; onEdit: (les
 
   const start = (lesson: Lesson) => {
     const state = store.getState();
-    if (!state.lesson.activeId && state.canvas.devices.length > 0) {
+    if (!state.lesson.activeId && hasContent(state.canvas)) {
       if (!confirm('Начать задание? Ваша схема сохранится и вернётся, когда вы выйдете из учебного режима.')) return;
     }
-    startLessonSession(dispatch, state, lesson);
-    onClose();
+    if (startLessonSession(dispatch, state, lesson)) onClose();
   };
 
   const remove = (lesson: Lesson) => {

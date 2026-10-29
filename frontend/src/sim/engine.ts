@@ -1,6 +1,6 @@
 import { Device, Connection, SimulationResult, SignalFlow, SimIssue, SimFix } from '../types/device.types';
 import { cableMaxLength } from '../data/cables';
-import { buildEdges, routingMode, signalsCompatible, tracePaths, TracedPath, Domain } from './signalPaths';
+import { buildEdges, reachable, routingMode, signalsCompatible, tracePaths, TracedPath, Domain, MAX_PATHS_PER_SOURCE } from './signalPaths';
 
 /**
  * Движок симуляции AV-системы — единственный в проекте, считает в браузере.
@@ -279,7 +279,8 @@ function analyzeVideoPath(path: string[], byId: Record<string, Device>) {
 }
 
 export function runSimulation(devices: Device[], connections: Connection[]): SimulationResult {
-  const byId: Record<string, Device> = {};
+  // Словарь без прототипа: идентификаторы из файла («constructor», «__proto__») — обычные ключи
+  const byId: Record<string, Device> = Object.create(null);
   for (const d of devices) byId[d.id] = d;
   const edges = buildEdges(byId, connections);
   const incoming = (id: string) => connections.filter((c) => c.to.device === id);
@@ -349,9 +350,16 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
         : undefined;
     blocked.set(traced.blockedAt, { note: traced.note, ...withFix(fix) });
   };
+  // Источники, у которых перебор ветвей остановлен на пределе
+  const truncated: Record<Domain, string[]> = { audio: [], video: [] };
+  const trace = (id: string, domain: Domain) => {
+    const r = tracePaths(id, domain, byId, edges);
+    if (r.truncated) truncated[domain].push(id);
+    return r.paths;
+  };
   for (const d of devices) {
     if (!isAudioSource(d)) continue;
-    for (const traced of tracePaths(d.id, 'audio', byId, edges)) {
+    for (const traced of trace(d.id, 'audio')) {
       noteBlocked(traced);
       // Звук так и не вышел из HDMI/SDI (дошёл до дисплея вместе с видео) — отдельной
       // аудиоцепочкой не показывается и уровень не проверяется
@@ -377,7 +385,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
   const videoFlows: SignalFlow[] = [];
   for (const d of devices) {
     if (!VIDEO_SOURCES.includes(d.type)) continue;
-    for (const traced of tracePaths(d.id, 'video', byId, edges)) {
+    for (const traced of trace(d.id, 'video')) {
       const r = analyzeVideoPath(traced.devices, byId);
       r.issues.forEach(addFlowWarning);
       noteBlocked(traced);
@@ -396,6 +404,19 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
   // Какие приёмники действительно получают сигнал от источника
   const reached: Record<Domain, Set<string>> = { audio: new Set(), video: new Set() };
   for (const f of [...audioFlows, ...videoFlows]) f.path.slice(1).forEach((id) => reached[f.type].add(id));
+  // Перебор остановлен на пределе: куда сигнал от этих источников может дойти по непросмотренным ветвям
+  const unexamined: Record<Domain, Set<string>> = { audio: new Set(), video: new Set() };
+  for (const domain of ['audio', 'video'] as const) {
+    for (const id of truncated[domain]) {
+      reachable(id, domain, byId, edges).forEach((x) => !reached[domain].has(x) && unexamined[domain].add(x));
+      warnings.push({
+        type: 'analysis_incomplete',
+        device: id,
+        message: `От «${byId[id].model}» больше ${MAX_PATHS_PER_SOURCE} ветвей ${domain === 'audio' ? 'звука' : 'видео'} — симуляция просмотрела не все, выводы по этой части схемы неполные`,
+        severity: 'medium',
+      });
+    }
+  }
 
   // Несовместимость сигналов на соединении (актуально для загруженных файлов)
   for (const c of connections) {
@@ -466,23 +487,25 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     }
   }
 
-  // Питание PoE: устройство требует PoE, но подключено к коммутатору без PoE
+  // Питание PoE подаёт только коммутатор с PoE: устройство, подключённое к коммутатору
+  // без PoE или напрямую к процессору, не работает
   for (const d of devices) {
     const needsPoe = d.specs?.requires_poe || d.properties?.requires_poe;
     if (!needsPoe) continue;
-    const links = connections.filter((c) => c.to.device === d.id || c.from.device === d.id);
-    for (const c of links) {
-      const otherId = c.to.device === d.id ? c.from.device : c.to.device;
-      const other = byId[otherId];
-      if (other?.type === 'network_switch' && other.properties?.poe === false) {
-        warnings.push({
-          type: 'no_poe',
-          device: d.id,
-          message: `«${d.model}» требует питания PoE, но коммутатор «${other.model}» его не подаёт`,
-          severity: 'medium',
-        });
-      }
-    }
+    const peers = connections
+      .filter((c) => c.to.device === d.id || c.from.device === d.id)
+      .map((c) => byId[c.to.device === d.id ? c.from.device : c.to.device])
+      .filter((other): other is Device => !!other);
+    if (peers.length === 0 || peers.some((o) => o.type === 'network_switch' && o.properties?.poe !== false)) continue;
+    const plain = peers.find((o) => o.type === 'network_switch');
+    warnings.push({
+      type: 'no_poe',
+      device: d.id,
+      message: plain
+        ? `«${d.model}» требует питания PoE, но коммутатор «${plain.model}» его не подаёт`
+        : `«${d.model}» требует питания PoE, а подключённые к нему устройства его не подают — подключите к коммутатору с PoE`,
+      severity: 'medium',
+    });
   }
 
   // Кодек ВКС: дальней стороне нужны сеть, камера и микрофоны, а изображение и звук
@@ -514,7 +537,7 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     if (amp.type !== 'amplifier') continue;
     const ampW = num(amp.properties?.power_watts, 0);
     const minOhm = num(amp.properties?.min_impedance_ohms, 4);
-    const byPort: Record<string, Device[]> = {};
+    const byPort: Record<string, Device[]> = Object.create(null);
     for (const c of connections) {
       if (c.from.device !== amp.id) continue;
       // Выход на трансляционную линию считается отдельно — по отводам громкоговорителей
@@ -793,6 +816,16 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
       continue;
     }
     if (reached[domain].has(d.id)) continue;
+    // Сигнал сюда может прийти по непросмотренной ветви — «нет сигнала» не установлено
+    if (unexamined[domain].has(d.id)) {
+      warnings.push({
+        type: 'analysis_incomplete',
+        device: d.id,
+        message: `Не удалось проверить, приходит ли ${domain === 'audio' ? 'звук' : 'видео'} на «${d.model}»: схема слишком разветвлённая, этот приёмник не попал в просмотренные ветви`,
+        severity: 'medium',
+      });
+      continue;
+    }
     const up = [...upstream(d.id)];
     const block = up.map((id) => blocked.get(id)).find(Boolean);
     const blockNote = block?.note;
@@ -820,10 +853,14 @@ export function runSimulation(devices: Device[], connections: Connection[]): Sim
     });
   }
 
+  const incompleteSources = [...truncated.audio, ...truncated.video];
   return {
     valid: errors.length === 0,
     signal_flows: [...audioFlows, ...videoFlows],
     warnings,
     errors,
+    ...(incompleteSources.length
+      ? { incomplete: { sources: [...new Set(incompleteSources)], sinks: [...new Set([...unexamined.audio, ...unexamined.video])] } }
+      : {}),
   };
 }

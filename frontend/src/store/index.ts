@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import canvasReducer, { initialCanvasState } from '../features/canvasSlice';
+import canvasReducer, { initialCanvasState, showToast } from '../features/canvasSlice';
 import lessonReducer, { initialLessonState, LessonState } from '../features/lessonSlice';
 import { parseProjectDoc, serializeProject } from '../data/projectSchema';
 import { setSaveStatus } from './saveStatus';
@@ -15,6 +15,7 @@ const CUSTOM_LESSONS_KEY = 'av-tracer:custom-lessons';
  * Свои задания преподавателя. Каждое проверяется отдельно: задание, ставшее
  * некорректным (например, карточку убрали из каталога), не мешает остальным.
  */
+let droppedLessons: string[] = [];
 function loadCustomLessons(): Lesson[] {
   try {
     const raw = JSON.parse(localStorage.getItem(CUSTOM_LESSONS_KEY) || '{}');
@@ -22,7 +23,8 @@ function loadCustomLessons(): Lesson[] {
     return raw.lessons.flatMap((l: unknown) => {
       try {
         return [parseLesson(l)];
-      } catch {
+      } catch (e) {
+        droppedLessons.push((e as Error).message);
         return [];
       }
     });
@@ -87,16 +89,26 @@ function loadPrefs() {
 }
 
 const persisted = loadPersisted();
+const lessonState = loadLesson();
+// Сохранённое задание больше не проходит проверку (например, карточку убрали из каталога) — сообщаем
+const lessonsToast = droppedLessons.length
+  ? { toast: { message: `Свои задания не загружены (${droppedLessons.length}): ${droppedLessons[0]}`, severity: 'warning' as const } }
+  : {};
+droppedLessons = [];
 
 export const store = configureStore({
   reducer: {
     canvas: canvasReducer,
     lesson: lessonReducer,
   },
-  preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...persisted }, lesson: loadLesson() },
+  preloadedState: { canvas: { ...initialCanvasState, ...loadPrefs(), ...lessonsToast, ...persisted }, lesson: lessonState },
 });
 
+// Ошибку записи показываем после текущего действия, чтобы её не перекрыло его же сообщение («Загружено заданий…»)
+const warn = (message: string, severity: 'warning' | 'error') => queueMicrotask(() => store.dispatch(showToast({ message, severity })));
+
 let lastLesson = store.getState().lesson;
+let progressWarned = false;
 store.subscribe(() => {
   const lesson = store.getState().lesson;
   if (lesson === lastLesson) return;
@@ -105,12 +117,17 @@ store.subscribe(() => {
   try {
     const { activeId, hintsShown, solutionShown, completed } = lesson;
     localStorage.setItem(LESSON_KEY, JSON.stringify({ activeId, hintsShown, solutionShown, completed }));
-    if (customChanged) {
-      if (lesson.custom.length) localStorage.setItem(CUSTOM_LESSONS_KEY, JSON.stringify(lessonsFile(lesson.custom)));
-      else localStorage.removeItem(CUSTOM_LESSONS_KEY);
-    }
   } catch {
-    /* хранилище недоступно — прогресс просто не запомнится */
+    // Прогресс пишется часто — предупреждаем один раз
+    if (!progressWarned) warn('Прогресс заданий не сохраняется: хранилище браузера переполнено или запрещено', 'warning');
+    progressWarned = true;
+  }
+  if (!customChanged) return;
+  try {
+    if (lesson.custom.length) localStorage.setItem(CUSTOM_LESSONS_KEY, JSON.stringify(lessonsFile(lesson.custom)));
+    else localStorage.removeItem(CUSTOM_LESSONS_KEY);
+  } catch {
+    warn('Свои задания не сохранены в браузере (нет места или хранилище запрещено) — скачайте их в файл, иначе после перезагрузки они пропадут', 'error');
   }
 });
 

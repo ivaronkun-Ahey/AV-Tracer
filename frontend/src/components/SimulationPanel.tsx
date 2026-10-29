@@ -91,12 +91,17 @@ const SimulationPanel: React.FC = () => {
     ? null
     : !simulation.valid
       ? { icon: <ErrorIcon sx={{ color: '#F44336', mr: 1 }} />, text: 'Найдены ошибки' }
-      : simulation.warnings.length > 0
+      : simulation.incomplete
         ? {
             icon: <WarningAmberIcon sx={{ color: '#FF9800', mr: 1 }} />,
-            text: `Система собрана, есть предупреждения (${simulation.warnings.length})`,
+            text: 'Проверка неполная: схема слишком разветвлённая, просмотрены не все пути сигнала',
           }
-        : { icon: <CheckCircleIcon sx={{ color: '#3DDC84', mr: 1 }} />, text: 'Система собрана корректно' };
+        : simulation.warnings.length > 0
+          ? {
+              icon: <WarningAmberIcon sx={{ color: '#FF9800', mr: 1 }} />,
+              text: `Система собрана, есть предупреждения (${simulation.warnings.length})`,
+            }
+          : { icon: <CheckCircleIcon sx={{ color: '#3DDC84', mr: 1 }} />, text: 'Система собрана корректно' };
 
   return (
     <Drawer

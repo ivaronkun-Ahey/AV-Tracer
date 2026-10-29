@@ -11,7 +11,7 @@ import {
   Rack,
   Room,
 } from '../types/device.types';
-import { propMapSchema, describeZodError, PARSE_OPTIONS } from './propSchema';
+import { propMapSchema, describeZodError, identifierSchema, PARSE_OPTIONS } from './propSchema';
 import { withTemplateDefaults } from './equipment';
 import { withCableLabels } from './cableLabels';
 import { withDeviceTags } from './deviceTags';
@@ -37,7 +37,7 @@ export const PROJECT_LIMITS = {
 const text = (max: number) => z.string().max(max, `строка длиннее ${max} символов`);
 
 const portSchema = z.object({
-  id: text(100),
+  id: identifierSchema(100),
   type: z.enum(CABLE_TYPES),
   direction: z.enum(PORT_DIRECTIONS),
   signal_type: z.enum(SIGNAL_TYPES),
@@ -45,10 +45,10 @@ const portSchema = z.object({
 });
 
 const deviceSchema = z.object({
-  id: text(200),
+  id: identifierSchema(200),
   tag: text(32).optional(),
-  room: text(100).optional(),
-  rack: z.object({ rack: text(100), u: z.number().int().min(1) }).optional(),
+  room: identifierSchema(100).optional(),
+  rack: z.object({ rack: identifierSchema(100), u: z.number().int().min(1) }).optional(),
   plan: z.object({ x: z.number(), y: z.number(), rotation: z.number().optional() }).optional(),
   type: text(100),
   category: z.enum(DEVICE_CATEGORIES),
@@ -63,10 +63,10 @@ const deviceSchema = z.object({
   image_url: text(2000).optional(),
 });
 
-const endpointSchema = z.object({ device: text(200), port: text(100) });
+const endpointSchema = z.object({ device: identifierSchema(200), port: identifierSchema(100) });
 
 const connectionSchema = z.object({
-  id: text(200),
+  id: identifierSchema(200),
   from: endpointSchema,
   to: endpointSchema,
   cable_type: z.enum(CABLE_TYPES),
@@ -75,7 +75,7 @@ const connectionSchema = z.object({
 });
 
 const roomSchema = z.object({
-  id: text(100),
+  id: identifierSchema(100),
   name: text(64).min(1, 'пустое название помещения'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'цвет помещения в формате #rrggbb'),
   size: z
@@ -87,10 +87,10 @@ const roomSchema = z.object({
 });
 
 const rackSchema = z.object({
-  id: text(100),
+  id: identifierSchema(100),
   name: text(64).min(1, 'пустое название шкафа'),
   units: z.number().int().min(1).max(MAX_RACK_UNITS, `шкаф выше ${MAX_RACK_UNITS}U`),
-  room: text(100).optional(),
+  room: identifierSchema(100).optional(),
 });
 
 const metaField = text(200).optional();
@@ -139,21 +139,22 @@ function firstDuplicate(values: string[]): string | undefined {
 }
 
 /** Уникальность идентификаторов: устройств, соединений, портов внутри устройства, обозначений, помещений. */
-function identityError(devices: Device[], connections: Connection[], rooms: Room[], racks: Rack[]): string | null {
+export function identityError(devices: Device[], connections: Connection[], rooms: Room[], racks: Rack[]): string | null {
+  // Повтор может быть и пустой строкой — сравниваем с undefined, а не по истинности
   const dupDevice = firstDuplicate(devices.map((d) => d.id));
-  if (dupDevice) return `повторяется идентификатор устройства «${dupDevice}»`;
+  if (dupDevice !== undefined) return `повторяется идентификатор устройства «${dupDevice}»`;
   const dupConnection = firstDuplicate(connections.map((c) => c.id));
-  if (dupConnection) return `повторяется идентификатор соединения «${dupConnection}»`;
+  if (dupConnection !== undefined) return `повторяется идентификатор соединения «${dupConnection}»`;
   for (const d of devices) {
     const dupPort = firstDuplicate(d.ports.map((p) => p.id));
-    if (dupPort) return `у устройства «${d.model}» повторяется порт «${dupPort}»`;
+    if (dupPort !== undefined) return `у устройства «${d.model}» повторяется порт «${dupPort}»`;
   }
   const dupTag = firstDuplicate(devices.flatMap((d) => (d.tag ? [d.tag] : [])));
-  if (dupTag) return `повторяется обозначение устройства «${dupTag}»`;
+  if (dupTag !== undefined) return `повторяется обозначение устройства «${dupTag}»`;
   const dupRoom = firstDuplicate(rooms.map((r) => r.id));
-  if (dupRoom) return `повторяется идентификатор помещения «${dupRoom}»`;
+  if (dupRoom !== undefined) return `повторяется идентификатор помещения «${dupRoom}»`;
   const dupRack = firstDuplicate(racks.map((r) => r.id));
-  if (dupRack) return `повторяется идентификатор шкафа «${dupRack}»`;
+  if (dupRack !== undefined) return `повторяется идентификатор шкафа «${dupRack}»`;
   return null;
 }
 

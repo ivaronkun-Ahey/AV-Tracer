@@ -230,6 +230,18 @@ describe('runSimulation', () => {
     expect(r.warnings.some((w) => w.type === 'no_poe')).toBe(true);
   });
 
+  it('PoE-устройство напрямую к процессору — без питания; через коммутатор с PoE — в порядке', () => {
+    const ap = dev({ id: 'ap', type: 'wireless_ap', specs: { requires_poe: true } });
+    const dsp = dev({ id: 'dsp', type: 'dsp' });
+    const poe = dev({ id: 'sw', type: 'network_switch', properties: { poe: true } });
+    const link = (to: string): Connection => ({ id: `c-${to}`, from: { device: 'ap', port: 'e' }, to: { device: to, port: 'p' }, cable_type: 'cat6', cable_length: 1 });
+    const direct = runSimulation([ap, dsp], [link('dsp')]);
+    expect(direct.warnings.find((w) => w.type === 'no_poe')?.message).toContain('подключите к коммутатору с PoE');
+    expect(runSimulation([ap, dsp, poe], [link('dsp'), link('sw')]).warnings.some((w) => w.type === 'no_poe')).toBe(false);
+    // Ещё не подключено — не предупреждаем
+    expect(runSimulation([ap], []).warnings).toEqual([]);
+  });
+
   it('масштабатор меняет итоговое разрешение видеоцепочки', () => {
     const devices: Device[] = [
       dev({ id: 'cam', type: 'camera', category: 'video', properties: { resolution: '3840x2160' } }),

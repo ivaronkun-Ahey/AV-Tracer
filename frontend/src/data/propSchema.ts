@@ -12,6 +12,21 @@ export const propValueSchema: z.ZodType<PropValue> = z.union([
 
 export const propMapSchema = z.record(z.string(), propValueSchema);
 
+/**
+ * Имена свойств Object.prototype («constructor», «__proto__», «toString»…): идентификатор
+ * с таким именем как ключ обычного объекта JS ломает словари, поэтому в файлах не допускается.
+ */
+const RESERVED_IDS = new Set(Object.getOwnPropertyNames(Object.prototype));
+export const isReservedId = (id: string) => RESERVED_IDS.has(id);
+
+/** Идентификатор во внешнем файле (проект, задание): непустой, не длиннее max, не служебное имя JS. */
+export const identifierSchema = (max: number) =>
+  z
+    .string()
+    .min(1, 'пустой идентификатор')
+    .max(max, `строка длиннее ${max} символов`)
+    .refine((v) => !isReservedId(v), { error: (issue) => `служебное имя «${String(issue.input)}» нельзя использовать как идентификатор` });
+
 /** Параметры проверки: в ошибках нужно исходное значение, чтобы назвать его по-русски. */
 export const PARSE_OPTIONS = { reportInput: true } as const;
 

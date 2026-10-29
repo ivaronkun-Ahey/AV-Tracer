@@ -32,8 +32,8 @@ interface Edge {
 }
 
 /** Предел ветвей на один источник — защита от взрывного роста в плотных сетях. */
-const MAX_PATHS_PER_SOURCE = 128;
-const MAX_STEPS_PER_SOURCE = 20000;
+export const MAX_PATHS_PER_SOURCE = 128;
+export const MAX_STEPS_PER_SOURCE = 20000;
 
 const DEFAULT_ROUTING: Record<string, RoutingMode> = {
   amplifier: 'channel',
@@ -189,7 +189,8 @@ function portOf(device: Device | undefined, portId: string): Port | undefined {
  * двунаправленными портами (коммутатор ↔ коммутатор) проходим в обе стороны.
  */
 export function buildEdges(devices: Record<string, Device>, connections: Connection[]): Record<string, Edge[]> {
-  const edges: Record<string, Edge[]> = {};
+  // Без прототипа: устройство с id «constructor» не должно найти Object.prototype.constructor
+  const edges: Record<string, Edge[]> = Object.create(null);
   const add = (from: string, edge: Edge) => (edges[from] ||= []).push(edge);
   for (const c of connections) {
     const a = devices[c.from.device];
@@ -206,6 +207,12 @@ export function buildEdges(devices: Record<string, Device>, connections: Connect
   return edges;
 }
 
+export interface TraceResult {
+  paths: TracedPath[];
+  /** Перебор остановлен на пределе ветвей или шагов — часть ветвей не просмотрена. */
+  truncated: boolean;
+}
+
 /**
  * Все ветви сигнала от источника. Устройство не повторяется внутри одной ветви
  * (защита от петель), но разные ветви могут проходить через одно устройство —
@@ -216,12 +223,16 @@ export function tracePaths(
   domain: Domain,
   devices: Record<string, Device>,
   edges: Record<string, Edge[]>
-): TracedPath[] {
+): TraceResult {
   const paths: TracedPath[] = [];
   let steps = 0;
+  let truncated = false;
 
   const walk = (path: string[], entries: (string | null)[]) => {
-    if (paths.length >= MAX_PATHS_PER_SOURCE || ++steps > MAX_STEPS_PER_SOURCE) return;
+    if (paths.length >= MAX_PATHS_PER_SOURCE || ++steps > MAX_STEPS_PER_SOURCE) {
+      truncated = true;
+      return;
+    }
     const node = path[path.length - 1];
     const device = devices[node];
     const { exits, note } = transfer(device, entries[entries.length - 1], domain);
@@ -240,5 +251,37 @@ export function tracePaths(
   };
 
   walk([sourceId], [null]);
-  return paths;
+  return { paths, truncated };
+}
+
+/**
+ * Куда сигнал от источника может дойти хоть по какой-то ветви — обход состояний
+ * «устройство + порт входа» без перечисления ветвей, за время, линейное по размеру схемы.
+ * Ограничение «устройство не повторяется в ветви» здесь не действует, поэтому
+ * множество не меньше, чем у tracePaths: чего нет в нём, туда сигнал не доходит точно.
+ */
+export function reachable(
+  sourceId: string,
+  domain: Domain,
+  devices: Record<string, Device>,
+  edges: Record<string, Edge[]>
+): Set<string> {
+  const seen = new Set<string>();
+  const found = new Set<string>();
+  const queue: Array<[string, string | null]> = [[sourceId, null]];
+  for (let i = 0; i < queue.length; i++) {
+    const [node, entry] = queue[i];
+    const key = `${node}\u0000${entry ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const { exits } = transfer(devices[node], entry, domain);
+    for (const edge of edges[node] ?? []) {
+      if (edge.to === sourceId || !exits(edge.fromPort)) continue;
+      const target = devices[edge.to];
+      if (!target || !accepts(target, edge.toPort, domain)) continue;
+      found.add(edge.to);
+      queue.push([edge.to, edge.toPort]);
+    }
+  }
+  return found;
 }

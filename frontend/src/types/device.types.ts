@@ -187,6 +187,11 @@ export interface SimulationResult {
   signal_flows: SignalFlow[];
   warnings: SimIssue[];
   errors: SimIssue[];
+  /**
+   * Анализ неполный: у источников слишком много ветвей, и перебор остановлен на пределе.
+   * Найденные тракты достоверны, а «сигнал не доходит» для части приёмников не установлено.
+   */
+  incomplete?: { sources: string[]; sinks: string[] };
 }
 
 /** Данные для основной надписи чертежей (штампа) — хранятся в проекте. */

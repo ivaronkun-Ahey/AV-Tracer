@@ -85,7 +85,9 @@ test('преподаватель: задание из схемы, прохожд
 
   await editor.getByRole('button', { name: 'Взять текущую схему как решение' }).click();
   await expect(editor.getByLabel('Эталонное решение')).toHaveText(/устройств: \d+, кабелей: \d+/);
-  await expect(editor.getByRole('checkbox', { name: /Проверка: Звук: Микрофон →/ })).toBeChecked();
+  await expect(editor.getByRole('checkbox', { name: 'Проверка: Звук: Микрофон → Акустическая система', exact: true })).toBeChecked();
+  // И тракт решения: в обход микшера задание не засчитается
+  await expect(editor.getByRole('checkbox', { name: 'Проверка: Звук: Микрофон → Акустическая система через Микшер' })).toBeChecked();
   await editor.getByRole('button', { name: 'Сохранить задание' }).click();
   await expect(page.getByText(/Задание «Оповещение в зале» сохранено/)).toBeVisible();
 
@@ -120,4 +122,35 @@ test('преподаватель: задание из схемы, прохожд
   await page.reload();
   await page.getByRole('button', { name: 'Учёба' }).click();
   await expect(page.getByRole('list', { name: 'Свои задания' }).getByText('Оповещение в зале')).toBeVisible();
+});
+
+test('схема без устройств (только помещение и шкаф) переживает задание и перезагрузку', async ({ page }) => {
+  await openClean(page);
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'av-tracer:autosave',
+      JSON.stringify({
+        schemaVersion: 5,
+        meta: { object: 'Школа №1' },
+        rooms: [{ id: 'hall', name: 'Актовый зал', color: '#5B8DEF' }],
+        racks: [{ id: 'r1', name: 'ШТ-1', units: 42, room: 'hall' }],
+        devices: [],
+        connections: [],
+      })
+    )
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Учёба' }).click();
+  await page.getByText('Первый звук').click();
+  const panel = page.getByRole('region', { name: 'Учебное задание' });
+  await expect(panel).toBeVisible();
+  await expect.poll(async () => (await autosave(page)).rooms?.length ?? 0).toBe(0);
+
+  await page.reload();
+  await page.getByRole('region', { name: 'Учебное задание' }).getByRole('button', { name: 'Выйти из задания' }).click();
+  await expect(page.getByText('Ваша схема возвращена')).toBeVisible();
+  await expect.poll(async () => (await autosave(page)).rooms?.map((r: { name: string }) => r.name)).toEqual(['Актовый зал']);
+  const saved = await autosave(page);
+  expect(saved.racks.map((r: { name: string }) => r.name)).toEqual(['ШТ-1']);
+  expect(saved.meta).toEqual({ object: 'Школа №1' });
 });

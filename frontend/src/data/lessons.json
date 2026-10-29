@@ -175,7 +175,7 @@
       },
       "checks": [
         { "type": "reaches", "text": "Изображение доходит до проектора по трассе не короче 30 м", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" }, "minLength": 30 },
-        { "type": "uses", "text": "Использован удлинитель HDBaseT (передатчик и приёмник)", "select": { "type": "extender" }, "min": 2 },
+        { "type": "reaches", "text": "Изображение идёт через удлинитель HDBaseT (передатчик и приёмник)", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" }, "via": [{ "model": "Передатчик HDBaseT" }, { "model": "Приёмник HDBaseT" }] },
         { "type": "no_issue", "text": "Ни один кабель не длиннее допустимого", "issues": ["cable_length"] },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
       ]
@@ -244,7 +244,7 @@
       },
       "checks": [
         { "type": "reaches", "text": "Изображение камеры доходит до дисплея", "domain": "video", "from": { "type": "camera" }, "to": { "type": "display" } },
-        { "type": "uses", "text": "Видео идёт через сетевой коммутатор", "select": { "type": "network_switch" }, "min": 1 },
+        { "type": "reaches", "text": "Видео идёт по сети: кодер → сетевой коммутатор → декодер", "domain": "video", "from": { "type": "camera" }, "to": { "type": "display" }, "via": [{ "type": "encoder" }, { "type": "network_switch" }, { "type": "decoder" }] },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
       ]
     },
@@ -371,7 +371,7 @@
       "checks": [
         { "type": "reaches", "text": "Изображение ноутбука на проекторе", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" } },
         { "type": "reaches", "text": "Звук ноутбука в колонке зала", "domain": "audio", "from": { "type": "computer" }, "to": { "type": "speaker" } },
-        { "type": "uses", "text": "Звук взят из HDMI деэмбеддером", "select": { "model": "Деэмбеддер HDMI" }, "min": 1 },
+        { "type": "reaches", "text": "Звук взят из HDMI деэмбеддером", "domain": "audio", "from": { "type": "computer" }, "to": { "type": "speaker" }, "via": [{ "model": "Деэмбеддер HDMI" }] },
         { "type": "no_issue", "text": "Уровень звука в норме", "issues": ["level_low", "level_high"] },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
       ]
@@ -458,7 +458,7 @@
         ]
       },
       "checks": [
-        { "type": "reaches", "text": "Изображение ноутбука доходит до проектора", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" } },
+        { "type": "reaches", "text": "Изображение ноутбука доходит до проектора через видеокоммутатор", "domain": "video", "from": { "type": "computer" }, "to": { "type": "projector" }, "via": [{ "type": "switcher" }] },
         { "type": "no_errors", "text": "В схеме нет ошибок" }
       ]
     },

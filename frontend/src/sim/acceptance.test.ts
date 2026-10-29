@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { runSimulation } from './engine';
+import { MAX_PATHS_PER_SOURCE, MAX_STEPS_PER_SOURCE, buildEdges, tracePaths } from './signalPaths';
+import { evaluateLesson } from '../learning/checks';
 import { createDevice, findEquipment } from '../data/equipment';
 import { EXAMPLE_PROJECTS } from '../data/examples';
 import { CableType, Connection, Device, PropValue, SimFix, SimIssue } from '../types/device.types';
@@ -7,7 +9,7 @@ import { CableType, Connection, Device, PropValue, SimFix, SimIssue } from '../t
 /**
  * Приёмочные сценарии с ожиданиями, заданными вручную по физике AV-систем
  * (а не снятыми с самого движка, как эталоны shared/sim-fixtures).
- * Сценарии R1–R4 — из docs/PROJECT_REVIEW_2026-10-26.md.
+ * Сценарии R1–R4 — из docs/PROJECT_REVIEW_2026-10-26.md, N5 — из docs/PROJECT_REVIEW_2026-10-28.md.
  */
 
 function dev(eq: string, id: string, props: Record<string, PropValue> = {}): Device {
@@ -391,3 +393,90 @@ describe('Помещения', () => {
   });
 });
 
+
+/**
+ * Обзор 28.10, N5: предел перебора ветвей не превращается в ложное «нет сигнала».
+ * Синтетические схемы проверяют границы алгоритма, а не физическую допустимость
+ * разветвления HDMI на сотню дисплеев.
+ */
+describe('N5: неполный анализ виден и не выдаётся за результат', () => {
+  const fanOut = (displays: number) => {
+    const devices = [dev('sony-srg300h', 'cam'), ...Array.from({ length: displays }, (_, i) => dev('lg-75up8000', `tv${i}`))];
+    const connections = devices.slice(1).map((d) => ({ ...cable('cam', 'hdmi_out', d.id, 'hdmi_in_1', 'hdmi'), cable_length: 2 }));
+    return runSimulation(devices, connections);
+  };
+
+  it(`ниже и ровно на пределе (${MAX_PATHS_PER_SOURCE} ветвей) — анализ полный, сигнал на всех дисплеях`, () => {
+    for (const n of [MAX_PATHS_PER_SOURCE - 1, MAX_PATHS_PER_SOURCE]) {
+      const r = fanOut(n);
+      expect(r.incomplete).toBeUndefined();
+      expect(r.signal_flows.filter((f) => f.type === 'video')).toHaveLength(n);
+      expect(types(r.errors)).not.toContain('no_signal');
+      expect(types(r.warnings)).not.toContain('analysis_incomplete');
+    }
+  });
+
+  it('выше предела — не «нет сигнала», а предупреждение о неполной проверке', () => {
+    const r = fanOut(MAX_PATHS_PER_SOURCE + 1);
+    expect(types(r.errors)).not.toContain('no_signal');
+    expect(r.incomplete).toEqual({ sources: ['cam'], sinks: [`tv${MAX_PATHS_PER_SOURCE}`] });
+    expect(types(r.warnings, 'cam')).toContain('analysis_incomplete');
+    expect(r.warnings.find((w) => w.device === `tv${MAX_PATHS_PER_SOURCE}`)?.message).toContain('Не удалось проверить');
+  });
+
+  it('при неполном анализе приёмник, до которого сигнал не доходит ни по какой ветви, — по-прежнему «нет сигнала»', () => {
+    const devices = [dev('sony-srg300h', 'cam'), ...Array.from({ length: MAX_PATHS_PER_SOURCE + 1 }, (_, i) => dev('lg-75up8000', `tv${i}`))];
+    const connections = devices.slice(1).map((d) => cable('cam', 'hdmi_out', d.id, 'hdmi_in_1', 'hdmi'));
+    // Отдельный дисплей за коммутатором без источника
+    devices.push(dev('extron-in1608', 'sw'), dev('epson-l1755u', 'proj'));
+    connections.push(cable('sw', 'hdmi_out_1', 'proj', 'hdmi_in_1', 'hdmi'));
+    const r = runSimulation(devices, connections);
+    expect(r.incomplete).toBeDefined();
+    expect(types(r.errors, 'proj')).toContain('no_signal');
+  });
+
+  it('задание не засчитывается по неполному анализу', () => {
+    const r = fanOut(MAX_PATHS_PER_SOURCE + 1);
+    expect(r.valid).toBe(true); // ошибок не найдено, но и не доказано, что их нет
+    const devices = [dev('sony-srg300h', 'cam'), ...Array.from({ length: MAX_PATHS_PER_SOURCE + 1 }, (_, i) => dev('lg-75up8000', `tv${i}`))];
+    const connections = devices.slice(1).map((d) => cable('cam', 'hdmi_out', d.id, 'hdmi_in_1', 'hdmi'));
+    const ev = evaluateLesson(
+      {
+        checks: [
+          { type: 'reaches', text: 'до всех дисплеев', domain: 'video', from: { type: 'camera' }, to: { type: 'display' }, all: true },
+          { type: 'no_errors', text: 'без ошибок' },
+        ],
+      },
+      { devices, connections, rooms: [] }
+    );
+    expect(ev.solved).toBe(false);
+    expect(ev.results.every((x) => !x.ok && x.detail?.includes('не все пути'))).toBe(true);
+  });
+
+  /** Цепочки устройств без описания портов: источник → branches ветвей по length устройств. */
+  const chains = (branches: number[]) => {
+    const byId: Record<string, Device> = Object.create(null);
+    const add = (id: string) => (byId[id] = { ...dev('shure-sm58', id), ports: [] });
+    add('src');
+    const connections: Connection[] = [];
+    branches.forEach((length, b) => {
+      let prev = 'src';
+      for (let i = 0; i < length; i++) {
+        const id = `b${b}_${i}`;
+        add(id);
+        connections.push({ id: `${prev}>${id}`, from: { device: prev, port: 'o' }, to: { device: id, port: 'i' }, cable_type: 'xlr', cable_length: 1 });
+        prev = id;
+      }
+    });
+    return tracePaths('src', 'audio', byId, buildEdges(byId, connections));
+  };
+
+  it(`предел шагов (${MAX_STEPS_PER_SOURCE}): ровно на пределе — полный обход, на шаг больше — неполный`, () => {
+    // 1 + 100·199 + 99 = 20 000 вызовов обхода, 101 ветвь — меньше предела ветвей
+    const exact = chains([...Array(100).fill(199), 99]);
+    expect(exact.truncated).toBe(false);
+    expect(exact.paths).toHaveLength(101);
+    expect(chains([...Array(100).fill(199), 100]).truncated).toBe(true);
+    expect(chains([...Array(100).fill(199), 98]).truncated).toBe(false);
+  });
+});

@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { parseProjectDoc, serializeProject } from './projectSchema';
+import { identityError, parseProjectDoc, serializeProject } from './projectSchema';
 import { SCHEMA_VERSION } from './migrations';
 import { createDevice, findEquipment } from './equipment';
+import { runSimulation } from '../sim/engine';
+import { Connection } from '../types/device.types';
 
 const mixer = () => createDevice(findEquipment('allen-heath-sq5')!, 'mix', { x: 0, y: 0 });
 const mic = () => createDevice(findEquipment('shure-sm58')!, 'mic', { x: 0, y: 0 });
@@ -160,5 +162,45 @@ describe('помещения в файле проекта (формат 3)', () 
   it('пустое название и неверный цвет помещения отклоняются', () => {
     expect(parseProjectDoc({ devices: [], connections: [], rooms: [{ ...room, name: '' }] }).ok).toBe(false);
     expect(parseProjectDoc({ devices: [], connections: [], rooms: [{ ...room, color: 'red' }] }).ok).toBe(false);
+  });
+});
+
+/** Обзор 28.10, N3: идентификатор из файла не ломает словари и проверку уникальности. */
+describe('N3: пустые и служебные идентификаторы', () => {
+  const cam = (id: string) => createDevice(findEquipment('sony-srg300h')!, id, { x: 0, y: 0 });
+  const tv = () => createDevice(findEquipment('lg-75up8000')!, 'tv', { x: 0, y: 0 });
+  const hdmi = (from: string) => ({
+    id: 'c1',
+    from: { device: from, port: 'hdmi_out' },
+    to: { device: 'tv', port: 'hdmi_in_1' },
+    cable_type: 'hdmi',
+    cable_length: 3,
+  });
+
+  for (const id of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+    it(`id «${id}» отклоняется при открытии файла с понятной ошибкой`, () => {
+      // Через JSON.parse, как из файла
+      const raw = JSON.parse(JSON.stringify({ devices: [cam(id), tv()], connections: [hdmi(id)] }));
+      const r = parseProjectDoc(raw);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toContain(`служебное имя «${id}»`);
+    });
+  }
+
+  it('два устройства с пустым id — ошибка, а не тихое принятие', () => {
+    const r = parseProjectDoc({ devices: [cam(''), { ...tv(), id: '' }], connections: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/пустой идентификатор \(devices\.0\.id\)/);
+  });
+
+  it('повтор пустой строки находится и в проверке уникальности', () => {
+    expect(identityError([cam(''), cam('')], [], [], [])).toContain('повторяется идентификатор устройства «»');
+  });
+
+  it('движок не падает на служебных именах, даже если схема собрана в обход файла', () => {
+    for (const id of ['constructor', '__proto__', 'toString']) {
+      const r = runSimulation([cam(id), tv()], [hdmi(id) as Connection]);
+      expect(r.signal_flows.some((f) => f.source === id && f.path.includes('tv'))).toBe(true);
+    }
   });
 });

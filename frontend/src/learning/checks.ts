@@ -1,5 +1,6 @@
 import { Connection, Device, ProjectDoc, SignalFlow, SimulationResult } from '../types/device.types';
 import { runSimulation } from '../sim/engine';
+import { DEVICE_TYPE_LABELS } from '../data/labels';
 import { Lesson, LessonCheck, Selector } from './lessonSchema';
 
 export interface CheckResult {
@@ -15,6 +16,21 @@ export interface LessonEvaluation {
 }
 
 const matches = (d: Device, s: Selector) => (!s.type || d.type === s.type) && (!s.model || d.model === s.model);
+
+export const selectorLabel = (s: Selector) => s.model ?? DEVICE_TYPE_LABELS[s.type!] ?? s.type!;
+
+/** Устройства между источником и приёмником (индекс upTo) проходят условия via по порядку. */
+function passesVia(flow: SignalFlow, upTo: number, via: Selector[], byId: Record<string, Device>): boolean {
+  let next = 0;
+  for (let i = 1; i < upTo && next < via.length; i++) {
+    const d = byId[flow.path[i]];
+    if (d && matches(d, via[next])) next++;
+  }
+  return next === via.length;
+}
+
+/** Симуляция остановила перебор ветвей: отсутствие ошибок и сигнала не доказано. */
+const INCOMPLETE = 'схема слишком разветвлённая: симуляция просмотрела не все пути сигнала, и это условие проверить нельзя — упростите схему';
 
 /** Суммарная длина кабелей по пути сигнала до устройства с индексом upTo (по портам входа в каждое устройство). */
 export function pathLength(flow: SignalFlow, connections: Connection[], upTo = flow.path.length - 1): number {
@@ -33,15 +49,18 @@ export function pathLength(flow: SignalFlow, connections: Connection[], upTo = f
 }
 
 function evaluateCheck(check: LessonCheck, doc: ProjectDoc, sim: SimulationResult): CheckResult {
-  const byId = Object.fromEntries(doc.devices.map((d) => [d.id, d]));
+  const byId: Record<string, Device> = Object.create(null);
+  for (const d of doc.devices) byId[d.id] = d;
   switch (check.type) {
     case 'no_errors':
-      return sim.errors.length === 0
-        ? { text: check.text, ok: true }
-        : { text: check.text, ok: false, detail: `ошибок: ${sim.errors.length} — запустите симуляцию и посмотрите, какие` };
+      if (sim.errors.length > 0) {
+        return { text: check.text, ok: false, detail: `ошибок: ${sim.errors.length} — запустите симуляцию и посмотрите, какие` };
+      }
+      return sim.incomplete ? { text: check.text, ok: false, detail: INCOMPLETE } : { text: check.text, ok: true };
     case 'no_issue': {
       const found = [...sim.errors, ...sim.warnings].filter((i) => check.issues.includes(i.type));
-      return found.length === 0 ? { text: check.text, ok: true } : { text: check.text, ok: false, detail: found[0].message };
+      if (found.length > 0) return { text: check.text, ok: false, detail: found[0].message };
+      return sim.incomplete ? { text: check.text, ok: false, detail: INCOMPLETE } : { text: check.text, ok: true };
     }
     case 'uses': {
       const n = doc.devices.filter((d) => matches(d, check.select)).length;
@@ -61,22 +80,25 @@ function evaluateCheck(check: LessonCheck, doc: ProjectDoc, sim: SimulationResul
             byId[f.source] &&
             matches(byId[f.source], check.from)
         );
+      const routed = (sink: Device) =>
+        flowsTo(sink).filter((f) => !check.via || passesVia(f, f.path.indexOf(sink.id), check.via, byId));
       const ok = (sink: Device) =>
-        flowsTo(sink).some(
+        routed(sink).some(
           (f) => check.minLength === undefined || pathLength(f, doc.connections, f.path.indexOf(sink.id)) >= check.minLength
         );
       const reached = sinks.filter(ok);
       const pass = check.all ? reached.length === sinks.length : reached.length > 0;
+      // Найденный тракт достоверен и при неполном анализе, а «не доходит» — нет
       if (pass) return { text: check.text, ok: true };
+      if (sim.incomplete) return { text: check.text, ok: false, detail: INCOMPLETE };
       const missing = sinks.find((s) => !ok(s))!;
-      const short = check.minLength !== undefined && flowsTo(missing).length > 0;
-      return {
-        text: check.text,
-        ok: false,
-        detail: short
-          ? `сигнал доходит до «${missing.model}», но длина трассы меньше ${check.minLength} м — задайте длину кабелей`
-          : `сигнал не доходит до «${missing.model}»`,
-      };
+      let detail = `сигнал не доходит до «${missing.model}»`;
+      if (flowsTo(missing).length > 0 && routed(missing).length === 0) {
+        detail = `сигнал доходит до «${missing.model}», но не через ${check.via!.map(selectorLabel).join(' → ')}`;
+      } else if (routed(missing).length > 0) {
+        detail = `сигнал доходит до «${missing.model}», но длина трассы меньше ${check.minLength} м — задайте длину кабелей`;
+      }
+      return { text: check.text, ok: false, detail };
     }
   }
 }

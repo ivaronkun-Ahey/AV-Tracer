@@ -4,7 +4,7 @@ import { DEVICE_TYPE_LABELS } from '../data/labels';
 import { runSimulation } from '../sim/engine';
 import { translit } from '../drawing/translit';
 import { DocSpec, Lesson, LessonCheck, buildDoc, parseLesson } from './lessonSchema';
-import { evaluateLesson } from './checks';
+import { isReservedId } from '../data/propSchema';
 
 /**
  * Задания преподавателя: схема с холста → короткая запись задания
@@ -59,7 +59,7 @@ export function docToSpec(doc: ProjectDoc): DocSpec {
     if (!tpl) throw new Error(`«${d.full_name || d.model}» нет в каталоге — такое устройство нельзя использовать в задании`);
     // Короткие читаемые id по обозначению: MIC-01 → mic-01
     let id = (d.tag ?? `d${i + 1}`).toLowerCase().replace(/[^a-z0-9-]+/g, '-') || `d${i + 1}`;
-    while (used.has(id)) id = `${id}-${i + 1}`;
+    while (used.has(id) || isReservedId(id)) id = `${id}-${i + 1}`;
     used.add(id);
     ids.set(d.id, id);
     const props: PropMap = {};
@@ -93,7 +93,8 @@ export const withoutCables = (spec: DocSpec): DocSpec => ({ ...spec, connections
 export function suggestChecks(spec: DocSpec): LessonCheck[] {
   const doc = buildDoc(spec, 'draft');
   const sim = runSimulation(doc.devices, doc.connections);
-  const byId = Object.fromEntries(doc.devices.map((d) => [d.id, d]));
+  const byId: Record<string, Device> = Object.create(null);
+  for (const d of doc.devices) byId[d.id] = d;
   const checks: LessonCheck[] = [];
   const seen = new Set<string>();
   for (const flow of sim.signal_flows) {
@@ -113,14 +114,31 @@ export function suggestChecks(spec: DocSpec): LessonCheck[] {
           (f) => f.type === flow.type && f.status !== 'error' && f.path.indexOf(s.id) > 0 && byId[f.source]?.type === source.type
         )
       );
+    const what = `${flow.type === 'audio' ? 'Звук' : 'Изображение'}: ${typeLabel(source.type)} → ${typeLabel(sink.type)}`;
     checks.push({
       type: 'reaches',
-      text: `${flow.type === 'audio' ? 'Звук' : 'Изображение'}: ${typeLabel(source.type)} → ${typeLabel(sink.type)}${all ? ' (все)' : ''}`,
+      text: `${what}${all ? ' (все)' : ''}`,
       domain: flow.type,
       from: { type: source.type },
       to: { type: sink.type },
       ...(all ? { all: true } : {}),
     });
+    // Тракт решения: без него «дошло» засчитывается и в обход нужного оборудования
+    // (прямой кабель мимо коммутатора, кодера, деэмбеддера)
+    const between = flow.path
+      .slice(1, -1)
+      .map((id) => byId[id].type)
+      .filter((t, i, list) => i === 0 || list[i - 1] !== t);
+    if (between.length > 0) {
+      checks.push({
+        type: 'reaches',
+        text: `${what} через ${between.map(typeLabel).join(' → ')}`,
+        domain: flow.type,
+        from: { type: source.type },
+        to: { type: sink.type },
+        via: between.map((type) => ({ type })),
+      });
+    }
   }
   const issues = [...sim.errors, ...sim.warnings].map((i) => i.type);
   if (sim.signal_flows.some((f) => f.type === 'audio') && !issues.some((t) => t === 'level_low' || t === 'level_high')) {
@@ -192,21 +210,12 @@ export function buildLesson(draft: LessonDraft, taken: Set<string>): BuildResult
     solution: draft.solution,
     checks,
   };
-  let lesson: Lesson;
+  // Та же проверка, что и для файла заданий: эталон проходит проверки, старт — нет
   try {
-    lesson = parseLesson(raw);
+    return { lesson: parseLesson(raw), errors: [] };
   } catch (e) {
-    return { errors: [(e as Error).message] };
+    return { errors: [(e as Error).message.replace(/^Ошибка в задании( «[^»]*»)?: /, '')] };
   }
-  const solved = evaluateLesson(lesson, buildDoc(lesson.solution, lesson.id));
-  const failed = solved.results.filter((r) => !r.ok);
-  if (failed.length) {
-    return { errors: failed.map((r) => `эталонное решение не проходит проверку «${r.text}»${r.detail ? `: ${r.detail}` : ''}`) };
-  }
-  if (evaluateLesson(lesson, buildDoc(lesson.start, lesson.id)).solved) {
-    return { errors: ['стартовая схема уже проходит все проверки — ученику нечего делать; внесите неисправность или уберите часть схемы'] };
-  }
-  return { lesson, errors: [] };
 }
 
 /** Черновик из сохранённого задания — для правки. */
