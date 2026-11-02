@@ -1,83 +1,113 @@
-import React, { useState } from 'react';
-import { Group, Rect, Text, Circle, Label, Tag } from 'react-konva';
+import React, { useContext } from 'react';
+import { Group, Rect, Text, Circle, Path } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   selectDevice,
-  updateDevicePosition,
+  beginDeviceDrag,
+  moveDevice,
   startConnection,
   completeConnection,
   cancelConnection,
   showToast,
 } from '../features/canvasSlice';
+import { isPortBusy } from '../features/connectionRules';
 import { Device, Port } from '../types/device.types';
 import { deviceTypeLabel, portLabel } from '../data/labels';
 import {
   NODE_W,
-  NODE_H,
+  HEADER_H,
+  ROW_H,
   PORT_R,
-  inputPorts,
-  outputPorts,
-  portLocalX,
+  PortSlot,
+  nodeSize,
+  portSlots,
+  slotOffset,
   signalColor,
   signalsCompatible,
-  deviceEmoji,
+  snapToGrid,
+  categoryColor,
 } from './deviceGeometry';
+import { deviceIconPath, ICON_VIEWBOX } from './deviceIcons';
+import { CanvasRenderContext } from './canvasTheme';
+import { routingMode, selectedInput } from '../sim/signalPaths';
 
 interface DeviceNodeProps {
   device: Device;
+  /** Позиционное обозначение (MIC-01). */
+  tag?: string;
 }
 
-const DeviceNode: React.FC<DeviceNodeProps> = ({ device }) => {
+type KonvaPointerEvent = KonvaEventObject<Event>;
+
+const ICON_SIZE = 22;
+
+const DeviceNode: React.FC<DeviceNodeProps> = ({ device, tag }) => {
   const dispatch = useAppDispatch();
+  const { palette, interactive } = useContext(CanvasRenderContext);
   const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
   const connectionInProgress = useAppSelector((s) => s.canvas.connectionInProgress);
   const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
   const simulation = useAppSelector((s) => s.canvas.simulation);
+  const snap = useAppSelector((s) => s.canvas.snapToGrid);
 
-  const [hoverPort, setHoverPort] = useState<Port | null>(null);
-
-  const isSelected = selectedDeviceId === device.id;
-  const isConnectingFrom = connectionInProgress?.fromDeviceId === device.id;
+  const { width, height } = nodeSize(device, connections);
+  const slots = portSlots(device, connections);
+  const connecting = interactive ? connectionInProgress : null;
 
   // Сигнал источника соединения — чтобы подсветить совместимые входы.
   let sourceSignal: string | null = null;
-  if (connectionInProgress) {
-    const src = devices.find((d) => d.id === connectionInProgress.fromDeviceId);
-    sourceSignal = src?.ports.find((p) => p.id === connectionInProgress.fromPortId)?.signal_type ?? null;
+  if (connecting) {
+    const src = devices.find((d) => d.id === connecting.fromDeviceId);
+    sourceSignal = src?.ports.find((p) => p.id === connecting.fromPortId)?.signal_type ?? null;
   }
 
-  const hasError = !!simulation?.errors.some((e) => e.device === device.id);
-  const hasWarning = !!simulation?.warnings.some((w) => w.device === device.id);
+  let borderColor = palette.nodeStroke;
+  if (interactive) {
+    if (selectedDeviceId === device.id) borderColor = palette.selection;
+    else if (connecting?.fromDeviceId === device.id) borderColor = palette.connecting;
+    else if (simulation?.errors.some((e) => e.device === device.id)) borderColor = palette.error;
+    else if (simulation?.warnings.some((w) => w.device === device.id)) borderColor = palette.warning;
+  }
+  const isSelected = interactive && selectedDeviceId === device.id;
+  const accent = categoryColor(device.category);
 
-  let borderColor = '#3d4654';
-  if (isSelected) borderColor = '#3DDC84';
-  else if (isConnectingFrom) borderColor = '#FFC107';
-  else if (hasError) borderColor = '#F44336';
-  else if (hasWarning) borderColor = '#FF9800';
+  const isConnected = (port: Port) =>
+    connections.some(
+      (c) => (c.from.device === device.id && c.from.port === port.id) || (c.to.device === device.id && c.to.port === port.id)
+    );
 
-  const accent = signalColor(device.ports[0]?.signal_type || 'control');
+  /** Роль порта в текущем клике: двунаправленный порт начинает или завершает соединение. */
+  const roleOf = (port: Port): 'input' | 'output' =>
+    port.direction === 'bidirectional' ? (connecting ? 'input' : 'output') : port.direction === 'input' ? 'input' : 'output';
 
-  const handleDragEnd = (e: any) => {
-    dispatch(updateDevicePosition({ id: device.id, position: { x: e.target.x(), y: e.target.y() } }));
+  const dragPosition = (e: KonvaEventObject<DragEvent>) => {
+    if (snap) e.target.position({ x: snapToGrid(e.target.x()), y: snapToGrid(e.target.y()) });
+    return { id: device.id, position: { x: e.target.x(), y: e.target.y() } };
   };
 
-  const handleClick = (e: any) => {
+  const handleClick = (e: KonvaPointerEvent) => {
     e.cancelBubble = true;
     dispatch(selectDevice(device.id));
   };
 
-  const handlePortClick = (port: Port, role: 'input' | 'output', e: any) => {
+  const handlePortClick = (port: Port, e: KonvaPointerEvent) => {
     e.cancelBubble = true;
-    if (!connectionInProgress) {
-      if (role === 'output') {
-        dispatch(startConnection({ deviceId: device.id, portId: port.id }));
+    const role = roleOf(port);
+    const busy = isPortBusy(connections, device.id, port);
+    if (!connecting) {
+      if (role === 'input') {
+        dispatch(showToast({ message: 'Начните соединение с выхода (порты справа)', severity: 'info' }));
+      } else if (busy) {
+        dispatch(showToast({ message: 'Этот порт уже занят кабелем', severity: 'warning' }));
       } else {
-        dispatch(showToast({ message: 'Начните соединение с выходного порта (снизу устройства)', severity: 'info' }));
+        dispatch(startConnection({ deviceId: device.id, portId: port.id }));
       }
       return;
     }
     // Соединение уже начато — кликнули по второму порту
-    if (role !== 'input' || device.id === connectionInProgress.fromDeviceId) {
+    if (role !== 'input' || device.id === connecting.fromDeviceId) {
       dispatch(cancelConnection());
       return;
     }
@@ -85,127 +115,158 @@ const DeviceNode: React.FC<DeviceNodeProps> = ({ device }) => {
       dispatch(showToast({ message: 'Несовместимые сигналы: эти порты нельзя соединить', severity: 'error' }));
       return;
     }
+    if (busy) {
+      dispatch(showToast({ message: 'Вход уже занят — сначала удалите подключённый кабель', severity: 'warning' }));
+      return;
+    }
     dispatch(completeConnection({ toDeviceId: device.id, toPortId: port.id, cableType: port.type }));
     dispatch(showToast({ message: 'Соединение создано', severity: 'success' }));
   };
 
-  const ins = inputPorts(device);
-  const outs = outputPorts(device);
+  const setCursor = (e: KonvaPointerEvent, cursor: string) => {
+    const c = e.target.getStage()?.container();
+    if (c) c.style.cursor = cursor;
+  };
 
-  const renderPort = (port: Port, role: 'input' | 'output', count: number, idx: number) => {
-    const x = portLocalX(count, idx);
-    const y = role === 'input' ? 0 : NODE_H;
+  // У презентационного коммутатора выбранный вход выделен — видно, что идёт на выход
+  const selectedPortId =
+    routingMode(device) === 'select'
+      ? device.ports.filter((p) => p.direction === 'input')[selectedInput(device) - 1]?.id
+      : undefined;
+
+  const renderSlot = (slot: PortSlot) => {
+    const { port, side } = slot;
+    const { x, y } = slotOffset(slot);
+    const color = signalColor(port.signal_type);
+    const targetable = !!connecting && roleOf(port) === 'input' && connecting.fromDeviceId !== device.id;
     const compatible =
-      role === 'input' && !!connectionInProgress && !!sourceSignal && signalsCompatible(sourceSignal, port.signal_type);
-    const incompatible =
-      role === 'input' && !!connectionInProgress && !compatible;
+      targetable &&
+      !!sourceSignal &&
+      signalsCompatible(sourceSignal, port.signal_type) &&
+      !isPortBusy(connections, device.id, port);
+    const dimmed = !!connecting && connecting.fromDeviceId !== device.id && !compatible;
+    const handlers = interactive
+      ? {
+          onClick: (e: KonvaPointerEvent) => handlePortClick(port, e),
+          onTap: (e: KonvaPointerEvent) => handlePortClick(port, e),
+          onMouseEnter: (e: KonvaPointerEvent) => setCursor(e, 'crosshair'),
+          onMouseLeave: (e: KonvaPointerEvent) => setCursor(e, 'default'),
+        }
+      : {};
+    const labelWidth = NODE_W / 2 - 14;
     return (
-      <React.Fragment key={`${role}-${port.id}`}>
-        {compatible && <Circle x={x} y={y} radius={PORT_R + 4} fill="#3DDC8455" />}
+      <Group key={`${side}-${port.id}`} opacity={dimmed ? 0.35 : 1}>
+        {/* Вся строка порта — область клика */}
+        <Rect
+          x={side === 'left' ? 0 : NODE_W / 2}
+          y={y - ROW_H / 2}
+          width={NODE_W / 2}
+          height={ROW_H}
+          fill={compatible ? '#3DDC8422' : 'transparent'}
+          {...handlers}
+        />
+        <Text
+          text={port.id === selectedPortId ? `▶ ${portLabel(port)}` : portLabel(port)}
+          x={side === 'left' ? 10 : NODE_W / 2 + 4}
+          y={y - 5}
+          width={labelWidth}
+          align={side === 'left' ? 'left' : 'right'}
+          fontSize={10}
+          fontStyle={port.id === selectedPortId ? 'bold' : 'normal'}
+          fill={port.id === selectedPortId ? palette.selection : palette.portLabel}
+          ellipsis
+          wrap="none"
+          listening={false}
+        />
+        {compatible && <Circle x={x} y={y} radius={PORT_R + 4} fill="#3DDC8455" listening={false} />}
         <Circle
           x={x}
           y={y}
-          radius={compatible ? PORT_R + 1 : PORT_R}
-          fill={signalColor(port.signal_type)}
-          stroke={compatible ? '#3DDC84' : '#FFFFFF'}
-          strokeWidth={compatible ? 3 : 2}
-          opacity={incompatible ? 0.35 : 1}
-          onClick={(e) => handlePortClick(port, role, e)}
-          onTap={(e) => handlePortClick(port, role, e)}
-          onMouseEnter={(e) => {
-            setHoverPort(port);
-            const c = e.target.getStage()?.container();
-            if (c) c.style.cursor = 'crosshair';
-          }}
-          onMouseLeave={(e) => {
-            setHoverPort(null);
-            const c = e.target.getStage()?.container();
-            if (c) c.style.cursor = 'default';
-          }}
+          radius={PORT_R}
+          fill={isConnected(port) ? color : palette.nodeFill}
+          stroke={compatible ? '#3DDC84' : color}
+          strokeWidth={compatible ? 2.5 : 2}
+          hitStrokeWidth={12}
+          {...handlers}
         />
-      </React.Fragment>
+      </Group>
     );
   };
+
+  const typeLine = `${deviceTypeLabel(device.type)} · ${device.manufacturer}`;
 
   return (
     <Group
       x={device.position.x}
       y={device.position.y}
-      draggable
-      onDragStart={() => dispatch(selectDevice(device.id))}
-      onDragEnd={handleDragEnd}
+      draggable={interactive}
+      listening={interactive}
+      onDragStart={() => dispatch(beginDeviceDrag(device.id))}
+      onDragMove={(e) => dispatch(moveDevice(dragPosition(e)))}
+      onDragEnd={(e) => dispatch(moveDevice(dragPosition(e)))}
       onClick={handleClick}
       onTap={handleClick}
     >
-      {/* Тень/подложка */}
       <Rect
-        width={NODE_W}
-        height={NODE_H}
-        fill="#222a36"
+        width={width}
+        height={height}
+        fill={palette.nodeFill}
         stroke={borderColor}
-        strokeWidth={isSelected ? 3 : 2}
-        cornerRadius={10}
+        strokeWidth={isSelected ? 2.5 : 1.5}
+        cornerRadius={8}
         shadowColor="black"
-        shadowBlur={isSelected ? 16 : 8}
-        shadowOpacity={0.45}
-        shadowOffsetY={4}
+        shadowBlur={interactive ? (isSelected ? 16 : 8) : 0}
+        shadowOpacity={0.35}
+        shadowOffsetY={3}
       />
-      {/* Цветная полоса категории сигнала слева */}
-      <Rect x={0} y={0} width={6} height={NODE_H} fill={accent} cornerRadius={[10, 0, 0, 10]} />
-
-      {/* Иконка */}
-      <Text text={deviceEmoji(device.type)} x={14} y={12} fontSize={30} />
-
-      {/* Тип устройства */}
-      <Text
-        text={deviceTypeLabel(device.type)}
-        x={54}
-        y={14}
-        width={NODE_W - 62}
-        fontSize={11}
-        fill="#8b95a5"
+      <Rect width={width} height={HEADER_H} fill={palette.headerFill} cornerRadius={[8, 8, 0, 0]} listening={false} />
+      <Rect width={width} height={3} fill={accent} cornerRadius={[8, 8, 0, 0]} listening={false} />
+      <Path
+        data={deviceIconPath(device.type)}
+        x={10}
+        y={(HEADER_H - ICON_SIZE) / 2 + 1}
+        scaleX={ICON_SIZE / ICON_VIEWBOX}
+        scaleY={ICON_SIZE / ICON_VIEWBOX}
+        fill={accent}
+        listening={false}
       />
-      {/* Модель */}
       <Text
-        text={device.model}
-        x={54}
-        y={28}
-        width={NODE_W - 62}
-        fontSize={14}
-        fontStyle="bold"
-        fill="#FFFFFF"
+        text={typeLine}
+        x={40}
+        y={8}
+        width={width - 40 - (tag ? 58 : 8)}
+        fontSize={10}
+        fill={palette.subtitle}
         ellipsis
         wrap="none"
+        listening={false}
       />
-      {/* Производитель */}
-      <Text
-        text={device.manufacturer}
-        x={14}
-        y={NODE_H - 24}
-        width={NODE_W - 20}
-        fontSize={10}
-        fill="#6b7686"
-      />
-
-      {/* Порты */}
-      {ins.map((p, i) => renderPort(p, 'input', ins.length, i))}
-      {outs.map((p, i) => renderPort(p, 'output', outs.length, i))}
-
-      {/* Подсказка имени порта при наведении */}
-      {hoverPort && (
-        <Label
-          x={portLocalX(
-            (hoverPort.direction === 'input' || hoverPort.direction === 'bidirectional' ? ins : outs).length,
-            (hoverPort.direction === 'input' || hoverPort.direction === 'bidirectional' ? ins : outs).findIndex(
-              (p) => p.id === hoverPort.id
-            )
-          )}
-          y={(hoverPort.direction === 'input' ? -10 : NODE_H + 10)}
-        >
-          <Tag fill="#0d1117" stroke="#3d4654" cornerRadius={4} pointerDirection={hoverPort.direction === 'input' ? 'down' : 'up'} pointerWidth={8} pointerHeight={6} />
-          <Text text={portLabel(hoverPort)} fontSize={11} padding={5} fill="#e6edf3" />
-        </Label>
+      {tag && (
+        <Text
+          text={tag}
+          x={width - 62}
+          y={8}
+          width={54}
+          align="right"
+          fontSize={10}
+          fontStyle="bold"
+          fill={palette.tag}
+          listening={false}
+        />
       )}
+      <Text
+        text={device.model}
+        x={40}
+        y={21}
+        width={width - 48}
+        fontSize={13}
+        fontStyle="bold"
+        fill={palette.title}
+        ellipsis
+        wrap="none"
+        listening={false}
+      />
+      {slots.map(renderSlot)}
     </Group>
   );
 };

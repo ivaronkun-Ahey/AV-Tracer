@@ -3,15 +3,17 @@ import { Paper, IconButton, Typography, Divider, Tooltip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
+import FitScreenIcon from '@mui/icons-material/FitScreen';
 
 interface ZoomControlsProps {
   zoom: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onFit: () => void;
 }
 
-const ZoomControls: React.FC<ZoomControlsProps> = ({ zoom, onZoomIn, onZoomOut, onReset }) => (
+const ZoomControls: React.FC<ZoomControlsProps> = ({ zoom, onZoomIn, onZoomOut, onReset, onFit }) => (
   <Paper
     elevation={4}
     sx={{
@@ -43,6 +45,11 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({ zoom, onZoomIn, onZoomOut, 
       </IconButton>
     </Tooltip>
     <Divider orientation="vertical" flexItem sx={{ borderColor: '#2d3645' }} />
+    <Tooltip title="Вписать схему в экран">
+      <IconButton size="small" onClick={onFit}>
+        <FitScreenIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
     <Tooltip title="Сбросить вид (100%)">
       <IconButton size="small" onClick={onReset}>
         <CenterFocusStrongIcon fontSize="small" />

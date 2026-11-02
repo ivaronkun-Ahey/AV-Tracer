@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -11,43 +11,64 @@ import {
   Stack,
   IconButton,
   Tooltip,
+  ButtonBase,
+  Link as MuiLink,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAppSelector, useAppDispatch } from '../store';
 import {
   updateDeviceProperty,
+  setDeviceTag,
   removeDevice,
   removeConnection,
+  selectConnection,
+  deselectAll,
+  connect,
   showToast,
 } from '../features/canvasSlice';
-import { Device } from '../types/device.types';
+import { isPortBusy, possibleLinks, Link } from '../features/connectionRules';
+import { Connection, Device, PropValue } from '../types/device.types';
 import { deviceTypeLabel, propertyLabel, portLabel, SIGNAL_LABELS, DIRECTION_LABELS } from '../data/labels';
-import { signalColor } from './deviceGeometry';
+import { signalColor, categoryColor } from './deviceGeometry';
+import { deviceTags } from '../data/deviceTags';
+import { provenance } from '../data/equipment';
 import ConnectionInspector from './ConnectionInspector';
+import { DeviceRoomField, RoomPanel, RoomsAndDevices } from './RoomPanels';
+import { DeviceRackField } from './RackView';
+import NumberField from './NumberField';
 
 const PropertiesPanel: React.FC = () => {
   const dispatch = useAppDispatch();
   const selectedDeviceId = useAppSelector((s) => s.canvas.selectedDeviceId);
   const selectedConnectionId = useAppSelector((s) => s.canvas.selectedConnectionId);
+  const selectedRoomId = useAppSelector((s) => s.canvas.selectedRoomId);
+  const rooms = useAppSelector((s) => s.canvas.rooms);
   const devices = useAppSelector((s) => s.canvas.devices);
   const connections = useAppSelector((s) => s.canvas.connections);
 
   const device = devices.find((d) => d.id === selectedDeviceId);
+  const tag = device ? deviceTags(devices)[device.id] : '';
 
   if (!device) {
     // Выбран кабель — показываем инспектор соединения
     if (selectedConnectionId) {
       return <ConnectionInspector />;
     }
-    return (
-      <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
-        <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Выберите устройство или кабель на холсте, чтобы увидеть и изменить параметры
-        </Typography>
-      </Box>
-    );
+    const room = rooms.find((r) => r.id === selectedRoomId);
+    if (room) return <RoomPanel key={room.id} room={room} />;
+    if (devices.length === 0 && rooms.length === 0) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center', mt: 4 }}>
+          <Typography sx={{ fontSize: 40, mb: 1 }}>👆</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Здесь появятся параметры устройства или кабеля, выбранного на холсте
+          </Typography>
+        </Box>
+      );
+    }
+    return <RoomsAndDevices devices={devices} />;
   }
 
   const deviceName = (id: string) => {
@@ -59,22 +80,26 @@ const PropertiesPanel: React.FC = () => {
     (c) => c.from.device === device.id || c.to.device === device.id
   );
 
-  const onChange = (property: string, value: any) =>
+  const onChange = (property: string, value: PropValue) =>
     dispatch(updateDeviceProperty({ id: device.id, property, value }));
 
   return (
     <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-        Свойства
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          Свойства
+        </Typography>
+        <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => dispatch(deselectAll())} sx={{ ml: 'auto' }}>
+          Все устройства
+        </Button>
+      </Box>
 
       {/* Шапка устройства */}
       <Box sx={{ mb: 2 }}>
-        <Chip
-          label={deviceTypeLabel(device.type)}
-          size="small"
-          sx={{ mb: 1, bgcolor: signalColor(device.ports[0]?.signal_type || 'control'), color: '#fff' }}
-        />
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+          <Chip label={deviceTypeLabel(device.type)} size="small" sx={{ bgcolor: categoryColor(device.category), color: '#fff' }} />
+          <Chip label={tag} size="small" variant="outlined" />
+        </Stack>
         <Typography variant="h6" sx={{ fontSize: '1.15rem', lineHeight: 1.2 }}>
           {device.model}
         </Typography>
@@ -84,6 +109,7 @@ const PropertiesPanel: React.FC = () => {
         <Typography variant="caption" color="text.secondary">
           {device.full_name}
         </Typography>
+        <DataNote device={device} />
       </Box>
 
       <Divider sx={{ my: 2 }} />
@@ -92,7 +118,16 @@ const PropertiesPanel: React.FC = () => {
       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
         Параметры
       </Typography>
+      <TagField
+        key={`tag:${device.id}`}
+        value={tag}
+        isTaken={(t) => devices.some((d) => d.id !== device.id && d.tag === t)}
+        onCommit={(t) => dispatch(setDeviceTag({ id: device.id, tag: t }))}
+      />
+      <DeviceRoomField key={`room:${device.id}`} device={device} />
+      <DeviceRackField key={`rack:${device.id}`} device={device} />
       {renderProperties(device, onChange)}
+      {renderChannelGains(device, connections, onChange)}
 
       {/* Подключения */}
       <Divider sx={{ my: 2 }} />
@@ -120,14 +155,19 @@ const PropertiesPanel: React.FC = () => {
                 borderRadius: 1,
               }}
             >
-              <Box sx={{ minWidth: 0, flex: 1 }}>
+              <ButtonBase
+                onClick={() => dispatch(selectConnection(c.id))}
+                aria-label={`Кабель ${c.label ?? ''} ${outgoing ? 'к' : 'от'} ${deviceName(otherId)}: открыть`}
+                sx={{ minWidth: 0, flex: 1, display: 'block', textAlign: 'left', borderRadius: 1 }}
+              >
                 <Typography variant="body2" noWrap>
                   {outgoing ? '→' : '←'} {deviceName(otherId)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
+                  {c.label ? `${c.label} · ` : ''}
                   {c.cable_type.toUpperCase()}
                 </Typography>
-              </Box>
+              </ButtonBase>
               <Tooltip title="Удалить соединение">
                 <IconButton size="small" onClick={() => dispatch(removeConnection(c.id))}>
                   <LinkOffIcon fontSize="small" />
@@ -137,6 +177,8 @@ const PropertiesPanel: React.FC = () => {
           );
         })}
       </Stack>
+
+      <ConnectForm key={`connect:${device.id}`} device={device} />
 
       {/* Порты */}
       <Divider sx={{ my: 2 }} />
@@ -175,10 +217,197 @@ const PropertiesPanel: React.FC = () => {
   );
 };
 
+/**
+ * Подключение кабеля без холста: порт этого устройства и подходящий порт
+ * другого. Варианты — только допустимые кабели (совместимые свободные порты).
+ */
+const ConnectForm: React.FC<{ device: Device }> = ({ device }) => {
+  const dispatch = useAppDispatch();
+  const devices = useAppSelector((s) => s.canvas.devices);
+  const connections = useAppSelector((s) => s.canvas.connections);
+  const [portId, setPortId] = useState('');
+  const [choice, setChoice] = useState('');
+
+  const freePorts = device.ports.filter((p) => !isPortBusy(connections, device.id, p));
+  const links: Link[] = portId ? possibleLinks(devices, connections, { device: device.id, port: portId }) : [];
+  const linkKey = (l: Link) => `${l.from.device}|${l.from.port}|${l.to.device}|${l.to.port}`;
+  const describe = (l: Link) => {
+    const outgoing = l.from.device === device.id;
+    const end = outgoing ? l.to : l.from;
+    const other = devices.find((d) => d.id === end.device);
+    const port = other?.ports.find((p) => p.id === end.port);
+    return `${outgoing ? '→' : '←'} ${other?.tag ?? ''} ${other?.model ?? ''} · ${port ? portLabel(port) : end.port}`;
+  };
+
+  const submit = () => {
+    const link = links.find((l) => linkKey(l) === choice);
+    const toPort = link && devices.find((d) => d.id === link.to.device)?.ports.find((p) => p.id === link.to.port);
+    if (!link || !toPort) return;
+    dispatch(connect({ from: link.from, to: link.to, cableType: toPort.type }));
+    dispatch(showToast({ message: 'Соединение создано', severity: 'success' }));
+    setPortId('');
+    setChoice('');
+  };
+
+  if (freePorts.length === 0) return null;
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Подключить кабель
+      </Typography>
+      <TextField
+        select
+        label="Порт этого устройства"
+        size="small"
+        fullWidth
+        value={portId}
+        onChange={(e) => {
+          setPortId(e.target.value);
+          setChoice('');
+        }}
+        SelectProps={{ native: true }}
+        InputLabelProps={{ shrink: true }}
+        sx={{ mb: 1.5 }}
+      >
+        <option value="">— выберите порт —</option>
+        {freePorts.map((p) => (
+          <option key={p.id} value={p.id}>
+            {portLabel(p)} ({DIRECTION_LABELS[p.direction]})
+          </option>
+        ))}
+      </TextField>
+      {portId && (
+        <TextField
+          select
+          label="С чем соединить"
+          size="small"
+          fullWidth
+          value={choice}
+          onChange={(e) => setChoice(e.target.value)}
+          disabled={links.length === 0}
+          helperText={links.length === 0 ? 'Нет свободных совместимых портов на других устройствах' : undefined}
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ mb: 1.5 }}
+        >
+          <option value="">— выберите —</option>
+          {links.map((l) => (
+            <option key={linkKey(l)} value={linkKey(l)}>
+              {describe(l)}
+            </option>
+          ))}
+        </TextField>
+      )}
+      <Button variant="outlined" size="small" fullWidth disabled={!choice} onClick={submit}>
+        Соединить
+      </Button>
+    </Box>
+  );
+};
+
+/** Обозначение устройства (MIC-01): редактируется, должно быть уникальным. */
+/** Откуда характеристики: сверены с производителем, ориентировочные или типовое учебное устройство. */
+const DataNote: React.FC<{ device: Device }> = ({ device }) => {
+  const data = provenance(device);
+  return (
+    <Typography
+      variant="caption"
+      component="p"
+      sx={{ mt: 0.5, color: data.kind === 'indicative' ? 'warning.main' : 'text.secondary' }}
+      data-testid="device-data-note"
+    >
+      {data.label}
+      {data.url && (
+        <>
+          {' · '}
+          <MuiLink href={data.url} target="_blank" rel="noopener noreferrer">
+            источник
+          </MuiLink>
+        </>
+      )}
+    </Typography>
+  );
+};
+
+const TagField: React.FC<{ value: string; isTaken: (tag: string) => boolean; onCommit: (tag: string) => void }> = ({
+  value,
+  isTaken,
+  onCommit,
+}) => {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  const normalized = text.trim().toUpperCase();
+  const error = !normalized ? 'Обозначение не может быть пустым' : isTaken(normalized) ? 'Такое обозначение уже есть' : '';
+  const commit = () => {
+    if (!error && normalized !== value) onCommit(normalized);
+    else setText(value);
+  };
+  return (
+    <TextField
+      label="Обозначение на схеме"
+      size="small"
+      fullWidth
+      value={text}
+      error={!!error}
+      helperText={error || 'попадает в спецификацию и кабельный журнал'}
+      inputProps={{ maxLength: 32 }}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+      }}
+      sx={{ mb: 1.5 }}
+    />
+  );
+};
+
+const GAIN_STAGES = ['mixer', 'dsp', 'audio_interface'];
+
+/**
+ * Усиление по каналам: у каждого подключённого входа микшера/DSP/интерфейса
+ * своё значение (gain:<порт>); пока оно не задано, действует «Усиление входа».
+ */
+function renderChannelGains(
+  device: Device,
+  connections: Connection[],
+  onChange: (prop: string, value: PropValue) => void
+) {
+  if (!GAIN_STAGES.includes(device.type)) return null;
+  const connectedInputs = device.ports.filter(
+    (p) => p.direction === 'input' && connections.some((c) => c.to.device === device.id && c.to.port === p.id)
+  );
+  if (connectedInputs.length === 0) return null;
+  const fallback = typeof device.properties.input_gain === 'number' ? device.properties.input_gain : 0;
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Усиление по каналам (подключённые входы)
+      </Typography>
+      {connectedInputs.map((port) => {
+        const key = `gain:${port.id}`;
+        const own = device.properties[key];
+        return (
+          <NumberField
+            key={`${device.id}:${key}`}
+            label={`${portLabel(port)}, дБ`}
+            size="small"
+            fullWidth
+            value={typeof own === 'number' ? own : fallback}
+            helperText={typeof own === 'number' ? undefined : 'как «Усиление входа»'}
+            onCommit={(n) => onChange(key, n)}
+            sx={{ mb: 1.5 }}
+          />
+        );
+      })}
+    </Box>
+  );
+}
+
 /** Универсальный рендер параметров: тип поля выбирается по типу значения. */
-function renderProperties(device: Device, onChange: (prop: string, value: any) => void) {
+function renderProperties(device: Device, onChange: (prop: string, value: PropValue) => void) {
   const props = device.properties || {};
-  const keys = Object.keys(props);
+  // Параметры каналов (gain:<порт>, phantom:<порт>) показываются отдельным блоком
+  const keys = Object.keys(props).filter((k) => !k.includes(':'));
   if (keys.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -200,27 +429,52 @@ function renderProperties(device: Device, onChange: (prop: string, value: any) =
             />
           );
         }
-        if (typeof value === 'number') {
+        // Значение из списка (отводы трансформатора, напряжение линии): варианты — в specs.<параметр>_options
+        const options = device.specs?.[`${key}_options`];
+        if (Array.isArray(options) && options.length > 0) {
+          const list = options.includes(value as never) ? options : [value as string | number, ...options];
           return (
             <TextField
-              key={key}
+              key={`${device.id}:${key}`}
+              select
               label={propertyLabel(key)}
-              type="number"
+              size="small"
+              fullWidth
+              value={String(value)}
+              onChange={(e) => onChange(key, typeof list[0] === 'number' ? Number(e.target.value) : e.target.value)}
+              SelectProps={{ native: true }}
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 1.5 }}
+            >
+              {list.map((o) => (
+                <option key={String(o)} value={String(o)}>
+                  {String(o).replace('.', ',')}
+                </option>
+              ))}
+            </TextField>
+          );
+        }
+        if (typeof value === 'number') {
+          return (
+            <NumberField
+              key={`${device.id}:${key}`}
+              label={propertyLabel(key)}
               size="small"
               fullWidth
               value={value}
-              onChange={(e) => onChange(key, Number(e.target.value))}
+              onCommit={(n) => onChange(key, n)}
               sx={{ mb: 1.5 }}
             />
           );
         }
         return (
           <TextField
-            key={key}
+            key={`${device.id}:${key}`}
             label={propertyLabel(key)}
             size="small"
             fullWidth
-            value={String(value)}
+            value={Array.isArray(value) ? value.join(', ') : String(value ?? '')}
+            disabled={Array.isArray(value)}
             onChange={(e) => onChange(key, e.target.value)}
             sx={{ mb: 1.5 }}
           />

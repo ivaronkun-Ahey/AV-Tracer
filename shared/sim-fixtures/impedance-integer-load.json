@@ -1,0 +1,701 @@
+{
+  "name": "impedance-integer-load",
+  "description": "Две АС по 8 Ω параллельно на усилителе с минимумом 8 Ω; мощный усилитель на слабую АС",
+  "devices": [
+    {
+      "id": "mic",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM58",
+      "full_name": "Shure SM58 Dynamic Microphone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "sensitivity": -54.5
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid",
+        "frequency_response": "50Hz-15kHz"
+      }
+    },
+    {
+      "id": "mix",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Allen & Heath",
+      "model": "SQ-5",
+      "full_name": "Allen & Heath SQ-5 Digital Mixer",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_7",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_8",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_9",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_10",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_11",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_12",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_13",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_14",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_15",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_16",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_l",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_r",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_1",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_2",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_3",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_4",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_5",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_6",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_7",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_8",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_9",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_10",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "channels": 16,
+        "input_gain": 45,
+        "master_gain": 0,
+        "phantom_power": true
+      }
+    },
+    {
+      "id": "amp",
+      "type": "amplifier",
+      "category": "audio",
+      "manufacturer": "QSC",
+      "model": "GX5",
+      "full_name": "QSC GX5 Power Amplifier",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_l",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_r",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_l",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_r",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 500,
+        "gain": 20,
+        "min_impedance_ohms": 8
+      },
+      "specs": {
+        "routing": "channel"
+      }
+    },
+    {
+      "id": "s1",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "speakon_in",
+          "type": "speakon",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "impedance_ohms": 8,
+        "active": false,
+        "power_handling_watts": 600
+      }
+    },
+    {
+      "id": "s2",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "speakon_in",
+          "type": "speakon",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "impedance_ohms": 8,
+        "active": false,
+        "power_handling_watts": 600
+      }
+    },
+    {
+      "id": "big",
+      "type": "amplifier",
+      "category": "audio",
+      "manufacturer": "Lab Gruppen",
+      "model": "FP 10000Q",
+      "full_name": "Lab Gruppen FP 10000Q Power Amplifier",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_1",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_2",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_3",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_4",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 2500,
+        "gain": 23,
+        "min_impedance_ohms": 2,
+        "mode": "4-channel"
+      },
+      "specs": {
+        "routing": "channel"
+      }
+    },
+    {
+      "id": "s3",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "speakon_in",
+          "type": "speakon",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "impedance_ohms": 8,
+        "active": false,
+        "power_handling_watts": 300
+      }
+    },
+    {
+      "id": "small",
+      "type": "amplifier",
+      "category": "audio",
+      "manufacturer": "Crown",
+      "model": "XLS 2502",
+      "full_name": "Crown XLS 2502 Power Amplifier",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_l",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_r",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_l",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "speakon_out_r",
+          "type": "speakon",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 200,
+        "gain": 20,
+        "mode": "stereo",
+        "min_impedance_ohms": 4
+      },
+      "specs": {
+        "routing": "channel"
+      }
+    },
+    {
+      "id": "s4",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Electro-Voice",
+      "model": "EVF-1122S",
+      "full_name": "EV EVF-1122S Passive Install Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "speakon_in",
+          "type": "speakon",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "impedance_ohms": 8,
+        "active": false,
+        "power_handling_watts": 600
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "mic",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "mix",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_l"
+      },
+      "to": {
+        "device": "amp",
+        "port": "xlr_in_l"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "amp",
+        "port": "speakon_out_l"
+      },
+      "to": {
+        "device": "s1",
+        "port": "speakon_in"
+      },
+      "cable_type": "speakon",
+      "cable_length": 10
+    },
+    {
+      "id": "c4",
+      "from": {
+        "device": "amp",
+        "port": "speakon_out_l"
+      },
+      "to": {
+        "device": "s2",
+        "port": "speakon_in"
+      },
+      "cable_type": "speakon",
+      "cable_length": 10
+    },
+    {
+      "id": "c5",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_r"
+      },
+      "to": {
+        "device": "big",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c6",
+      "from": {
+        "device": "big",
+        "port": "speakon_out_1"
+      },
+      "to": {
+        "device": "s3",
+        "port": "speakon_in"
+      },
+      "cable_type": "speakon",
+      "cable_length": 10
+    },
+    {
+      "id": "c7",
+      "from": {
+        "device": "mix",
+        "port": "xlr_out_1"
+      },
+      "to": {
+        "device": "small",
+        "port": "xlr_in_l"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c8",
+      "from": {
+        "device": "small",
+        "port": "speakon_out_l"
+      },
+      "to": {
+        "device": "s4",
+        "port": "speakon_in"
+      },
+      "cable_type": "speakon",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "amp",
+          "s1"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "amp",
+          "s2"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "amp",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "big",
+          "s3"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_1",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "big",
+        "status": "ok"
+      },
+      {
+        "type": "audio",
+        "source": "mic",
+        "path": [
+          "mic",
+          "mix",
+          "small",
+          "s4"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in_l",
+          "speakon_in"
+        ],
+        "final_level_db": -7.3,
+        "level_at": "small",
+        "status": "ok"
+      }
+    ],
+    "warnings": [
+      {
+        "type": "power_under",
+        "device": "amp",
+        "message": "Усилитель 500 Вт недостаточен для АС 1200 Вт — возможен клиппинг",
+        "severity": "medium"
+      },
+      {
+        "type": "power_over",
+        "device": "big",
+        "message": "Усилитель 2500 Вт мощнее суммарной мощности АС 300 Вт — риск повреждения на высокой громкости",
+        "severity": "medium"
+      },
+      {
+        "type": "power_under",
+        "device": "small",
+        "message": "Усилитель 200 Вт недостаточен для АС 600 Вт — возможен клиппинг",
+        "severity": "medium"
+      }
+    ],
+    "errors": [
+      {
+        "type": "impedance_low",
+        "device": "amp",
+        "message": "Нагрузка 4 Ω на «GX5» ниже минимума 8 Ω — риск перегрузки и срабатывания защиты",
+        "severity": "high"
+      }
+    ]
+  }
+}

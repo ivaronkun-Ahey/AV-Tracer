@@ -1,0 +1,5 @@
+# Зависимости для разработки и тестов backend.
+-r requirements.txt
+pytest>=8.3,<10
+# TestClient FastAPI/Starlette 0.27 работает через httpx
+httpx==0.25.2

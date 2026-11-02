@@ -1,22 +1,11 @@
-import { Device, Connection, CableType } from '../types/device.types';
-import { getAllEquipment } from './equipment';
+import { Device, Connection, CableType, Room } from '../types/device.types';
+import { createDevice, findEquipment } from './equipment';
 
 /** Создаёт экземпляр устройства из библиотечной карточки по её _id. */
 function instantiate(equipmentId: string, id: string, x: number, y: number): Device {
-  const tpl = getAllEquipment().find((e) => e._id === equipmentId);
+  const tpl = findEquipment(equipmentId);
   if (!tpl) throw new Error(`Неизвестное оборудование: ${equipmentId}`);
-  return {
-    id,
-    type: tpl.type,
-    manufacturer: tpl.manufacturer,
-    model: tpl.model,
-    full_name: tpl.full_name,
-    category: tpl.category,
-    position: { x, y },
-    properties: { ...tpl.default_properties },
-    ports: tpl.ports,
-    specs: (tpl as any).specs,
-  };
+  return createDevice(tpl, id, { x, y });
 }
 
 function connect(
@@ -25,7 +14,7 @@ function connect(
   cable: CableType
 ): Connection {
   return {
-    id: `conn_${from[0]}_${to[0]}_${Math.random().toString(36).substr(2, 5)}`,
+    id: `conn_${from[0]}_${to[0]}_${Math.random().toString(36).slice(2, 7)}`,
     from: { device: from[0], port: from[1] },
     to: { device: to[0], port: to[1] },
     cable_type: cable,
@@ -37,7 +26,7 @@ export interface ExampleProject {
   id: string;
   name: string;
   description: string;
-  build: () => { devices: Device[]; connections: Connection[] };
+  build: () => { devices: Device[]; connections: Connection[]; rooms?: Room[] };
 }
 
 export const EXAMPLE_PROJECTS: ExampleProject[] = [
@@ -46,9 +35,9 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
     name: 'Базовая система оповещения (PA)',
     description: 'Микрофон → микшер → активная акустическая система',
     build: () => {
-      const mic = instantiate('shure-sm58', 'ex_mic', 120, 80);
-      const mixer = instantiate('allen-heath-sq5', 'ex_mixer', 120, 280);
-      const speaker = instantiate('jbl-prx815w', 'ex_speaker', 120, 500);
+      const mic = instantiate('shure-sm58', 'ex_mic', 40, 80);
+      const mixer = instantiate('allen-heath-sq5', 'ex_mixer', 340, 80);
+      const speaker = instantiate('jbl-prx815w', 'ex_speaker', 640, 80);
       return {
         devices: [mic, mixer, speaker],
         connections: [
@@ -63,9 +52,9 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
     name: 'Презентационная видеосистема',
     description: 'Камера → видеокоммутатор → проектор',
     build: () => {
-      const cam = instantiate('sony-srg300h', 'ex_cam', 420, 80);
-      const sw = instantiate('extron-in1608', 'ex_sw', 420, 280);
-      const proj = instantiate('epson-l1755u', 'ex_proj', 420, 500);
+      const cam = instantiate('sony-srg300h', 'ex_cam', 40, 80);
+      const sw = instantiate('extron-in1608', 'ex_sw', 340, 80);
+      const proj = instantiate('epson-l1755u', 'ex_proj', 640, 80);
       return {
         devices: [cam, sw, proj],
         connections: [
@@ -80,10 +69,10 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
     name: 'Видео по сети (AV-over-IP)',
     description: 'Камера → кодер → декодер → дисплей',
     build: () => {
-      const cam = instantiate('panasonic-aw-ue150', 'ip_cam', 720, 60);
-      const enc = instantiate('crestron-nvx-enc', 'ip_enc', 720, 240);
-      const dec = instantiate('crestron-nvx-dec', 'ip_dec', 720, 420);
-      const display = instantiate('samsung-qm85r', 'ip_disp', 720, 600);
+      const cam = instantiate('panasonic-aw-ue150', 'ip_cam', 40, 80);
+      const enc = instantiate('crestron-nvx-enc', 'ip_enc', 340, 80);
+      const dec = instantiate('crestron-nvx-dec', 'ip_dec', 640, 80);
+      const display = instantiate('samsung-qm85r', 'ip_disp', 940, 80);
       return {
         devices: [cam, enc, dec, display],
         connections: [
@@ -97,21 +86,160 @@ export const EXAMPLE_PROJECTS: ExampleProject[] = [
   {
     id: 'concert',
     name: 'Концертный звук (усилитель + пассивные АС)',
-    description: 'Микрофон → микшер → усилитель → две параллельные пассивные колонки',
+    description: 'Сцена: микрофон, усилитель, две пассивные колонки; пульт FOH в зале — кабели по 40 м',
     build: () => {
-      const mic = instantiate('shure-sm58', 'c_mic', 1000, 40);
-      const mix = instantiate('allen-heath-sq5', 'c_mix', 1000, 220);
-      const amp = instantiate('crown-xls2502', 'c_amp', 1000, 400);
-      const sp1 = instantiate('yorkville-yx15p', 'c_sp1', 900, 600);
-      const sp2 = instantiate('yorkville-yx15p', 'c_sp2', 1120, 600);
+      const rooms: Room[] = [
+        { id: 'c_stage', name: 'Сцена', color: '#5B8DEF' },
+        { id: 'c_foh', name: 'Пульт FOH', color: '#E0A030' },
+      ];
+      const mic = instantiate('shure-sm58', 'c_mic', 40, 80);
+      const amp = instantiate('crown-xls2502', 'c_amp', 640, 80);
+      const sp1 = instantiate('ev-evf1122', 'c_sp1', 940, 80);
+      const sp2 = instantiate('ev-evf1122', 'c_sp2', 940, 180);
+      const mix = instantiate('allen-heath-sq5', 'c_mix', 340, 420);
+      for (const d of [mic, amp, sp1, sp2]) d.room = 'c_stage';
+      mix.room = 'c_foh';
+      const toFoh = connect(['c_mic', 'xlr_out'], ['c_mix', 'xlr_in_1'], 'xlr');
+      const fromFoh = connect(['c_mix', 'xlr_out_l'], ['c_amp', 'xlr_in_l'], 'xlr');
+      toFoh.cable_length = 40;
+      fromFoh.cable_length = 40;
       return {
+        rooms,
         devices: [mic, mix, amp, sp1, sp2],
         connections: [
-          connect(['c_mic', 'xlr_out'], ['c_mix', 'xlr_in_1'], 'xlr'),
-          connect(['c_mix', 'xlr_out_l'], ['c_amp', 'xlr_in_l'], 'xlr'),
+          toFoh,
+          fromFoh,
           connect(['c_amp', 'speakon_out_l'], ['c_sp1', 'speakon_in'], 'speakon'),
           connect(['c_amp', 'speakon_out_l'], ['c_sp2', 'speakon_in'], 'speakon'),
         ],
+      };
+    },
+  },
+  {
+    id: 'pa-100v',
+    name: 'Трансляция 100 В (две зоны)',
+    description: 'Микшер → усилитель 2×120 Вт: холл — 6 потолочных громкоговорителей, улица — 4 рупора; линии по проходным клеммам',
+    build: () => {
+      const rooms: Room[] = [
+        { id: 'p_tech', name: 'Аппаратная', color: '#5B8DEF' },
+        { id: 'p_hall', name: 'Холл', color: '#E0A030' },
+        { id: 'p_out', name: 'Улица', color: '#43A047' },
+      ];
+      const mic = instantiate('shure-sm58', 'p_mic', 40, 80);
+      const mix = instantiate('yamaha-mg12xu', 'p_mix', 340, 80);
+      mix.properties.input_gain = 50;
+      const amp = instantiate('generic-pa-amp-2x120', 'p_amp', 640, 80);
+      for (const d of [mic, mix, amp]) d.room = 'p_tech';
+      const hall = Array.from({ length: 6 }, (_, i) => {
+        const d = instantiate('generic-ceiling-spk-100v', `p_c${i + 1}`, 940 + (i % 3) * 300, 380 + Math.floor(i / 3) * 140);
+        d.room = 'p_hall';
+        return d;
+      });
+      const street = Array.from({ length: 4 }, (_, i) => {
+        const d = instantiate('generic-horn-100v', `p_h${i + 1}`, 940 + i * 300, 760);
+        d.properties.tap_watts = 15;
+        d.room = 'p_out';
+        return d;
+      });
+      // Линия — от выхода усилителя к первому громкоговорителю, дальше по проходным клеммам
+      const chain = (line: Device[], ampPort: string) =>
+        line.map((d, i) => {
+          const c = connect(i === 0 ? ['p_amp', ampPort] : [line[i - 1].id, 'line100_thru'], [d.id, 'line100_in'], 'terminal');
+          c.cable_length = i === 0 ? 30 : 8;
+          return c;
+        });
+      return {
+        rooms,
+        devices: [mic, mix, amp, ...hall, ...street],
+        connections: [
+          connect(['p_mic', 'xlr_out'], ['p_mix', 'xlr_in_1'], 'xlr'),
+          connect(['p_mix', 'xlr_out_l'], ['p_amp', 'xlr_in_1'], 'xlr'),
+          connect(['p_mix', 'xlr_out_r'], ['p_amp', 'xlr_in_2'], 'xlr'),
+          ...chain(hall, 'line100_out_1'),
+          ...chain(street, 'line100_out_2'),
+        ],
+      };
+    },
+  },
+  {
+    id: 'meeting-room',
+    name: 'Переговорная с ВКС',
+    description: 'Видеобар → ноутбук (USB) → HDBaseT по витой паре 40 м → дисплей',
+    build: () => {
+      const bar = instantiate('generic-video-bar', 'm_bar', 40, 80);
+      const pc = instantiate('generic-laptop', 'm_pc', 340, 80);
+      const tx = instantiate('generic-hdbt-tx', 'm_tx', 640, 80);
+      const rx = instantiate('generic-hdbt-rx', 'm_rx', 940, 80);
+      const tv = instantiate('samsung-qm85r', 'm_tv', 1240, 80);
+      const run = connect(['m_tx', 'hdbt_out'], ['m_rx', 'hdbt_in'], 'cat6');
+      run.cable_length = 40;
+      const usb = connect(['m_bar', 'usb_out'], ['m_pc', 'usb_in'], 'usb');
+      usb.cable_length = 2;
+      return {
+        devices: [bar, pc, tx, rx, tv],
+        connections: [
+          usb,
+          connect(['m_pc', 'hdmi_out'], ['m_tx', 'hdmi_in'], 'hdmi'),
+          run,
+          connect(['m_rx', 'hdmi_out'], ['m_tv', 'hdmi_in_1'], 'hdmi'),
+        ],
+      };
+    },
+  },
+  {
+    id: 'vc-codec-room',
+    name: 'Переговорная с кодеком ВКС',
+    description: 'PTZ-камера и ноутбук → кодек; два микрофона; собеседники и презентация — на двух дисплеях, звук — в колонку; кодек в сети',
+    build: () => {
+      const cam = instantiate('ptzoptics-20x', 'v_cam', 40, 80);
+      const pc = instantiate('generic-laptop', 'v_pc', 40, 240);
+      const mic1 = instantiate('sennheiser-e835', 'v_mic1', 40, 420);
+      const mic2 = instantiate('sennheiser-e835', 'v_mic2', 40, 540);
+      const vc = instantiate('generic-vc-codec', 'v_vc', 400, 200);
+      const tv1 = instantiate('samsung-qm85r', 'v_tv1', 760, 80);
+      const tv2 = instantiate('lg-75up8000', 'v_tv2', 760, 260);
+      const spk = instantiate('jbl-prx815w', 'v_spk', 760, 440);
+      const lan = instantiate('cisco-sg350', 'v_lan', 400, 620);
+      const uplink = connect(['v_vc', 'eth'], ['v_lan', 'eth_1'], 'cat6');
+      uplink.cable_length = 15;
+      return {
+        devices: [cam, pc, mic1, mic2, vc, tv1, tv2, spk, lan],
+        connections: [
+          connect(['v_cam', 'hdmi_out'], ['v_vc', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_pc', 'hdmi_out'], ['v_vc', 'hdmi_in_2'], 'hdmi'),
+          connect(['v_mic1', 'xlr_out'], ['v_vc', 'xlr_in_1'], 'xlr'),
+          connect(['v_mic2', 'xlr_out'], ['v_vc', 'xlr_in_2'], 'xlr'),
+          connect(['v_vc', 'hdmi_out_1'], ['v_tv1', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_vc', 'hdmi_out_2'], ['v_tv2', 'hdmi_in_1'], 'hdmi'),
+          connect(['v_vc', 'xlr_out'], ['v_spk', 'xlr_in'], 'xlr'),
+          uplink,
+        ],
+      };
+    },
+  },
+  {
+    id: 'stage-light',
+    name: 'Свет сцены (DMX)',
+    description: 'Пульт: вселенная 1 — четыре прожектора PAR (адреса 1, 9, 17, 25), вселенная 2 — две вращающиеся головы; терминаторы на концах линий',
+    build: () => {
+      const desk = instantiate('generic-dmx-console', 'l_desk', 40, 200);
+      const pars = [1, 9, 17, 25].map((address, i) => {
+        const d = instantiate('generic-led-par', `l_par${i + 1}`, 340 + i * 300, 80);
+        d.properties.dmx_address = address;
+        d.properties.dmx_terminator = i === 3;
+        return d;
+      });
+      const heads = [1, 17].map((address, i) => {
+        const d = instantiate('generic-moving-head', `l_head${i + 1}`, 340 + i * 300, 320);
+        d.properties.dmx_address = address;
+        d.properties.dmx_terminator = i === 1;
+        return d;
+      });
+      const line = (list: Device[], deskPort: string) =>
+        list.map((d, i) => connect(i === 0 ? ['l_desk', deskPort] : [list[i - 1].id, 'dmx_thru'], [d.id, 'dmx_in'], 'xlr'));
+      return {
+        devices: [desk, ...pars, ...heads],
+        connections: [...line(pars, 'dmx_out_1'), ...line(heads, 'dmx_out_2')],
       };
     },
   },

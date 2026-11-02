@@ -1,0 +1,996 @@
+{
+  "name": "levels",
+  "description": "Перегрузка горячего конденсатора, слабый сигнал при нулевом усилении входа, микрофон напрямую в активную АС, пэд и фантом, выключенный на интерфейсе",
+  "devices": [
+    {
+      "id": "nt1",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Rode",
+      "model": "NT1 5th Gen",
+      "full_name": "Rode NT1 5th Gen Condenser (XLR/USB)",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "usb_out",
+          "type": "usb",
+          "direction": "output",
+          "signal_type": "usb"
+        }
+      ],
+      "properties": {
+        "sensitivity": -29
+      },
+      "specs": {
+        "type": "condenser",
+        "pattern": "cardioid",
+        "requires_phantom": true
+      }
+    },
+    {
+      "id": "hot",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Yamaha",
+      "model": "MG12XU",
+      "full_name": "Yamaha MG12XU Analog Mixer",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_7",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_8",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_9",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_10",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_11",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_in_12",
+          "type": "trs",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_l",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_r",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "channels": 12,
+        "input_gain": 60,
+        "master_gain": 0,
+        "effects": true,
+        "phantom_power": true
+      }
+    },
+    {
+      "id": "spk1",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "JBL",
+      "model": "PRX815W",
+      "full_name": "JBL PRX815W Powered Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_thru",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 1500,
+        "impedance_ohms": 8,
+        "active": true
+      }
+    },
+    {
+      "id": "e835",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Sennheiser",
+      "model": "e835",
+      "full_name": "Sennheiser e835 Dynamic",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "sensitivity": -51.4
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid"
+      }
+    },
+    {
+      "id": "cold",
+      "type": "mixer",
+      "category": "audio",
+      "manufacturer": "Allen & Heath",
+      "model": "SQ-5",
+      "full_name": "Allen & Heath SQ-5 Digital Mixer",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_7",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_8",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_9",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_10",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_11",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_12",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_13",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_14",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_15",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_16",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_l",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_r",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_1",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_2",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_3",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_4",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_5",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_6",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_7",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_8",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_9",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_10",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "channels": 16,
+        "input_gain": 0,
+        "master_gain": 0,
+        "phantom_power": true
+      }
+    },
+    {
+      "id": "spk2",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "QSC",
+      "model": "K12.2",
+      "full_name": "QSC K12.2 Active Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_thru",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 2000,
+        "impedance_ohms": 8,
+        "active": true
+      }
+    },
+    {
+      "id": "sm57",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "SM57",
+      "full_name": "Shure SM57 Dynamic Instrument Microphone",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "sensitivity": -56
+      },
+      "specs": {
+        "type": "dynamic",
+        "pattern": "cardioid"
+      }
+    },
+    {
+      "id": "spk3",
+      "type": "speaker",
+      "category": "audio",
+      "manufacturer": "Electro-Voice",
+      "model": "ZLX-12P",
+      "full_name": "EV ZLX-12P Powered Speaker",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 1000,
+        "impedance_ohms": 8,
+        "active": true
+      }
+    },
+    {
+      "id": "c414",
+      "type": "microphone",
+      "category": "audio",
+      "manufacturer": "AKG",
+      "model": "C414 XLII",
+      "full_name": "AKG C414 XLII Studio Condenser",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "sensitivity": -32.8,
+        "pattern": "cardioid",
+        "pad": -10
+      },
+      "specs": {
+        "type": "condenser",
+        "patterns": [
+          "omni",
+          "cardioid",
+          "figure-8"
+        ],
+        "requires_phantom": true
+      }
+    },
+    {
+      "id": "iface",
+      "type": "audio_interface",
+      "category": "audio",
+      "manufacturer": "Focusrite",
+      "model": "Scarlett 2i2",
+      "full_name": "Focusrite Scarlett 2i2 (4th Gen)",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "usb_out",
+          "type": "usb",
+          "direction": "output",
+          "signal_type": "usb"
+        }
+      ],
+      "properties": {
+        "input_gain": 45,
+        "sample_rate": 48,
+        "bit_depth": 24,
+        "phantom_power": false
+      }
+    },
+    {
+      "id": "rx",
+      "type": "wireless_mic",
+      "category": "audio",
+      "manufacturer": "Shure",
+      "model": "ULXD4",
+      "full_name": "Shure ULXD4 Digital Wireless Receiver",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_out",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "trs_out",
+          "type": "trs",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "frequency_band": "470-636 MHz",
+        "channels": 1,
+        "diversity": true,
+        "battery_hours": 11
+      }
+    },
+    {
+      "id": "dsp",
+      "type": "dsp",
+      "category": "audio",
+      "manufacturer": "QSC",
+      "model": "Core 110f",
+      "full_name": "QSC Core 110f Audio Processor",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in_1",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_2",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_3",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_4",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_5",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_6",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_7",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_in_8",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "dante_in",
+          "type": "cat6",
+          "direction": "input",
+          "signal_type": "digital_audio"
+        },
+        {
+          "id": "xlr_out_1",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_2",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_3",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_4",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_5",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_6",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_7",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_out_8",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "dante_out",
+          "type": "cat6",
+          "direction": "output",
+          "signal_type": "digital_audio"
+        }
+      ],
+      "properties": {
+        "input_gain": 40,
+        "gain": -3,
+        "qsys": true,
+        "processing": "dante",
+        "channels": 8,
+        "phantom_power": false
+      }
+    },
+    {
+      "id": "sub",
+      "type": "subwoofer",
+      "category": "audio",
+      "manufacturer": "JBL",
+      "model": "PRX818XLFW",
+      "full_name": "JBL PRX818XLFW Powered Subwoofer",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "ports": [
+        {
+          "id": "xlr_in",
+          "type": "xlr",
+          "direction": "input",
+          "signal_type": "analog_audio"
+        },
+        {
+          "id": "xlr_thru",
+          "type": "xlr",
+          "direction": "output",
+          "signal_type": "analog_audio"
+        }
+      ],
+      "properties": {
+        "power_watts": 1500,
+        "active": true,
+        "crossover_hz": 100,
+        "max_spl_db": 135
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c1",
+      "from": {
+        "device": "nt1",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "hot",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c2",
+      "from": {
+        "device": "hot",
+        "port": "xlr_out_l"
+      },
+      "to": {
+        "device": "spk1",
+        "port": "xlr_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c3",
+      "from": {
+        "device": "e835",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "cold",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c4",
+      "from": {
+        "device": "cold",
+        "port": "xlr_out_l"
+      },
+      "to": {
+        "device": "spk2",
+        "port": "xlr_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c5",
+      "from": {
+        "device": "sm57",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "spk3",
+        "port": "xlr_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c6",
+      "from": {
+        "device": "c414",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "iface",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c7",
+      "from": {
+        "device": "rx",
+        "port": "xlr_out"
+      },
+      "to": {
+        "device": "dsp",
+        "port": "xlr_in_1"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    },
+    {
+      "id": "c8",
+      "from": {
+        "device": "dsp",
+        "port": "xlr_out_1"
+      },
+      "to": {
+        "device": "sub",
+        "port": "xlr_in"
+      },
+      "cable_type": "xlr",
+      "cable_length": 10
+    }
+  ],
+  "expected": {
+    "valid": false,
+    "signal_flows": [
+      {
+        "type": "audio",
+        "source": "nt1",
+        "path": [
+          "nt1",
+          "hot",
+          "spk1"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
+        ],
+        "final_level_db": 33.2,
+        "level_at": "spk1",
+        "status": "warning"
+      },
+      {
+        "type": "audio",
+        "source": "e835",
+        "path": [
+          "e835",
+          "cold",
+          "spk2"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
+        ],
+        "final_level_db": -49.2,
+        "level_at": "spk2",
+        "status": "warning"
+      },
+      {
+        "type": "audio",
+        "source": "sm57",
+        "path": [
+          "sm57",
+          "spk3"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in"
+        ],
+        "final_level_db": -53.8,
+        "level_at": "spk3",
+        "status": "warning"
+      },
+      {
+        "type": "audio",
+        "source": "c414",
+        "path": [
+          "c414",
+          "iface"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1"
+        ],
+        "final_level_db": 4.4,
+        "level_at": "iface",
+        "status": "error",
+        "note": "нет фантомного питания — микрофон не работает"
+      },
+      {
+        "type": "audio",
+        "source": "rx",
+        "path": [
+          "rx",
+          "dsp",
+          "sub"
+        ],
+        "entry_ports": [
+          null,
+          "xlr_in_1",
+          "xlr_in"
+        ],
+        "final_level_db": -13,
+        "level_at": "sub",
+        "status": "warning"
+      }
+    ],
+    "warnings": [
+      {
+        "type": "level_high",
+        "device": "hot",
+        "message": "Перегрузка: 33.2 дБu на выходе «MG12XU» — выше +20 дБu, уменьшите усиление",
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Уменьшить усиление входа XLR IN 1 на «MG12XU» до 31 дБ",
+          "device": "hot",
+          "property": "gain:xlr_in_1",
+          "value": 31
+        }
+      },
+      {
+        "type": "level_low",
+        "device": "cold",
+        "message": "Слабый сигнал: -49.2 дБu на «K12.2» (норма -10…+20 дБu) — увеличьте усиление «SQ-5»",
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Поднять усиление входа XLR IN 1 на «SQ-5» до 53 дБ",
+          "device": "cold",
+          "property": "gain:xlr_in_1",
+          "value": 53
+        }
+      },
+      {
+        "type": "level_low",
+        "device": "sm57",
+        "message": "Слабый сигнал: -53.8 дБu на «ZLX-12P» — микрофонный уровень нужно поднять предусилителем (микшер, DSP, аудиоинтерфейс)",
+        "severity": "medium"
+      },
+      {
+        "type": "level_low",
+        "device": "dsp",
+        "message": "Слабый сигнал: -13 дБu на «PRX818XLFW» (норма -10…+20 дБu) — увеличьте усиление «Core 110f»",
+        "severity": "medium",
+        "fix": {
+          "kind": "set_property",
+          "label": "Поднять усиление входа XLR IN 1 на «Core 110f» до 57 дБ",
+          "device": "dsp",
+          "property": "gain:xlr_in_1",
+          "value": 57
+        }
+      }
+    ],
+    "errors": [
+      {
+        "type": "phantom_power",
+        "device": "c414",
+        "connection": "c6",
+        "message": "Для «C414 XLII» нужно фантомное питание +48 В, но на «Scarlett 2i2» оно выключено — включите его на «Scarlett 2i2»",
+        "severity": "high",
+        "fix": {
+          "kind": "set_property",
+          "label": "Включить +48 В на «Scarlett 2i2»",
+          "device": "iface",
+          "property": "phantom_power",
+          "value": true
+        }
+      }
+    ]
+  }
+}

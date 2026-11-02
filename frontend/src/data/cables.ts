@@ -11,6 +11,8 @@ export const CABLE_MAX_LENGTH: Record<CableType, number> = {
   rca: 10,
   bnc: 100,
   usb: 5,
+  // Трансляционная линия: потери зависят от сечения; ориентир для 1,5 мм² и десятков ватт
+  terminal: 300,
 };
 
 /** Короткое описание разъёма/кабеля для инспектора. */
@@ -20,10 +22,11 @@ export const CABLE_DESCRIPTION: Record<CableType, string> = {
   speakon: 'Speakon — спикерный кабель (усилитель → пассивная АС)',
   hdmi: 'HDMI — цифровое видео и аудио',
   sdi: 'SDI (BNC) — профессиональное видео по коаксиалу',
-  cat6: 'Cat6 — витая пара (сеть, Dante, AV-over-IP)',
+  cat6: 'Cat6 — витая пара (сеть, Dante, AV-over-IP, HDBaseT)',
   rca: 'RCA — небалансный аналоговый сигнал',
   bnc: 'BNC — коаксиальный разъём (SDI/видео)',
   usb: 'USB — подключение к компьютеру',
+  terminal: 'Кабель трансляционной линии 70/100 В (2 жилы, клеммы)',
 };
 
 export function cableMaxLength(cable: CableType): number {

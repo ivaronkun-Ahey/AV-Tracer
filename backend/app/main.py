@@ -1,8 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict, Any
-from app.services.engine import SimulationEngine
+from app.core.config import settings
+
+# Симуляция считается в браузере (frontend/src/sim/engine.ts) — это единственный
+# движок. Сервер оставлен как основа для будущих функций: хранение проектов,
+# учётные записи, ИИ-ассистент. Прежний Python-движок и эндпоинт /api/simulate
+# перенесены в archive/ (см. archive/README.md).
 
 app = FastAPI(
     title="AV-Tracer API",
@@ -10,19 +13,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS - Allow all origins for development
+# CORS: в dev-режиме фронтенд ходит через прокси Vite, прямые запросы —
+# только с адресов из настроек. Cookie/авторизация не используются.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
-
-# Request models
-class SimulationRequest(BaseModel):
-    devices: List[Dict[str, Any]]
-    connections: List[Dict[str, Any]]
 
 # Routes
 @app.get("/")
@@ -36,16 +35,3 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
-
-@app.post("/api/simulate")
-async def simulate_system(request: SimulationRequest):
-    """
-    Simulate an AV system topology
-    """
-    try:
-        engine = SimulationEngine()
-        engine.load_topology(request.devices, request.connections)
-        result = engine.run_simulation()
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
